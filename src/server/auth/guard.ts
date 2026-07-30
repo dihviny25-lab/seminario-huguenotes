@@ -4,6 +4,7 @@ import { db } from "@/server/db/client";
 import { disciplines, teachers } from "@/server/db/schema";
 
 import { readAppSession } from "./session";
+import { readAppStudentSession } from "./studentSession";
 
 /** Garante que existe um professor logado; lança erro caso contrário. */
 export async function requireTeacherId(): Promise<string> {
@@ -49,6 +50,16 @@ export async function requireAdminOrSelf(targetTeacherId: string): Promise<strin
     throw new Error("Você só pode editar o seu próprio perfil.");
   }
   return teacherId;
+}
+
+/** Garante que existe um aluno logado (portal do aluno); lança erro caso contrário. */
+export async function requireStudentId(): Promise<string> {
+  const session = await readAppStudentSession();
+  const studentId = session.data.studentId;
+  if (!studentId) {
+    throw new Error("UNAUTHORIZED");
+  }
+  return studentId;
 }
 
 /**

@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
-import { Pencil, Plus, Trash2, Undo2, Upload } from "lucide-react";
+import { KeyRound, Pencil, Plus, ShieldOff, Trash2, Undo2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -51,7 +51,9 @@ import {
   createStudentFn,
   deleteStudentFn,
   listStudentsFn,
+  revokeStudentLoginFn,
   setStudentActiveFn,
+  setStudentPasswordFn,
   updateStudentFn,
   type Student,
 } from "@/functions/students";
@@ -77,6 +79,7 @@ export function Students() {
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<Student | null>(null);
+  const [settingPasswordFor, setSettingPasswordFor] = useState<Student | null>(null);
   const [deleting, setDeleting] = useState<Student | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -118,6 +121,15 @@ export function Students() {
       await invalidate();
     },
     onError: (error) => toast.error(errorMessage(error, "Não foi possível excluir.")),
+  });
+
+  const revokeMutation = useMutation({
+    mutationFn: (id: string) => revokeStudentLoginFn({ data: { id } }),
+    onSuccess: async () => {
+      toast.success("Login removido.");
+      await invalidate();
+    },
+    onError: (error) => toast.error(errorMessage(error, "Não foi possível remover o login.")),
   });
 
   return (
@@ -164,13 +176,14 @@ export function Students() {
               <TableHead>Nome</TableHead>
               <TableHead>E-mail</TableHead>
               <TableHead>Situação</TableHead>
+              <TableHead>Portal</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={4} className="py-6 text-center text-muted-foreground">
+                <TableCell colSpan={5} className="py-6 text-center text-muted-foreground">
                   Carregando…
                 </TableCell>
               </TableRow>
@@ -185,6 +198,11 @@ export function Students() {
                     </Badge>
                   </TableCell>
                   <TableCell>
+                    <Badge variant={student.hasLogin ? "default" : "secondary"}>
+                      {student.hasLogin ? "Ativo" : "Sem login"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
                     {isAdmin ? (
                       <div className="flex justify-end gap-1">
                         <Button
@@ -195,6 +213,28 @@ export function Students() {
                         >
                           <Pencil className="size-4" aria-hidden />
                         </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title={
+                            student.hasLogin
+                              ? "Redefinir senha do portal"
+                              : "Definir senha do portal"
+                          }
+                          onClick={() => setSettingPasswordFor(student)}
+                        >
+                          <KeyRound className="size-4" aria-hidden />
+                        </Button>
+                        {student.hasLogin ? (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Remover login do portal"
+                            onClick={() => revokeMutation.mutate(student.id)}
+                          >
+                            <ShieldOff className="size-4" aria-hidden />
+                          </Button>
+                        ) : null}
                         <Button
                           variant="ghost"
                           size="icon"
@@ -218,7 +258,7 @@ export function Students() {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={4} className="py-6 text-center text-muted-foreground">
+                <TableCell colSpan={5} className="py-6 text-center text-muted-foreground">
                   Nenhum aluno cadastrado ainda.
                 </TableCell>
               </TableRow>
@@ -232,6 +272,13 @@ export function Students() {
         <EditStudentDialog
           student={editing}
           onOpenChange={(open) => !open && setEditing(null)}
+          onSaved={invalidate}
+        />
+      ) : null}
+      {settingPasswordFor ? (
+        <SetStudentPasswordDialog
+          student={settingPasswordFor}
+          onOpenChange={(open) => !open && setSettingPasswordFor(null)}
           onSaved={invalidate}
         />
       ) : null}
@@ -414,6 +461,99 @@ function EditStudentDialog({
             </DialogFooter>
           </form>
         </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+const passwordSchema = z
+  .object({
+    password: z.string().min(8, "Mínimo de 8 caracteres."),
+    confirm: z.string(),
+  })
+  .refine((data) => data.password === data.confirm, {
+    message: "As senhas não coincidem.",
+    path: ["confirm"],
+  });
+
+function SetStudentPasswordDialog({
+  student,
+  onOpenChange,
+  onSaved,
+}: {
+  student: Student;
+  onOpenChange: (open: boolean) => void;
+  onSaved: () => Promise<unknown>;
+}) {
+  const form = useForm<z.infer<typeof passwordSchema>>({
+    resolver: zodResolver(passwordSchema),
+    defaultValues: { password: "", confirm: "" },
+  });
+
+  const mutation = useMutation({
+    mutationFn: (values: z.infer<typeof passwordSchema>) =>
+      setStudentPasswordFn({ data: { id: student.id, password: values.password } }),
+    onSuccess: async () => {
+      toast.success("Senha definida.");
+      onOpenChange(false);
+      await onSaved();
+    },
+    onError: (error) => toast.error(errorMessage(error, "Não foi possível definir a senha.")),
+  });
+
+  return (
+    <Dialog open onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>
+            {student.hasLogin ? "Redefinir" : "Definir"} senha do portal de {student.name}
+          </DialogTitle>
+        </DialogHeader>
+        {!student.email ? (
+          <p className="text-sm text-destructive">
+            Esse aluno não tem e-mail cadastrado. Edite o cadastro e adicione um e-mail antes de
+            definir a senha.
+          </p>
+        ) : (
+          <Form {...form}>
+            <form
+              className="space-y-4"
+              onSubmit={form.handleSubmit((values) => mutation.mutate(values))}
+            >
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nova senha</FormLabel>
+                    <FormControl>
+                      <Input type="password" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="confirm"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Confirmar senha</FormLabel>
+                    <FormControl>
+                      <Input type="password" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button type="submit" disabled={mutation.isPending}>
+                  Salvar
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        )}
       </DialogContent>
     </Dialog>
   );

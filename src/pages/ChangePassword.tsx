@@ -49,12 +49,10 @@ export function ChangePassword() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div className="flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-sm rounded-[1.75rem] border border-border/70 bg-card/70 p-6 shadow-soft sm:p-8">
         <div className="mb-6 text-center">
-          <span className="mx-auto grid size-11 place-items-center rounded-xl bg-primary font-display text-sm font-bold text-primary-foreground">
-            SH
-          </span>
+          <img src="/logo.png" alt="Seminário Huguenotes" className="mx-auto size-14" />
           <h1 className="mt-4 font-display text-xl font-semibold tracking-tight text-foreground">
             Troque sua senha
           </h1>

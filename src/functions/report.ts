@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-import { requireTeacherId } from "@/server/auth/guard";
+import { requireStudentId, requireTeacherId } from "@/server/auth/guard";
 import { getStudentReportData, type StudentReport } from "@/functions/reportData";
 
 const reportSchema = z.object({ studentId: z.string().uuid() });
@@ -17,5 +17,13 @@ export const getStudentReportFn = createServerFn({ method: "GET" })
     await requireTeacherId();
     return getStudentReportData(data.studentId);
   });
+
+/** Portal do aluno: só o próprio boletim, nunca de outro aluno. */
+export const getMyStudentReportFn = createServerFn({ method: "GET" }).handler(
+  async (): Promise<StudentReport> => {
+    const studentId = await requireStudentId();
+    return getStudentReportData(studentId);
+  },
+);
 
 export type { StudentReport, StudentReportRow } from "@/functions/reportData";

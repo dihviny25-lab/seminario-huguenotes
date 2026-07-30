@@ -13,7 +13,7 @@ interface PageShellProps {
 /** Estrutura comum das páginas: cabeçalho fixo, cabeçalho editorial e conteúdo. */
 export function PageShell({ title, subtitle, description, children }: PageShellProps) {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen">
       <Navigation />
 
       <main className="mx-auto max-w-6xl px-4 pb-24 pt-10 sm:px-6 sm:pt-16">

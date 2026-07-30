@@ -30,14 +30,12 @@ export function PainelShell({ title, description, children }: PainelShellProps) 
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen">
       <header className="sticky top-0 z-50 border-b border-border/80 bg-background/85 backdrop-blur-md print:hidden">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <div className="flex items-center gap-4">
             <Link to="/painel" className="flex items-center gap-2">
-              <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary font-display text-xs font-bold text-primary-foreground">
-                SH
-              </span>
+              <img src="/logo.png" alt="" className="size-8 shrink-0" aria-hidden />
               <span className="font-display text-sm font-semibold text-foreground">
                 Painel do professor
               </span>

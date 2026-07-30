@@ -2,19 +2,21 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { getStudentReportData } from "@/functions/reportData";
 import { renderStudentReportPdf, slugify } from "@/functions/reportPdf";
-import { requireTeacherId } from "@/server/auth/guard";
+import { requireStudentId } from "@/server/auth/guard";
 
-export const Route = createFileRoute("/painel/relatorio/$studentId/pdf")({
+/** Boletim em PDF do próprio aluno logado no portal. */
+export const Route = createFileRoute("/portal/pdf")({
   server: {
     handlers: {
-      GET: async ({ params }) => {
+      GET: async () => {
+        let studentId: string;
         try {
-          await requireTeacherId();
+          studentId = await requireStudentId();
         } catch {
           return new Response("Não autenticado.", { status: 401 });
         }
 
-        const report = await getStudentReportData(params.studentId);
+        const report = await getStudentReportData(studentId);
         const buffer = await renderStudentReportPdf(report.student.name, report.rows);
 
         return new Response(new Uint8Array(buffer), {

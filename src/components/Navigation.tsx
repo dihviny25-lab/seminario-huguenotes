@@ -1,10 +1,11 @@
 import { Link } from "@tanstack/react-router";
-import { LayoutGrid, LogIn, Users } from "lucide-react";
+import { GraduationCap, LayoutGrid, LogIn, Users } from "lucide-react";
 
 /** Itens do menu principal. Adicionar novas seções aqui. */
 const navigationItems = [
   { to: "/", label: "Visão Geral", icon: LayoutGrid },
   { to: "/professores", label: "Professores", icon: Users },
+  { to: "/login-aluno", label: "Portal do Aluno", icon: GraduationCap },
   { to: "/painel", label: "Painel", icon: LogIn },
 ] as const;
 
@@ -14,9 +15,7 @@ export function Navigation() {
     <header className="sticky top-0 z-50 border-b border-border/80 bg-background/85 backdrop-blur-md">
       <div className="mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 sm:px-6">
         <Link to="/" className="flex min-w-0 items-center gap-3">
-          <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary font-display text-sm font-bold text-primary-foreground">
-            SH
-          </span>
+          <img src="/logo.png" alt="" className="size-9 shrink-0" aria-hidden />
           <span className="min-w-0">
             <span className="block truncate font-display text-sm font-semibold tracking-tight text-foreground">
               Seminário Huguenotes

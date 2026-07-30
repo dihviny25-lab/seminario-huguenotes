@@ -57,6 +57,9 @@ export const students = pgTable("students", {
   name: text("name").notNull(),
   email: text("email"),
   active: boolean("active").notNull().default(true),
+  // Nulo = aluno sem login no portal ainda (precisa que um admin defina a senha).
+  passwordHash: text("password_hash"),
+  mustChangePassword: boolean("must_change_password").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

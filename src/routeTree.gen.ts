@@ -10,10 +10,15 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ProfessoresRouteImport } from './routes/professores'
+import { Route as LoginAlunoRouteImport } from './routes/login-aluno'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as PortalRouteRouteImport } from './routes/portal/route'
 import { Route as PainelRouteRouteImport } from './routes/painel/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as PortalIndexRouteImport } from './routes/portal/index'
 import { Route as PainelIndexRouteImport } from './routes/painel/index'
+import { Route as PortalTrocarSenhaRouteImport } from './routes/portal/trocar-senha'
+import { Route as PortalPdfRouteImport } from './routes/portal/pdf'
 import { Route as PainelTrocarSenhaRouteImport } from './routes/painel/trocar-senha'
 import { Route as PainelRelatorioRouteImport } from './routes/painel/relatorio'
 import { Route as PainelProfessoresRouteImport } from './routes/painel/professores'
@@ -26,9 +31,19 @@ const ProfessoresRoute = ProfessoresRouteImport.update({
   path: '/professores',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LoginAlunoRoute = LoginAlunoRouteImport.update({
+  id: '/login-aluno',
+  path: '/login-aluno',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PortalRouteRoute = PortalRouteRouteImport.update({
+  id: '/portal',
+  path: '/portal',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PainelRouteRoute = PainelRouteRouteImport.update({
@@ -41,10 +56,25 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PortalIndexRoute = PortalIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => PortalRouteRoute,
+} as any)
 const PainelIndexRoute = PainelIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => PainelRouteRoute,
+} as any)
+const PortalTrocarSenhaRoute = PortalTrocarSenhaRouteImport.update({
+  id: '/trocar-senha',
+  path: '/trocar-senha',
+  getParentRoute: () => PortalRouteRoute,
+} as any)
+const PortalPdfRoute = PortalPdfRouteImport.update({
+  id: '/pdf',
+  path: '/pdf',
+  getParentRoute: () => PortalRouteRoute,
 } as any)
 const PainelTrocarSenhaRoute = PainelTrocarSenhaRouteImport.update({
   id: '/trocar-senha',
@@ -82,25 +112,34 @@ const PainelRelatorioStudentIdPdfRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/painel': typeof PainelRouteRouteWithChildren
+  '/portal': typeof PortalRouteRouteWithChildren
   '/login': typeof LoginRoute
+  '/login-aluno': typeof LoginAlunoRoute
   '/professores': typeof ProfessoresRoute
   '/painel/alunos': typeof PainelAlunosRoute
   '/painel/professores': typeof PainelProfessoresRoute
   '/painel/relatorio': typeof PainelRelatorioRouteWithChildren
   '/painel/trocar-senha': typeof PainelTrocarSenhaRoute
+  '/portal/pdf': typeof PortalPdfRoute
+  '/portal/trocar-senha': typeof PortalTrocarSenhaRoute
   '/painel/': typeof PainelIndexRoute
+  '/portal/': typeof PortalIndexRoute
   '/painel/disciplinas/$disciplineId': typeof PainelDisciplinasDisciplineIdRoute
   '/painel/relatorio/$studentId/pdf': typeof PainelRelatorioStudentIdPdfRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/login-aluno': typeof LoginAlunoRoute
   '/professores': typeof ProfessoresRoute
   '/painel/alunos': typeof PainelAlunosRoute
   '/painel/professores': typeof PainelProfessoresRoute
   '/painel/relatorio': typeof PainelRelatorioRouteWithChildren
   '/painel/trocar-senha': typeof PainelTrocarSenhaRoute
+  '/portal/pdf': typeof PortalPdfRoute
+  '/portal/trocar-senha': typeof PortalTrocarSenhaRoute
   '/painel': typeof PainelIndexRoute
+  '/portal': typeof PortalIndexRoute
   '/painel/disciplinas/$disciplineId': typeof PainelDisciplinasDisciplineIdRoute
   '/painel/relatorio/$studentId/pdf': typeof PainelRelatorioStudentIdPdfRoute
 }
@@ -108,13 +147,18 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/painel': typeof PainelRouteRouteWithChildren
+  '/portal': typeof PortalRouteRouteWithChildren
   '/login': typeof LoginRoute
+  '/login-aluno': typeof LoginAlunoRoute
   '/professores': typeof ProfessoresRoute
   '/painel/alunos': typeof PainelAlunosRoute
   '/painel/professores': typeof PainelProfessoresRoute
   '/painel/relatorio': typeof PainelRelatorioRouteWithChildren
   '/painel/trocar-senha': typeof PainelTrocarSenhaRoute
+  '/portal/pdf': typeof PortalPdfRoute
+  '/portal/trocar-senha': typeof PortalTrocarSenhaRoute
   '/painel/': typeof PainelIndexRoute
+  '/portal/': typeof PortalIndexRoute
   '/painel/disciplinas/$disciplineId': typeof PainelDisciplinasDisciplineIdRoute
   '/painel/relatorio/$studentId/pdf': typeof PainelRelatorioStudentIdPdfRoute
 }
@@ -123,38 +167,52 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/painel'
+    | '/portal'
     | '/login'
+    | '/login-aluno'
     | '/professores'
     | '/painel/alunos'
     | '/painel/professores'
     | '/painel/relatorio'
     | '/painel/trocar-senha'
+    | '/portal/pdf'
+    | '/portal/trocar-senha'
     | '/painel/'
+    | '/portal/'
     | '/painel/disciplinas/$disciplineId'
     | '/painel/relatorio/$studentId/pdf'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/login'
+    | '/login-aluno'
     | '/professores'
     | '/painel/alunos'
     | '/painel/professores'
     | '/painel/relatorio'
     | '/painel/trocar-senha'
+    | '/portal/pdf'
+    | '/portal/trocar-senha'
     | '/painel'
+    | '/portal'
     | '/painel/disciplinas/$disciplineId'
     | '/painel/relatorio/$studentId/pdf'
   id:
     | '__root__'
     | '/'
     | '/painel'
+    | '/portal'
     | '/login'
+    | '/login-aluno'
     | '/professores'
     | '/painel/alunos'
     | '/painel/professores'
     | '/painel/relatorio'
     | '/painel/trocar-senha'
+    | '/portal/pdf'
+    | '/portal/trocar-senha'
     | '/painel/'
+    | '/portal/'
     | '/painel/disciplinas/$disciplineId'
     | '/painel/relatorio/$studentId/pdf'
   fileRoutesById: FileRoutesById
@@ -162,7 +220,9 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   PainelRouteRoute: typeof PainelRouteRouteWithChildren
+  PortalRouteRoute: typeof PortalRouteRouteWithChildren
   LoginRoute: typeof LoginRoute
+  LoginAlunoRoute: typeof LoginAlunoRoute
   ProfessoresRoute: typeof ProfessoresRoute
 }
 
@@ -175,11 +235,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProfessoresRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/login-aluno': {
+      id: '/login-aluno'
+      path: '/login-aluno'
+      fullPath: '/login-aluno'
+      preLoaderRoute: typeof LoginAlunoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/portal': {
+      id: '/portal'
+      path: '/portal'
+      fullPath: '/portal'
+      preLoaderRoute: typeof PortalRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/painel': {
@@ -196,12 +270,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/portal/': {
+      id: '/portal/'
+      path: '/'
+      fullPath: '/portal/'
+      preLoaderRoute: typeof PortalIndexRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
     '/painel/': {
       id: '/painel/'
       path: '/'
       fullPath: '/painel/'
       preLoaderRoute: typeof PainelIndexRouteImport
       parentRoute: typeof PainelRouteRoute
+    }
+    '/portal/trocar-senha': {
+      id: '/portal/trocar-senha'
+      path: '/trocar-senha'
+      fullPath: '/portal/trocar-senha'
+      preLoaderRoute: typeof PortalTrocarSenhaRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
+    '/portal/pdf': {
+      id: '/portal/pdf'
+      path: '/pdf'
+      fullPath: '/portal/pdf'
+      preLoaderRoute: typeof PortalPdfRouteImport
+      parentRoute: typeof PortalRouteRoute
     }
     '/painel/trocar-senha': {
       id: '/painel/trocar-senha'
@@ -282,10 +377,28 @@ const PainelRouteRouteWithChildren = PainelRouteRoute._addFileChildren(
   PainelRouteRouteChildren,
 )
 
+interface PortalRouteRouteChildren {
+  PortalPdfRoute: typeof PortalPdfRoute
+  PortalTrocarSenhaRoute: typeof PortalTrocarSenhaRoute
+  PortalIndexRoute: typeof PortalIndexRoute
+}
+
+const PortalRouteRouteChildren: PortalRouteRouteChildren = {
+  PortalPdfRoute: PortalPdfRoute,
+  PortalTrocarSenhaRoute: PortalTrocarSenhaRoute,
+  PortalIndexRoute: PortalIndexRoute,
+}
+
+const PortalRouteRouteWithChildren = PortalRouteRoute._addFileChildren(
+  PortalRouteRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   PainelRouteRoute: PainelRouteRouteWithChildren,
+  PortalRouteRoute: PortalRouteRouteWithChildren,
   LoginRoute: LoginRoute,
+  LoginAlunoRoute: LoginAlunoRoute,
   ProfessoresRoute: ProfessoresRoute,
 }
 export const routeTree = rootRouteImport

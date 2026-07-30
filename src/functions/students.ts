@@ -3,6 +3,7 @@ import { asc, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { requireAdminId, requireTeacherId } from "@/server/auth/guard";
+import { hashPassword } from "@/server/auth/password";
 import { db } from "@/server/db/client";
 import { students } from "@/server/db/schema";
 
@@ -11,20 +12,23 @@ export type Student = {
   name: string;
   email: string | null;
   active: boolean;
+  hasLogin: boolean;
 };
 
 export const listStudentsFn = createServerFn({ method: "GET" }).handler(
   async (): Promise<Array<Student>> => {
     await requireTeacherId();
-    return db
+    const rows = await db
       .select({
         id: students.id,
         name: students.name,
         email: students.email,
         active: students.active,
+        passwordHash: students.passwordHash,
       })
       .from(students)
       .orderBy(asc(students.name));
+    return rows.map(({ passwordHash, ...rest }) => ({ ...rest, hasLogin: passwordHash !== null }));
   },
 );
 
@@ -79,6 +83,42 @@ export const setStudentActiveFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     await requireAdminId();
     await db.update(students).set({ active: data.active }).where(eq(students.id, data.id));
+  });
+
+const setPasswordSchema = z.object({
+  id: z.string().uuid(),
+  password: z.string().min(8, "A senha precisa ter ao menos 8 caracteres."),
+});
+
+/** Admin define/redefine a senha de acesso do aluno ao portal (exige e-mail cadastrado). */
+export const setStudentPasswordFn = createServerFn({ method: "POST" })
+  .validator(setPasswordSchema)
+  .handler(async ({ data }) => {
+    await requireAdminId();
+    const [student] = await db
+      .select({ email: students.email })
+      .from(students)
+      .where(eq(students.id, data.id))
+      .limit(1);
+    if (!student?.email) {
+      throw new Error("Cadastre um e-mail para o aluno antes de definir a senha.");
+    }
+
+    const passwordHash = await hashPassword(data.password);
+    await db
+      .update(students)
+      .set({ passwordHash, mustChangePassword: true })
+      .where(eq(students.id, data.id));
+  });
+
+const revokeStudentLoginSchema = z.object({ id: z.string().uuid() });
+
+/** Remove a senha (o cadastro do aluno continua, só perde o acesso ao portal). */
+export const revokeStudentLoginFn = createServerFn({ method: "POST" })
+  .validator(revokeStudentLoginSchema)
+  .handler(async ({ data }) => {
+    await requireAdminId();
+    await db.update(students).set({ passwordHash: null }).where(eq(students.id, data.id));
   });
 
 const deleteSchema = z.object({ id: z.string().uuid() });

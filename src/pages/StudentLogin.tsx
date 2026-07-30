@@ -14,15 +14,15 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { loginFn } from "@/functions/auth";
+import { studentLoginFn } from "@/functions/studentAuth";
 
 const loginSchema = z.object({
   email: z.string().trim().toLowerCase().email("Informe um e-mail válido."),
   password: z.string().min(1, "Informe a senha."),
 });
 
-/** Login de professores/secretaria — acesso ao painel interno. */
-export function Login() {
+/** Login do aluno — acesso ao portal com as próprias notas e faltas. */
+export function StudentLogin() {
   const navigate = useNavigate();
   const [serverError, setServerError] = useState<string | null>(null);
   const form = useForm<z.infer<typeof loginSchema>>({
@@ -33,8 +33,8 @@ export function Login() {
   async function onSubmit(values: z.infer<typeof loginSchema>) {
     setServerError(null);
     try {
-      await loginFn({ data: values });
-      await navigate({ to: "/painel" });
+      await studentLoginFn({ data: values });
+      await navigate({ to: "/portal" });
     } catch (error) {
       setServerError(error instanceof Error ? error.message : "Não foi possível entrar.");
     }
@@ -46,10 +46,10 @@ export function Login() {
         <div className="mb-6 text-center">
           <img src="/logo.png" alt="Seminário Huguenotes" className="mx-auto size-14" />
           <h1 className="mt-4 font-display text-xl font-semibold tracking-tight text-foreground">
-            Painel do professor
+            Portal do aluno
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Entre com seu e-mail e senha para lançar notas e faltas.
+            Entre com seu e-mail e senha para ver suas notas e faltas.
           </p>
         </div>
 
