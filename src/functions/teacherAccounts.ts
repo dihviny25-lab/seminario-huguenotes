@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { asc, eq } from "drizzle-orm";
 import { z } from "zod";
 
-import { requireTeacherId } from "@/server/auth/guard";
+import { requireAdminId, requireAdminOrSelf, requireTeacherId } from "@/server/auth/guard";
 import { hashPassword } from "@/server/auth/password";
 import { db } from "@/server/db/client";
 import { teachers } from "@/server/db/schema";
@@ -12,6 +12,7 @@ export type TeacherAccount = {
   name: string;
   email: string;
   hasLogin: boolean;
+  role: "admin" | "teacher";
 };
 
 function isUniqueViolation(error: unknown): boolean {
@@ -32,6 +33,7 @@ export const listTeacherAccountsFn = createServerFn({ method: "GET" }).handler(
         name: teachers.name,
         email: teachers.email,
         passwordHash: teachers.passwordHash,
+        role: teachers.role,
       })
       .from(teachers)
       .orderBy(asc(teachers.name));
@@ -48,12 +50,12 @@ const createSchema = z.object({
 export const createTeacherAccountFn = createServerFn({ method: "POST" })
   .validator(createSchema)
   .handler(async ({ data }) => {
-    await requireTeacherId();
+    await requireAdminId();
     const passwordHash = await hashPassword(data.password);
     try {
       const [row] = await db
         .insert(teachers)
-        .values({ name: data.name, email: data.email, passwordHash })
+        .values({ name: data.name, email: data.email, passwordHash, mustChangePassword: true })
         .returning({ id: teachers.id });
       return row;
     } catch (error) {
@@ -70,10 +72,11 @@ const updateSchema = z.object({
   email: z.string().trim().toLowerCase().email("Informe um e-mail válido."),
 });
 
+/** Admin edita qualquer um; professor comum só edita o próprio perfil. */
 export const updateTeacherAccountFn = createServerFn({ method: "POST" })
   .validator(updateSchema)
   .handler(async ({ data }) => {
-    await requireTeacherId();
+    await requireAdminOrSelf(data.id);
     try {
       await db
         .update(teachers)
@@ -92,12 +95,16 @@ const setPasswordSchema = z.object({
   password: z.string().min(8, "A senha precisa ter ao menos 8 caracteres."),
 });
 
+/** Admin define/redefine a senha de qualquer professor (força troca no próximo login). */
 export const setTeacherPasswordFn = createServerFn({ method: "POST" })
   .validator(setPasswordSchema)
   .handler(async ({ data }) => {
-    await requireTeacherId();
+    await requireAdminId();
     const passwordHash = await hashPassword(data.password);
-    await db.update(teachers).set({ passwordHash }).where(eq(teachers.id, data.id));
+    await db
+      .update(teachers)
+      .set({ passwordHash, mustChangePassword: true })
+      .where(eq(teachers.id, data.id));
   });
 
 const revokeSchema = z.object({ id: z.string().uuid() });
@@ -106,7 +113,7 @@ const revokeSchema = z.object({ id: z.string().uuid() });
 export const revokeTeacherLoginFn = createServerFn({ method: "POST" })
   .validator(revokeSchema)
   .handler(async ({ data }) => {
-    await requireTeacherId();
+    await requireAdminId();
     await db.update(teachers).set({ passwordHash: null }).where(eq(teachers.id, data.id));
   });
 
@@ -115,6 +122,9 @@ const deleteSchema = z.object({ id: z.string().uuid() });
 export const deleteTeacherAccountFn = createServerFn({ method: "POST" })
   .validator(deleteSchema)
   .handler(async ({ data }) => {
-    await requireTeacherId();
+    const adminId = await requireAdminId();
+    if (adminId === data.id) {
+      throw new Error("Você não pode excluir a própria conta.");
+    }
     await db.delete(teachers).where(eq(teachers.id, data.id));
   });

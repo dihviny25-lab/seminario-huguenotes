@@ -43,6 +43,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { PainelShell } from "@/components/painel/PainelShell";
+import { getCurrentTeacherFn } from "@/functions/auth";
 import {
   createTeacherAccountFn,
   deleteTeacherAccountFn,
@@ -66,6 +67,11 @@ export function TeacherAccounts() {
     queryKey: TEACHER_ACCOUNTS_KEY,
     queryFn: () => listTeacherAccountsFn(),
   });
+  const { data: me } = useQuery({
+    queryKey: ["current-teacher"],
+    queryFn: () => getCurrentTeacherFn(),
+  });
+  const isAdmin = me?.role === "admin";
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<TeacherAccount | null>(null);
@@ -100,12 +106,19 @@ export function TeacherAccounts() {
       title="Contas de professores"
       description="Cadastre professores e defina o e-mail/senha usados para entrar no painel."
     >
-      <div className="mb-4 flex justify-end">
-        <Button onClick={() => setCreateOpen(true)}>
-          <Plus className="size-4" aria-hidden />
-          Novo professor
-        </Button>
-      </div>
+      {isAdmin ? (
+        <div className="mb-4 flex justify-end">
+          <Button onClick={() => setCreateOpen(true)}>
+            <Plus className="size-4" aria-hidden />
+            Novo professor
+          </Button>
+        </div>
+      ) : (
+        <p className="mb-4 text-sm text-muted-foreground">
+          Você só visualiza os outros professores. Para editar seus próprios dados, use o lápis na
+          sua linha.
+        </p>
+      )}
 
       <div className="overflow-hidden rounded-[1.25rem] border border-border/70 bg-card/70 shadow-soft">
         <Table>
@@ -113,6 +126,7 @@ export function TeacherAccounts() {
             <TableRow>
               <TableHead>Nome</TableHead>
               <TableHead>E-mail</TableHead>
+              <TableHead>Papel</TableHead>
               <TableHead>Login</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
@@ -120,63 +134,78 @@ export function TeacherAccounts() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={4} className="py-6 text-center text-muted-foreground">
+                <TableCell colSpan={5} className="py-6 text-center text-muted-foreground">
                   Carregando…
                 </TableCell>
               </TableRow>
             ) : teachers && teachers.length > 0 ? (
-              teachers.map((teacher) => (
-                <TableRow key={teacher.id}>
-                  <TableCell className="font-medium text-foreground">{teacher.name}</TableCell>
-                  <TableCell className="text-muted-foreground">{teacher.email}</TableCell>
-                  <TableCell>
-                    <Badge variant={teacher.hasLogin ? "default" : "secondary"}>
-                      {teacher.hasLogin ? "Ativo" : "Sem login"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        title="Editar"
-                        onClick={() => setEditing(teacher)}
-                      >
-                        <Pencil className="size-4" aria-hidden />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        title={teacher.hasLogin ? "Redefinir senha" : "Definir senha"}
-                        onClick={() => setSettingPasswordFor(teacher)}
-                      >
-                        <KeyRound className="size-4" aria-hidden />
-                      </Button>
-                      {teacher.hasLogin ? (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          title="Remover login"
-                          onClick={() => revokeMutation.mutate(teacher.id)}
-                        >
-                          <ShieldOff className="size-4" aria-hidden />
-                        </Button>
-                      ) : null}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        title="Excluir"
-                        onClick={() => setDeleting(teacher)}
-                      >
-                        <Trash2 className="size-4" aria-hidden />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
+              teachers.map((teacher) => {
+                const isSelf = teacher.id === me?.id;
+                const canEdit = isAdmin || isSelf;
+                return (
+                  <TableRow key={teacher.id}>
+                    <TableCell className="font-medium text-foreground">{teacher.name}</TableCell>
+                    <TableCell className="text-muted-foreground">{teacher.email}</TableCell>
+                    <TableCell>
+                      <Badge variant={teacher.role === "admin" ? "default" : "outline"}>
+                        {teacher.role === "admin" ? "Admin" : "Professor"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={teacher.hasLogin ? "default" : "secondary"}>
+                        {teacher.hasLogin ? "Ativo" : "Sem login"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex justify-end gap-1">
+                        {canEdit ? (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Editar"
+                            onClick={() => setEditing(teacher)}
+                          >
+                            <Pencil className="size-4" aria-hidden />
+                          </Button>
+                        ) : null}
+                        {isAdmin ? (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title={teacher.hasLogin ? "Redefinir senha" : "Definir senha"}
+                            onClick={() => setSettingPasswordFor(teacher)}
+                          >
+                            <KeyRound className="size-4" aria-hidden />
+                          </Button>
+                        ) : null}
+                        {isAdmin && teacher.hasLogin ? (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Remover login"
+                            onClick={() => revokeMutation.mutate(teacher.id)}
+                          >
+                            <ShieldOff className="size-4" aria-hidden />
+                          </Button>
+                        ) : null}
+                        {isAdmin ? (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Excluir"
+                            onClick={() => setDeleting(teacher)}
+                          >
+                            <Trash2 className="size-4" aria-hidden />
+                          </Button>
+                        ) : null}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             ) : (
               <TableRow>
-                <TableCell colSpan={4} className="py-6 text-center text-muted-foreground">
+                <TableCell colSpan={5} className="py-6 text-center text-muted-foreground">
                   Nenhum professor cadastrado ainda.
                 </TableCell>
               </TableRow>

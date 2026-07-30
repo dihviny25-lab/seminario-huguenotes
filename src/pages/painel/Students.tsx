@@ -45,6 +45,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { PainelShell } from "@/components/painel/PainelShell";
+import { getCurrentTeacherFn } from "@/functions/auth";
 import {
   bulkCreateStudentsFn,
   createStudentFn,
@@ -68,6 +69,11 @@ export function Students() {
     queryKey: STUDENTS_KEY,
     queryFn: () => listStudentsFn(),
   });
+  const { data: me } = useQuery({
+    queryKey: ["current-teacher"],
+    queryFn: () => getCurrentTeacherFn(),
+  });
+  const isAdmin = me?.role === "admin";
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<Student | null>(null);
@@ -119,31 +125,37 @@ export function Students() {
       title="Alunos"
       description="Cadastre os alunos do seminário para lançar notas e faltas por disciplina."
     >
-      <div className="mb-4 flex justify-end gap-2">
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".xlsx,.xls,.csv"
-          className="hidden"
-          onChange={(event) => {
-            const file = event.target.files?.[0];
-            event.target.value = "";
-            if (file) importMutation.mutate(file);
-          }}
-        />
-        <Button
-          variant="outline"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={importMutation.isPending}
-        >
-          <Upload className="size-4" aria-hidden />
-          {importMutation.isPending ? "Importando…" : "Importar planilha"}
-        </Button>
-        <Button onClick={() => setCreateOpen(true)}>
-          <Plus className="size-4" aria-hidden />
-          Novo aluno
-        </Button>
-      </div>
+      {isAdmin ? (
+        <div className="mb-4 flex justify-end gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".xlsx,.xls,.csv"
+            className="hidden"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              event.target.value = "";
+              if (file) importMutation.mutate(file);
+            }}
+          />
+          <Button
+            variant="outline"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={importMutation.isPending}
+          >
+            <Upload className="size-4" aria-hidden />
+            {importMutation.isPending ? "Importando…" : "Importar planilha"}
+          </Button>
+          <Button onClick={() => setCreateOpen(true)}>
+            <Plus className="size-4" aria-hidden />
+            Novo aluno
+          </Button>
+        </div>
+      ) : (
+        <p className="mb-4 text-sm text-muted-foreground">
+          Você só visualiza a lista de alunos — cadastro e edição são feitos pelos admins.
+        </p>
+      )}
 
       <div className="overflow-hidden rounded-[1.25rem] border border-border/70 bg-card/70 shadow-soft">
         <Table>
@@ -173,32 +185,34 @@ export function Students() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <div className="flex justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        title="Editar"
-                        onClick={() => setEditing(student)}
-                      >
-                        <Pencil className="size-4" aria-hidden />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        title={student.active ? "Inativar" : "Reativar"}
-                        onClick={() => toggleActiveMutation.mutate(student)}
-                      >
-                        <Undo2 className="size-4" aria-hidden />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        title="Excluir"
-                        onClick={() => setDeleting(student)}
-                      >
-                        <Trash2 className="size-4" aria-hidden />
-                      </Button>
-                    </div>
+                    {isAdmin ? (
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title="Editar"
+                          onClick={() => setEditing(student)}
+                        >
+                          <Pencil className="size-4" aria-hidden />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title={student.active ? "Inativar" : "Reativar"}
+                          onClick={() => toggleActiveMutation.mutate(student)}
+                        >
+                          <Undo2 className="size-4" aria-hidden />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title="Excluir"
+                          onClick={() => setDeleting(student)}
+                        >
+                          <Trash2 className="size-4" aria-hidden />
+                        </Button>
+                      </div>
+                    ) : null}
                   </TableCell>
                 </TableRow>
               ))

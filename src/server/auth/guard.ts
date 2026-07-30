@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 
 import { db } from "@/server/db/client";
-import { disciplines } from "@/server/db/schema";
+import { disciplines, teachers } from "@/server/db/schema";
 
 import { readAppSession } from "./session";
 
@@ -11,6 +11,42 @@ export async function requireTeacherId(): Promise<string> {
   const teacherId = session.data.teacherId;
   if (!teacherId) {
     throw new Error("UNAUTHORIZED");
+  }
+  return teacherId;
+}
+
+/**
+ * Garante que o professor logado é admin (acesso completo). Não-admins só
+ * visualizam professores/alunos e editam o próprio perfil.
+ */
+export async function requireAdminId(): Promise<string> {
+  const teacherId = await requireTeacherId();
+  const [teacher] = await db
+    .select({ role: teachers.role })
+    .from(teachers)
+    .where(eq(teachers.id, teacherId))
+    .limit(1);
+  if (teacher?.role !== "admin") {
+    throw new Error("Só administradores podem fazer isso.");
+  }
+  return teacherId;
+}
+
+/**
+ * Permite se o professor logado é admin OU se é o próprio alvo da ação —
+ * usado para "editar meu próprio perfil" sem precisar ser admin.
+ */
+export async function requireAdminOrSelf(targetTeacherId: string): Promise<string> {
+  const teacherId = await requireTeacherId();
+  if (teacherId === targetTeacherId) return teacherId;
+
+  const [teacher] = await db
+    .select({ role: teachers.role })
+    .from(teachers)
+    .where(eq(teachers.id, teacherId))
+    .limit(1);
+  if (teacher?.role !== "admin") {
+    throw new Error("Você só pode editar o seu próprio perfil.");
   }
   return teacherId;
 }

@@ -14,10 +14,12 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as PainelRouteRouteImport } from './routes/painel/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PainelIndexRouteImport } from './routes/painel/index'
+import { Route as PainelTrocarSenhaRouteImport } from './routes/painel/trocar-senha'
 import { Route as PainelRelatorioRouteImport } from './routes/painel/relatorio'
 import { Route as PainelProfessoresRouteImport } from './routes/painel/professores'
 import { Route as PainelAlunosRouteImport } from './routes/painel/alunos'
 import { Route as PainelDisciplinasDisciplineIdRouteImport } from './routes/painel/disciplinas/$disciplineId'
+import { Route as PainelRelatorioStudentIdPdfRouteImport } from './routes/painel/relatorio/$studentId/pdf'
 
 const ProfessoresRoute = ProfessoresRouteImport.update({
   id: '/professores',
@@ -44,6 +46,11 @@ const PainelIndexRoute = PainelIndexRouteImport.update({
   path: '/',
   getParentRoute: () => PainelRouteRoute,
 } as any)
+const PainelTrocarSenhaRoute = PainelTrocarSenhaRouteImport.update({
+  id: '/trocar-senha',
+  path: '/trocar-senha',
+  getParentRoute: () => PainelRouteRoute,
+} as any)
 const PainelRelatorioRoute = PainelRelatorioRouteImport.update({
   id: '/relatorio',
   path: '/relatorio',
@@ -65,6 +72,12 @@ const PainelDisciplinasDisciplineIdRoute =
     path: '/disciplinas/$disciplineId',
     getParentRoute: () => PainelRouteRoute,
   } as any)
+const PainelRelatorioStudentIdPdfRoute =
+  PainelRelatorioStudentIdPdfRouteImport.update({
+    id: '/$studentId/pdf',
+    path: '/$studentId/pdf',
+    getParentRoute: () => PainelRelatorioRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -73,9 +86,11 @@ export interface FileRoutesByFullPath {
   '/professores': typeof ProfessoresRoute
   '/painel/alunos': typeof PainelAlunosRoute
   '/painel/professores': typeof PainelProfessoresRoute
-  '/painel/relatorio': typeof PainelRelatorioRoute
+  '/painel/relatorio': typeof PainelRelatorioRouteWithChildren
+  '/painel/trocar-senha': typeof PainelTrocarSenhaRoute
   '/painel/': typeof PainelIndexRoute
   '/painel/disciplinas/$disciplineId': typeof PainelDisciplinasDisciplineIdRoute
+  '/painel/relatorio/$studentId/pdf': typeof PainelRelatorioStudentIdPdfRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -83,9 +98,11 @@ export interface FileRoutesByTo {
   '/professores': typeof ProfessoresRoute
   '/painel/alunos': typeof PainelAlunosRoute
   '/painel/professores': typeof PainelProfessoresRoute
-  '/painel/relatorio': typeof PainelRelatorioRoute
+  '/painel/relatorio': typeof PainelRelatorioRouteWithChildren
+  '/painel/trocar-senha': typeof PainelTrocarSenhaRoute
   '/painel': typeof PainelIndexRoute
   '/painel/disciplinas/$disciplineId': typeof PainelDisciplinasDisciplineIdRoute
+  '/painel/relatorio/$studentId/pdf': typeof PainelRelatorioStudentIdPdfRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -95,9 +112,11 @@ export interface FileRoutesById {
   '/professores': typeof ProfessoresRoute
   '/painel/alunos': typeof PainelAlunosRoute
   '/painel/professores': typeof PainelProfessoresRoute
-  '/painel/relatorio': typeof PainelRelatorioRoute
+  '/painel/relatorio': typeof PainelRelatorioRouteWithChildren
+  '/painel/trocar-senha': typeof PainelTrocarSenhaRoute
   '/painel/': typeof PainelIndexRoute
   '/painel/disciplinas/$disciplineId': typeof PainelDisciplinasDisciplineIdRoute
+  '/painel/relatorio/$studentId/pdf': typeof PainelRelatorioStudentIdPdfRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -109,8 +128,10 @@ export interface FileRouteTypes {
     | '/painel/alunos'
     | '/painel/professores'
     | '/painel/relatorio'
+    | '/painel/trocar-senha'
     | '/painel/'
     | '/painel/disciplinas/$disciplineId'
+    | '/painel/relatorio/$studentId/pdf'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -119,8 +140,10 @@ export interface FileRouteTypes {
     | '/painel/alunos'
     | '/painel/professores'
     | '/painel/relatorio'
+    | '/painel/trocar-senha'
     | '/painel'
     | '/painel/disciplinas/$disciplineId'
+    | '/painel/relatorio/$studentId/pdf'
   id:
     | '__root__'
     | '/'
@@ -130,8 +153,10 @@ export interface FileRouteTypes {
     | '/painel/alunos'
     | '/painel/professores'
     | '/painel/relatorio'
+    | '/painel/trocar-senha'
     | '/painel/'
     | '/painel/disciplinas/$disciplineId'
+    | '/painel/relatorio/$studentId/pdf'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -178,6 +203,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PainelIndexRouteImport
       parentRoute: typeof PainelRouteRoute
     }
+    '/painel/trocar-senha': {
+      id: '/painel/trocar-senha'
+      path: '/trocar-senha'
+      fullPath: '/painel/trocar-senha'
+      preLoaderRoute: typeof PainelTrocarSenhaRouteImport
+      parentRoute: typeof PainelRouteRoute
+    }
     '/painel/relatorio': {
       id: '/painel/relatorio'
       path: '/relatorio'
@@ -206,13 +238,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PainelDisciplinasDisciplineIdRouteImport
       parentRoute: typeof PainelRouteRoute
     }
+    '/painel/relatorio/$studentId/pdf': {
+      id: '/painel/relatorio/$studentId/pdf'
+      path: '/$studentId/pdf'
+      fullPath: '/painel/relatorio/$studentId/pdf'
+      preLoaderRoute: typeof PainelRelatorioStudentIdPdfRouteImport
+      parentRoute: typeof PainelRelatorioRoute
+    }
   }
 }
+
+interface PainelRelatorioRouteChildren {
+  PainelRelatorioStudentIdPdfRoute: typeof PainelRelatorioStudentIdPdfRoute
+}
+
+const PainelRelatorioRouteChildren: PainelRelatorioRouteChildren = {
+  PainelRelatorioStudentIdPdfRoute: PainelRelatorioStudentIdPdfRoute,
+}
+
+const PainelRelatorioRouteWithChildren = PainelRelatorioRoute._addFileChildren(
+  PainelRelatorioRouteChildren,
+)
 
 interface PainelRouteRouteChildren {
   PainelAlunosRoute: typeof PainelAlunosRoute
   PainelProfessoresRoute: typeof PainelProfessoresRoute
-  PainelRelatorioRoute: typeof PainelRelatorioRoute
+  PainelRelatorioRoute: typeof PainelRelatorioRouteWithChildren
+  PainelTrocarSenhaRoute: typeof PainelTrocarSenhaRoute
   PainelIndexRoute: typeof PainelIndexRoute
   PainelDisciplinasDisciplineIdRoute: typeof PainelDisciplinasDisciplineIdRoute
 }
@@ -220,7 +272,8 @@ interface PainelRouteRouteChildren {
 const PainelRouteRouteChildren: PainelRouteRouteChildren = {
   PainelAlunosRoute: PainelAlunosRoute,
   PainelProfessoresRoute: PainelProfessoresRoute,
-  PainelRelatorioRoute: PainelRelatorioRoute,
+  PainelRelatorioRoute: PainelRelatorioRouteWithChildren,
+  PainelTrocarSenhaRoute: PainelTrocarSenhaRoute,
   PainelIndexRoute: PainelIndexRoute,
   PainelDisciplinasDisciplineIdRoute: PainelDisciplinasDisciplineIdRoute,
 }

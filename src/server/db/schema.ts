@@ -19,6 +19,7 @@ import {
  */
 
 export const scheduleStatus = pgEnum("schedule_status", ["confirmed", "pending"]);
+export const teacherRole = pgEnum("teacher_role", ["admin", "teacher"]);
 
 export const teachers = pgTable("teachers", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -26,6 +27,12 @@ export const teachers = pgTable("teachers", {
   email: text("email").notNull().unique(),
   // Nulo = professor sem login (ex.: "Professores convidados", "Todos os professores").
   passwordHash: text("password_hash"),
+  // true sempre que a senha foi (re)definida por alguém administrando a conta
+  // (criação ou "Redefinir senha") — força a troca no próximo login.
+  mustChangePassword: boolean("must_change_password").notNull().default(true),
+  // admin: acesso completo (gerenciar professores e alunos).
+  // teacher: só visualiza professores/alunos, edita apenas o próprio perfil.
+  role: teacherRole("role").notNull().default("teacher"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

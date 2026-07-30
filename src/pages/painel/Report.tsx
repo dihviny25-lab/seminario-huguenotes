@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Printer } from "lucide-react";
+import { Download, Printer } from "lucide-react";
 
 import { PainelShell } from "@/components/painel/PainelShell";
 import { Input } from "@/components/ui/input";
@@ -85,10 +85,18 @@ export function Report() {
                     {report.student.name}
                   </h2>
                 </div>
-                <Button className="print:hidden" onClick={() => window.print()}>
-                  <Printer className="size-4" aria-hidden />
-                  Imprimir
-                </Button>
+                <div className="flex gap-2 print:hidden">
+                  <Button variant="outline" asChild>
+                    <a href={`/painel/relatorio/${report.student.id}/pdf`}>
+                      <Download className="size-4" aria-hidden />
+                      Baixar PDF
+                    </a>
+                  </Button>
+                  <Button onClick={() => window.print()}>
+                    <Printer className="size-4" aria-hidden />
+                    Imprimir
+                  </Button>
+                </div>
               </div>
 
               <Table>

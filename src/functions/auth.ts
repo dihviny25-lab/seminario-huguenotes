@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { requireTeacherId } from "@/server/auth/guard";
-import { verifyPassword } from "@/server/auth/password";
+import { hashPassword, verifyPassword } from "@/server/auth/password";
 import { readAppSession, useAppSession } from "@/server/auth/session";
 import { db } from "@/server/db/client";
 import { teachers } from "@/server/db/schema";
@@ -47,7 +47,13 @@ export const getCurrentTeacherFn = createServerFn({ method: "GET" }).handler(asy
   if (!teacherId) return null;
 
   const [teacher] = await db
-    .select({ id: teachers.id, name: teachers.name, email: teachers.email })
+    .select({
+      id: teachers.id,
+      name: teachers.name,
+      email: teachers.email,
+      role: teachers.role,
+      mustChangePassword: teachers.mustChangePassword,
+    })
     .from(teachers)
     .where(eq(teachers.id, teacherId))
     .limit(1);
@@ -56,5 +62,41 @@ export const getCurrentTeacherFn = createServerFn({ method: "GET" }).handler(asy
 
 /** Usado pelo guard de rota do /painel: lança se não houver sessão válida. */
 export const requireTeacherFn = createServerFn({ method: "GET" }).handler(async () => {
-  await requireTeacherId();
+  const teacherId = await requireTeacherId();
+  const [teacher] = await db
+    .select({ mustChangePassword: teachers.mustChangePassword })
+    .from(teachers)
+    .where(eq(teachers.id, teacherId))
+    .limit(1);
+  return { mustChangePassword: teacher?.mustChangePassword ?? false };
 });
+
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Informe a senha atual."),
+  newPassword: z.string().min(8, "A nova senha precisa ter ao menos 8 caracteres."),
+});
+
+/** Troca de senha feita pelo próprio professor (exige a senha atual). */
+export const changeMyPasswordFn = createServerFn({ method: "POST" })
+  .validator(changePasswordSchema)
+  .handler(async ({ data }) => {
+    const teacherId = await requireTeacherId();
+    const [teacher] = await db
+      .select({ passwordHash: teachers.passwordHash })
+      .from(teachers)
+      .where(eq(teachers.id, teacherId))
+      .limit(1);
+
+    if (
+      !teacher?.passwordHash ||
+      !(await verifyPassword(data.currentPassword, teacher.passwordHash))
+    ) {
+      throw new Error("Senha atual incorreta.");
+    }
+
+    const passwordHash = await hashPassword(data.newPassword);
+    await db
+      .update(teachers)
+      .set({ passwordHash, mustChangePassword: false })
+      .where(eq(teachers.id, teacherId));
+  });

@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { asc, eq } from "drizzle-orm";
 import { z } from "zod";
 
-import { requireTeacherId } from "@/server/auth/guard";
+import { requireAdminId, requireTeacherId } from "@/server/auth/guard";
 import { db } from "@/server/db/client";
 import { students } from "@/server/db/schema";
 
@@ -42,7 +42,7 @@ const createSchema = z.object({
 export const createStudentFn = createServerFn({ method: "POST" })
   .validator(createSchema)
   .handler(async ({ data }) => {
-    await requireTeacherId();
+    await requireAdminId();
     const [row] = await db
       .insert(students)
       .values({ name: data.name, email: data.email || null })
@@ -65,7 +65,7 @@ const updateSchema = z.object({
 export const updateStudentFn = createServerFn({ method: "POST" })
   .validator(updateSchema)
   .handler(async ({ data }) => {
-    await requireTeacherId();
+    await requireAdminId();
     await db
       .update(students)
       .set({ name: data.name, email: data.email || null })
@@ -77,7 +77,7 @@ const setActiveSchema = z.object({ id: z.string().uuid(), active: z.boolean() })
 export const setStudentActiveFn = createServerFn({ method: "POST" })
   .validator(setActiveSchema)
   .handler(async ({ data }) => {
-    await requireTeacherId();
+    await requireAdminId();
     await db.update(students).set({ active: data.active }).where(eq(students.id, data.id));
   });
 
@@ -86,7 +86,7 @@ const deleteSchema = z.object({ id: z.string().uuid() });
 export const deleteStudentFn = createServerFn({ method: "POST" })
   .validator(deleteSchema)
   .handler(async ({ data }) => {
-    await requireTeacherId();
+    await requireAdminId();
     await db.delete(students).where(eq(students.id, data.id));
   });
 
@@ -105,7 +105,7 @@ export type BulkCreateResult = { created: number; skipped: Array<string> };
 export const bulkCreateStudentsFn = createServerFn({ method: "POST" })
   .validator(bulkCreateSchema)
   .handler(async ({ data }): Promise<BulkCreateResult> => {
-    await requireTeacherId();
+    await requireAdminId();
 
     const existing = await db.select({ name: students.name }).from(students);
     const existingNames = new Set(existing.map((s) => s.name.trim().toLowerCase()));
