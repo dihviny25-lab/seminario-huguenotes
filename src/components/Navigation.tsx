@@ -1,10 +1,11 @@
 import { Link } from "@tanstack/react-router";
-import { LayoutGrid, Users } from "lucide-react";
+import { LayoutGrid, LogIn, Users } from "lucide-react";
 
 /** Itens do menu principal. Adicionar novas seções aqui. */
 const navigationItems = [
   { to: "/", label: "Visão Geral", icon: LayoutGrid },
   { to: "/professores", label: "Professores", icon: Users },
+  { to: "/painel", label: "Painel", icon: LogIn },
 ] as const;
 
 /** Cabeçalho fixo com identidade do seminário e navegação principal. */
