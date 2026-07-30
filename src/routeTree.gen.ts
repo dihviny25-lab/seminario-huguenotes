@@ -14,7 +14,10 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as PainelRouteRouteImport } from './routes/painel/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PainelIndexRouteImport } from './routes/painel/index'
+import { Route as PainelRelatorioRouteImport } from './routes/painel/relatorio'
 import { Route as PainelProfessoresRouteImport } from './routes/painel/professores'
+import { Route as PainelAlunosRouteImport } from './routes/painel/alunos'
+import { Route as PainelDisciplinasDisciplineIdRouteImport } from './routes/painel/disciplinas/$disciplineId'
 
 const ProfessoresRoute = ProfessoresRouteImport.update({
   id: '/professores',
@@ -41,26 +44,48 @@ const PainelIndexRoute = PainelIndexRouteImport.update({
   path: '/',
   getParentRoute: () => PainelRouteRoute,
 } as any)
+const PainelRelatorioRoute = PainelRelatorioRouteImport.update({
+  id: '/relatorio',
+  path: '/relatorio',
+  getParentRoute: () => PainelRouteRoute,
+} as any)
 const PainelProfessoresRoute = PainelProfessoresRouteImport.update({
   id: '/professores',
   path: '/professores',
   getParentRoute: () => PainelRouteRoute,
 } as any)
+const PainelAlunosRoute = PainelAlunosRouteImport.update({
+  id: '/alunos',
+  path: '/alunos',
+  getParentRoute: () => PainelRouteRoute,
+} as any)
+const PainelDisciplinasDisciplineIdRoute =
+  PainelDisciplinasDisciplineIdRouteImport.update({
+    id: '/disciplinas/$disciplineId',
+    path: '/disciplinas/$disciplineId',
+    getParentRoute: () => PainelRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/painel': typeof PainelRouteRouteWithChildren
   '/login': typeof LoginRoute
   '/professores': typeof ProfessoresRoute
+  '/painel/alunos': typeof PainelAlunosRoute
   '/painel/professores': typeof PainelProfessoresRoute
+  '/painel/relatorio': typeof PainelRelatorioRoute
   '/painel/': typeof PainelIndexRoute
+  '/painel/disciplinas/$disciplineId': typeof PainelDisciplinasDisciplineIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/professores': typeof ProfessoresRoute
+  '/painel/alunos': typeof PainelAlunosRoute
   '/painel/professores': typeof PainelProfessoresRoute
+  '/painel/relatorio': typeof PainelRelatorioRoute
   '/painel': typeof PainelIndexRoute
+  '/painel/disciplinas/$disciplineId': typeof PainelDisciplinasDisciplineIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -68,8 +93,11 @@ export interface FileRoutesById {
   '/painel': typeof PainelRouteRouteWithChildren
   '/login': typeof LoginRoute
   '/professores': typeof ProfessoresRoute
+  '/painel/alunos': typeof PainelAlunosRoute
   '/painel/professores': typeof PainelProfessoresRoute
+  '/painel/relatorio': typeof PainelRelatorioRoute
   '/painel/': typeof PainelIndexRoute
+  '/painel/disciplinas/$disciplineId': typeof PainelDisciplinasDisciplineIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -78,18 +106,32 @@ export interface FileRouteTypes {
     | '/painel'
     | '/login'
     | '/professores'
+    | '/painel/alunos'
     | '/painel/professores'
+    | '/painel/relatorio'
     | '/painel/'
+    | '/painel/disciplinas/$disciplineId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/professores' | '/painel/professores' | '/painel'
+  to:
+    | '/'
+    | '/login'
+    | '/professores'
+    | '/painel/alunos'
+    | '/painel/professores'
+    | '/painel/relatorio'
+    | '/painel'
+    | '/painel/disciplinas/$disciplineId'
   id:
     | '__root__'
     | '/'
     | '/painel'
     | '/login'
     | '/professores'
+    | '/painel/alunos'
     | '/painel/professores'
+    | '/painel/relatorio'
     | '/painel/'
+    | '/painel/disciplinas/$disciplineId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -136,6 +178,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PainelIndexRouteImport
       parentRoute: typeof PainelRouteRoute
     }
+    '/painel/relatorio': {
+      id: '/painel/relatorio'
+      path: '/relatorio'
+      fullPath: '/painel/relatorio'
+      preLoaderRoute: typeof PainelRelatorioRouteImport
+      parentRoute: typeof PainelRouteRoute
+    }
     '/painel/professores': {
       id: '/painel/professores'
       path: '/professores'
@@ -143,17 +192,37 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PainelProfessoresRouteImport
       parentRoute: typeof PainelRouteRoute
     }
+    '/painel/alunos': {
+      id: '/painel/alunos'
+      path: '/alunos'
+      fullPath: '/painel/alunos'
+      preLoaderRoute: typeof PainelAlunosRouteImport
+      parentRoute: typeof PainelRouteRoute
+    }
+    '/painel/disciplinas/$disciplineId': {
+      id: '/painel/disciplinas/$disciplineId'
+      path: '/disciplinas/$disciplineId'
+      fullPath: '/painel/disciplinas/$disciplineId'
+      preLoaderRoute: typeof PainelDisciplinasDisciplineIdRouteImport
+      parentRoute: typeof PainelRouteRoute
+    }
   }
 }
 
 interface PainelRouteRouteChildren {
+  PainelAlunosRoute: typeof PainelAlunosRoute
   PainelProfessoresRoute: typeof PainelProfessoresRoute
+  PainelRelatorioRoute: typeof PainelRelatorioRoute
   PainelIndexRoute: typeof PainelIndexRoute
+  PainelDisciplinasDisciplineIdRoute: typeof PainelDisciplinasDisciplineIdRoute
 }
 
 const PainelRouteRouteChildren: PainelRouteRouteChildren = {
+  PainelAlunosRoute: PainelAlunosRoute,
   PainelProfessoresRoute: PainelProfessoresRoute,
+  PainelRelatorioRoute: PainelRelatorioRoute,
   PainelIndexRoute: PainelIndexRoute,
+  PainelDisciplinasDisciplineIdRoute: PainelDisciplinasDisciplineIdRoute,
 }
 
 const PainelRouteRouteWithChildren = PainelRouteRoute._addFileChildren(

@@ -24,6 +24,11 @@ dist-ssr
 # Local Claude Code state
 .claude/
 
+# Planilhas soltas na raiz (dados de alunos etc.) — nunca versionar dados pessoais.
+/*.xlsx
+/*.xls
+/*.csv
+
 # Wrangler / Cloudflare
 .wrangler/
 .dev.vars

@@ -8,6 +8,8 @@ import { logoutFn } from "@/functions/auth";
 const painelNavItems = [
   { to: "/painel", label: "Painel" },
   { to: "/painel/professores", label: "Contas de professores" },
+  { to: "/painel/alunos", label: "Alunos" },
+  { to: "/painel/relatorio", label: "Relatório" },
 ] as const;
 
 interface PainelShellProps {
@@ -29,7 +31,7 @@ export function PainelShell({ title, description, children }: PainelShellProps) 
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-50 border-b border-border/80 bg-background/85 backdrop-blur-md">
+      <header className="sticky top-0 z-50 border-b border-border/80 bg-background/85 backdrop-blur-md print:hidden">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <div className="flex items-center gap-4">
             <Link to="/painel" className="flex items-center gap-2">
@@ -63,12 +65,12 @@ export function PainelShell({ title, description, children }: PainelShellProps) 
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 pb-24 pt-10 sm:px-6">
-        <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground">
+      <main className="mx-auto max-w-6xl px-4 pb-24 pt-10 sm:px-6 print:p-0">
+        <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground print:hidden">
           {title}
         </h1>
         {description ? (
-          <p className="mt-2 max-w-2xl text-pretty leading-relaxed text-muted-foreground">
+          <p className="mt-2 max-w-2xl text-pretty leading-relaxed text-muted-foreground print:hidden">
             {description}
           </p>
         ) : null}
