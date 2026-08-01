@@ -1,9 +1,8 @@
-import { disciplines } from "@/data/schedule";
 import type { Discipline, ModuleGroup, SemesterGroup, TeacherSummary } from "@/types/schedule";
 
 /**
- * Funções puras de derivação do cronograma.
- * Nenhum dado é declarado aqui — tudo vem de `src/data/schedule.ts`.
+ * Funções puras de derivação do cronograma — recebem sempre o array de
+ * disciplinas (hoje vindo do banco via `getPublicDisciplinesFn`).
  */
 
 /** Rótulo textual do semestre (ex.: "1º Semestre"). */
@@ -12,7 +11,7 @@ export function semesterLabel(semester: number): string {
 }
 
 /** Agrupa as disciplinas em semestres → módulos, preservando a ordem original. */
-export function groupBySemester(source: Discipline[] = disciplines): SemesterGroup[] {
+export function groupBySemester(source: Discipline[]): SemesterGroup[] {
   const semesters = new Map<number, SemesterGroup>();
 
   for (const item of source) {
@@ -56,7 +55,7 @@ export function groupBySemester(source: Discipline[] = disciplines): SemesterGro
 }
 
 /** Lista de professores com sua carga consolidada, ordenada por nº de aulas. */
-export function getTeacherSummaries(source: Discipline[] = disciplines): TeacherSummary[] {
+export function getTeacherSummaries(source: Discipline[]): TeacherSummary[] {
   const teachers = new Map<string, TeacherSummary>();
 
   for (const item of source) {
@@ -92,18 +91,20 @@ export function getTeacherSummaries(source: Discipline[] = disciplines): Teacher
 
 /**
  * Ordenação cronológica: datas confirmadas primeiro (pela data real),
- * depois por semestre e pela ordem de publicação do cronograma.
+ * depois por semestre. Sem data e mesmo semestre: mantém a ordem em que
+ * chegou (sort é estável, e o array já chega ordenado pelo `sortOrder`
+ * do banco), por isso não há critério de desempate explícito aqui.
  */
 export function compareChronologically(a: Discipline, b: Discipline): number {
   if (a.startDate && b.startDate) return a.startDate.localeCompare(b.startDate);
   if (a.startDate) return -1;
   if (b.startDate) return 1;
   if (a.semester !== b.semester) return a.semester - b.semester;
-  return disciplines.indexOf(a) - disciplines.indexOf(b);
+  return 0;
 }
 
 /** Estatísticas gerais exibidas no topo do dashboard. */
-export function getScheduleStatistics(source: Discipline[] = disciplines) {
+export function getScheduleStatistics(source: Discipline[]) {
   const modules = new Set(source.map((d) => `${d.semester}:${d.module}`));
   const teachers = new Set(source.map((d) => d.teacher).filter((t): t is string => Boolean(t)));
   const semesters = new Set(source.map((d) => d.semester));

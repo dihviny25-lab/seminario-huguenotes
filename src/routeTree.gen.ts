@@ -9,7 +9,6 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as ProfessoresRouteImport } from './routes/professores'
 import { Route as LoginAlunoRouteImport } from './routes/login-aluno'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as PortalRouteRouteImport } from './routes/portal/route'
@@ -23,14 +22,10 @@ import { Route as PainelTrocarSenhaRouteImport } from './routes/painel/trocar-se
 import { Route as PainelRelatorioRouteImport } from './routes/painel/relatorio'
 import { Route as PainelProfessoresRouteImport } from './routes/painel/professores'
 import { Route as PainelAlunosRouteImport } from './routes/painel/alunos'
+import { Route as PainelAgendaRouteImport } from './routes/painel/agenda'
 import { Route as PainelDisciplinasDisciplineIdRouteImport } from './routes/painel/disciplinas/$disciplineId'
 import { Route as PainelRelatorioStudentIdPdfRouteImport } from './routes/painel/relatorio/$studentId/pdf'
 
-const ProfessoresRoute = ProfessoresRouteImport.update({
-  id: '/professores',
-  path: '/professores',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const LoginAlunoRoute = LoginAlunoRouteImport.update({
   id: '/login-aluno',
   path: '/login-aluno',
@@ -96,6 +91,11 @@ const PainelAlunosRoute = PainelAlunosRouteImport.update({
   path: '/alunos',
   getParentRoute: () => PainelRouteRoute,
 } as any)
+const PainelAgendaRoute = PainelAgendaRouteImport.update({
+  id: '/agenda',
+  path: '/agenda',
+  getParentRoute: () => PainelRouteRoute,
+} as any)
 const PainelDisciplinasDisciplineIdRoute =
   PainelDisciplinasDisciplineIdRouteImport.update({
     id: '/disciplinas/$disciplineId',
@@ -115,7 +115,7 @@ export interface FileRoutesByFullPath {
   '/portal': typeof PortalRouteRouteWithChildren
   '/login': typeof LoginRoute
   '/login-aluno': typeof LoginAlunoRoute
-  '/professores': typeof ProfessoresRoute
+  '/painel/agenda': typeof PainelAgendaRoute
   '/painel/alunos': typeof PainelAlunosRoute
   '/painel/professores': typeof PainelProfessoresRoute
   '/painel/relatorio': typeof PainelRelatorioRouteWithChildren
@@ -131,7 +131,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/login-aluno': typeof LoginAlunoRoute
-  '/professores': typeof ProfessoresRoute
+  '/painel/agenda': typeof PainelAgendaRoute
   '/painel/alunos': typeof PainelAlunosRoute
   '/painel/professores': typeof PainelProfessoresRoute
   '/painel/relatorio': typeof PainelRelatorioRouteWithChildren
@@ -150,7 +150,7 @@ export interface FileRoutesById {
   '/portal': typeof PortalRouteRouteWithChildren
   '/login': typeof LoginRoute
   '/login-aluno': typeof LoginAlunoRoute
-  '/professores': typeof ProfessoresRoute
+  '/painel/agenda': typeof PainelAgendaRoute
   '/painel/alunos': typeof PainelAlunosRoute
   '/painel/professores': typeof PainelProfessoresRoute
   '/painel/relatorio': typeof PainelRelatorioRouteWithChildren
@@ -170,7 +170,7 @@ export interface FileRouteTypes {
     | '/portal'
     | '/login'
     | '/login-aluno'
-    | '/professores'
+    | '/painel/agenda'
     | '/painel/alunos'
     | '/painel/professores'
     | '/painel/relatorio'
@@ -186,7 +186,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/login-aluno'
-    | '/professores'
+    | '/painel/agenda'
     | '/painel/alunos'
     | '/painel/professores'
     | '/painel/relatorio'
@@ -204,7 +204,7 @@ export interface FileRouteTypes {
     | '/portal'
     | '/login'
     | '/login-aluno'
-    | '/professores'
+    | '/painel/agenda'
     | '/painel/alunos'
     | '/painel/professores'
     | '/painel/relatorio'
@@ -223,18 +223,10 @@ export interface RootRouteChildren {
   PortalRouteRoute: typeof PortalRouteRouteWithChildren
   LoginRoute: typeof LoginRoute
   LoginAlunoRoute: typeof LoginAlunoRoute
-  ProfessoresRoute: typeof ProfessoresRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/professores': {
-      id: '/professores'
-      path: '/professores'
-      fullPath: '/professores'
-      preLoaderRoute: typeof ProfessoresRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/login-aluno': {
       id: '/login-aluno'
       path: '/login-aluno'
@@ -326,6 +318,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PainelAlunosRouteImport
       parentRoute: typeof PainelRouteRoute
     }
+    '/painel/agenda': {
+      id: '/painel/agenda'
+      path: '/agenda'
+      fullPath: '/painel/agenda'
+      preLoaderRoute: typeof PainelAgendaRouteImport
+      parentRoute: typeof PainelRouteRoute
+    }
     '/painel/disciplinas/$disciplineId': {
       id: '/painel/disciplinas/$disciplineId'
       path: '/disciplinas/$disciplineId'
@@ -356,6 +355,7 @@ const PainelRelatorioRouteWithChildren = PainelRelatorioRoute._addFileChildren(
 )
 
 interface PainelRouteRouteChildren {
+  PainelAgendaRoute: typeof PainelAgendaRoute
   PainelAlunosRoute: typeof PainelAlunosRoute
   PainelProfessoresRoute: typeof PainelProfessoresRoute
   PainelRelatorioRoute: typeof PainelRelatorioRouteWithChildren
@@ -365,6 +365,7 @@ interface PainelRouteRouteChildren {
 }
 
 const PainelRouteRouteChildren: PainelRouteRouteChildren = {
+  PainelAgendaRoute: PainelAgendaRoute,
   PainelAlunosRoute: PainelAlunosRoute,
   PainelProfessoresRoute: PainelProfessoresRoute,
   PainelRelatorioRoute: PainelRelatorioRouteWithChildren,
@@ -399,7 +400,6 @@ const rootRouteChildren: RootRouteChildren = {
   PortalRouteRoute: PortalRouteRouteWithChildren,
   LoginRoute: LoginRoute,
   LoginAlunoRoute: LoginAlunoRoute,
-  ProfessoresRoute: ProfessoresRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

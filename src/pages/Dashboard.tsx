@@ -4,13 +4,17 @@ import { BookOpen, CalendarRange, Layers, Users } from "lucide-react";
 import { PageShell } from "@/components/PageShell";
 import { SemesterCard } from "@/components/SemesterCard";
 import { StatisticCard } from "@/components/StatisticCard";
-import { scheduleNote } from "@/data/schedule";
 import { getScheduleStatistics, groupBySemester } from "@/lib/schedule-utils";
+import type { Discipline } from "@/types/schedule";
+
+/** Nota oficial da coordenação sobre a publicação das datas. */
+const scheduleNote =
+  "Somente o 1º Semestre (2026) possui datas de calendário confirmadas pela coordenação. Os demais permanecem como “A confirmar” até serem publicados.";
 
 /** Página inicial: resumo geral e todos os semestres em cartões. */
-export function Dashboard() {
-  const semesters = useMemo(() => groupBySemester(), []);
-  const statistics = useMemo(() => getScheduleStatistics(), []);
+export function Dashboard({ disciplines }: { disciplines: Discipline[] }) {
+  const semesters = useMemo(() => groupBySemester(disciplines), [disciplines]);
+  const statistics = useMemo(() => getScheduleStatistics(disciplines), [disciplines]);
 
   return (
     <PageShell

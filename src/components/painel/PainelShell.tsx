@@ -7,6 +7,7 @@ import { logoutFn } from "@/functions/auth";
 
 const painelNavItems = [
   { to: "/painel", label: "Painel" },
+  { to: "/painel/agenda", label: "Agenda" },
   { to: "/painel/professores", label: "Contas de professores" },
   { to: "/painel/alunos", label: "Alunos" },
   { to: "/painel/relatorio", label: "Relatório" },

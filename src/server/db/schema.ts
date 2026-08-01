@@ -38,6 +38,8 @@ export const teachers = pgTable("teachers", {
 
 export const disciplines = pgTable("disciplines", {
   id: uuid("id").primaryKey().defaultRandom(),
+  // Preserva a ordem de exibição original (currículo → semestre → módulo).
+  sortOrder: integer("sort_order").notNull().default(0),
   semester: integer("semester").notNull(),
   term: text("term").notNull(),
   module: text("module").notNull(),

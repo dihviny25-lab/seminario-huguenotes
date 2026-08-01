@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import { disciplines } from "@/data/schedule";
 import type { Discipline } from "@/types/schedule";
 import {
   compareChronologically,
@@ -295,16 +294,28 @@ describe("compareChronologically", () => {
     expect(compareChronologically(undated, dated)).toBeGreaterThan(0);
   });
 
-  it("falls back to the published order for two undated disciplines in the same semester", () => {
-    // compareChronologically breaks same-semester, undated ties using
-    // `disciplines.indexOf`, i.e. the real schedule import — not the `source`
-    // array passed to the caller. So this tie-break only works for objects
-    // that are actually part of `src/data/schedule.ts`.
-    const sameSemester = disciplines.filter((d) => d.semester === 2 && !d.startDate);
-    expect(sameSemester.length).toBeGreaterThanOrEqual(2);
+  it("treats two undated disciplines in the same semester as equal (no tie-break)", () => {
+    // Sem data e mesmo semestre, a ordem de exibição já vem do `source`
+    // (ordenado por sortOrder no banco) — compareChronologically só precisa
+    // não desfazer essa ordem, então retorna 0 (sort estável preserva).
+    const a = makeDiscipline({
+      id: "a",
+      semester: 2,
+      term: "2027",
+      module: "M",
+      discipline: "A",
+      status: "pending",
+    });
+    const b = makeDiscipline({
+      id: "b",
+      semester: 2,
+      term: "2027",
+      module: "M",
+      discipline: "B",
+      status: "pending",
+    });
 
-    const [first, second] = sameSemester;
-    expect(compareChronologically(first, second)).toBeLessThan(0);
-    expect(compareChronologically(second, first)).toBeGreaterThan(0);
+    expect(compareChronologically(a, b)).toBe(0);
+    expect(compareChronologically(b, a)).toBe(0);
   });
 });

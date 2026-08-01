@@ -1,10 +1,9 @@
 import { Link } from "@tanstack/react-router";
-import { GraduationCap, LayoutGrid, LogIn, Users } from "lucide-react";
+import { GraduationCap, LayoutGrid, LogIn } from "lucide-react";
 
 /** Itens do menu principal. Adicionar novas seções aqui. */
 const navigationItems = [
   { to: "/", label: "Visão Geral", icon: LayoutGrid },
-  { to: "/professores", label: "Professores", icon: Users },
   { to: "/login-aluno", label: "Portal do Aluno", icon: GraduationCap },
   { to: "/painel", label: "Painel", icon: LogIn },
 ] as const;
