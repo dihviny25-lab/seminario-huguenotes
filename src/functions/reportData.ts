@@ -1,5 +1,7 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
 
+import { countFaltas } from "@/lib/attendance";
+import { computeWeightedAverage } from "@/lib/grades";
 import { db } from "@/server/db/client";
 import {
   assessments,
@@ -105,14 +107,13 @@ export async function getStudentReportData(studentId: string): Promise<StudentRe
         return score === undefined ? null : { score: Number(score), weight: Number(a.weight) };
       })
       .filter((s): s is { score: number; weight: number } => s !== null);
-    const totalWeight = scored.reduce((sum, s) => sum + s.weight, 0);
-    const average =
-      scored.length === 0 || totalWeight === 0
-        ? null
-        : scored.reduce((sum, s) => sum + s.score * s.weight, 0) / totalWeight;
+    const average = computeWeightedAverage(scored);
 
     const disciplineLessons = lessonRows.filter((l) => l.disciplineId === discipline.id);
-    const totalFaltas = disciplineLessons.filter((l) => absentLessonIds.has(l.id)).length;
+    const totalFaltas = countFaltas(
+      disciplineLessons.map((l) => l.id),
+      absentLessonIds,
+    );
 
     return {
       disciplineId: discipline.id,

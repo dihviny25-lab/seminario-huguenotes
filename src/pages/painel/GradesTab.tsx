@@ -37,16 +37,10 @@ import {
   getGradesBoardFn,
   setGradeFn,
 } from "@/functions/grades";
+import { computeWeightedAverage } from "@/lib/grades";
 
 function gradesKey(disciplineId: string) {
   return ["grades-board", disciplineId] as const;
-}
-
-function average(scores: Array<{ score: number; weight: number }>): number | null {
-  if (scores.length === 0) return null;
-  const totalWeight = scores.reduce((sum, s) => sum + s.weight, 0);
-  if (totalWeight === 0) return null;
-  return scores.reduce((sum, s) => sum + s.score * s.weight, 0) / totalWeight;
 }
 
 export function GradesTab({ disciplineId }: { disciplineId: string }) {
@@ -139,7 +133,7 @@ export function GradesTab({ disciplineId }: { disciplineId: string }) {
                       : { score: Number(raw), weight: Number(a.weight) };
                   })
                   .filter((s): s is { score: number; weight: number } => s !== null);
-                const avg = average(scores);
+                const avg = computeWeightedAverage(scores);
 
                 return (
                   <TableRow key={student.id}>
