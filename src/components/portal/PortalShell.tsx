@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { LogOut } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,12 @@ interface PortalShellProps {
   children: ReactNode;
 }
 
-/** Cabeçalho do portal do aluno — login protegido, sem navegação (só uma tela). */
+const portalNavItems = [
+  { to: "/portal", label: "Minhas notas" },
+  { to: "/portal/videos", label: "Vídeo-aulas" },
+] as const;
+
+/** Cabeçalho do portal do aluno — login protegido. */
 export function PortalShell({ title, description, children }: PortalShellProps) {
   const navigate = useNavigate();
   const [signingOut, setSigningOut] = useState(false);
@@ -32,10 +37,19 @@ export function PortalShell({ title, description, children }: PortalShellProps) 
               Portal do aluno
             </span>
           </div>
-          <Button variant="ghost" size="sm" onClick={handleLogout} disabled={signingOut}>
-            <LogOut className="size-4" aria-hidden />
-            Sair
-          </Button>
+          <nav className="flex items-center gap-1">
+            {portalNavItems.map((item) => (
+              <Button key={item.to} variant="ghost" size="sm" asChild>
+                <Link to={item.to} activeProps={{ className: "bg-accent/10 text-accent" }}>
+                  {item.label}
+                </Link>
+              </Button>
+            ))}
+            <Button variant="ghost" size="sm" onClick={handleLogout} disabled={signingOut}>
+              <LogOut className="size-4" aria-hidden />
+              Sair
+            </Button>
+          </nav>
         </div>
       </header>
 

@@ -117,3 +117,14 @@ export const attendance = pgTable(
   },
   (table) => [unique().on(table.lessonId, table.studentId)],
 );
+
+export const videoLessons = pgTable("video_lessons", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  disciplineId: uuid("discipline_id")
+    .notNull()
+    .references(() => disciplines.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  youtubeUrl: text("youtube_url").notNull(),
+  sequence: integer("sequence").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});

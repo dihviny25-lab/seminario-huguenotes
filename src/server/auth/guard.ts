@@ -63,6 +63,21 @@ export async function requireStudentId(): Promise<string> {
 }
 
 /**
+ * Garante que existe uma sessão válida — de professor OU de aluno. Usado
+ * pra conteúdo que os dois públicos podem ver (ex.: vídeo-aulas), mas que
+ * não é público pra qualquer visitante.
+ */
+export async function requireAnyLogin(): Promise<void> {
+  const [teacherSession, studentSession] = await Promise.all([
+    readAppSession(),
+    readAppStudentSession(),
+  ]);
+  if (!teacherSession.data.teacherId && !studentSession.data.studentId) {
+    throw new Error("UNAUTHORIZED");
+  }
+}
+
+/**
  * Garante que a disciplina existe e pertence ao professor logado — cada
  * professor só lança notas/faltas nas disciplinas que ele mesmo ministra.
  */

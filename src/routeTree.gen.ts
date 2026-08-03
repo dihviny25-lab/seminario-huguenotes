@@ -16,6 +16,7 @@ import { Route as PainelRouteRouteImport } from './routes/painel/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PortalIndexRouteImport } from './routes/portal/index'
 import { Route as PainelIndexRouteImport } from './routes/painel/index'
+import { Route as PortalVideosRouteImport } from './routes/portal/videos'
 import { Route as PortalTrocarSenhaRouteImport } from './routes/portal/trocar-senha'
 import { Route as PortalPdfRouteImport } from './routes/portal/pdf'
 import { Route as PainelTrocarSenhaRouteImport } from './routes/painel/trocar-senha'
@@ -60,6 +61,11 @@ const PainelIndexRoute = PainelIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => PainelRouteRoute,
+} as any)
+const PortalVideosRoute = PortalVideosRouteImport.update({
+  id: '/videos',
+  path: '/videos',
+  getParentRoute: () => PortalRouteRoute,
 } as any)
 const PortalTrocarSenhaRoute = PortalTrocarSenhaRouteImport.update({
   id: '/trocar-senha',
@@ -122,6 +128,7 @@ export interface FileRoutesByFullPath {
   '/painel/trocar-senha': typeof PainelTrocarSenhaRoute
   '/portal/pdf': typeof PortalPdfRoute
   '/portal/trocar-senha': typeof PortalTrocarSenhaRoute
+  '/portal/videos': typeof PortalVideosRoute
   '/painel/': typeof PainelIndexRoute
   '/portal/': typeof PortalIndexRoute
   '/painel/disciplinas/$disciplineId': typeof PainelDisciplinasDisciplineIdRoute
@@ -138,6 +145,7 @@ export interface FileRoutesByTo {
   '/painel/trocar-senha': typeof PainelTrocarSenhaRoute
   '/portal/pdf': typeof PortalPdfRoute
   '/portal/trocar-senha': typeof PortalTrocarSenhaRoute
+  '/portal/videos': typeof PortalVideosRoute
   '/painel': typeof PainelIndexRoute
   '/portal': typeof PortalIndexRoute
   '/painel/disciplinas/$disciplineId': typeof PainelDisciplinasDisciplineIdRoute
@@ -157,6 +165,7 @@ export interface FileRoutesById {
   '/painel/trocar-senha': typeof PainelTrocarSenhaRoute
   '/portal/pdf': typeof PortalPdfRoute
   '/portal/trocar-senha': typeof PortalTrocarSenhaRoute
+  '/portal/videos': typeof PortalVideosRoute
   '/painel/': typeof PainelIndexRoute
   '/portal/': typeof PortalIndexRoute
   '/painel/disciplinas/$disciplineId': typeof PainelDisciplinasDisciplineIdRoute
@@ -177,6 +186,7 @@ export interface FileRouteTypes {
     | '/painel/trocar-senha'
     | '/portal/pdf'
     | '/portal/trocar-senha'
+    | '/portal/videos'
     | '/painel/'
     | '/portal/'
     | '/painel/disciplinas/$disciplineId'
@@ -193,6 +203,7 @@ export interface FileRouteTypes {
     | '/painel/trocar-senha'
     | '/portal/pdf'
     | '/portal/trocar-senha'
+    | '/portal/videos'
     | '/painel'
     | '/portal'
     | '/painel/disciplinas/$disciplineId'
@@ -211,6 +222,7 @@ export interface FileRouteTypes {
     | '/painel/trocar-senha'
     | '/portal/pdf'
     | '/portal/trocar-senha'
+    | '/portal/videos'
     | '/painel/'
     | '/portal/'
     | '/painel/disciplinas/$disciplineId'
@@ -275,6 +287,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/painel/'
       preLoaderRoute: typeof PainelIndexRouteImport
       parentRoute: typeof PainelRouteRoute
+    }
+    '/portal/videos': {
+      id: '/portal/videos'
+      path: '/videos'
+      fullPath: '/portal/videos'
+      preLoaderRoute: typeof PortalVideosRouteImport
+      parentRoute: typeof PortalRouteRoute
     }
     '/portal/trocar-senha': {
       id: '/portal/trocar-senha'
@@ -381,12 +400,14 @@ const PainelRouteRouteWithChildren = PainelRouteRoute._addFileChildren(
 interface PortalRouteRouteChildren {
   PortalPdfRoute: typeof PortalPdfRoute
   PortalTrocarSenhaRoute: typeof PortalTrocarSenhaRoute
+  PortalVideosRoute: typeof PortalVideosRoute
   PortalIndexRoute: typeof PortalIndexRoute
 }
 
 const PortalRouteRouteChildren: PortalRouteRouteChildren = {
   PortalPdfRoute: PortalPdfRoute,
   PortalTrocarSenhaRoute: PortalTrocarSenhaRoute,
+  PortalVideosRoute: PortalVideosRoute,
   PortalIndexRoute: PortalIndexRoute,
 }
 

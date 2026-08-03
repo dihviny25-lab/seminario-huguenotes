@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getMyDisciplineFn } from "@/functions/disciplines";
 import { AttendanceTab } from "@/pages/painel/AttendanceTab";
 import { GradesTab } from "@/pages/painel/GradesTab";
+import { VideoLessonsTab } from "@/pages/painel/VideoLessonsTab";
 
 export function DisciplineDetail({ disciplineId }: { disciplineId: string }) {
   const { data: discipline, isLoading } = useQuery({
@@ -21,12 +22,16 @@ export function DisciplineDetail({ disciplineId }: { disciplineId: string }) {
         <TabsList>
           <TabsTrigger value="notas">Notas</TabsTrigger>
           <TabsTrigger value="frequencia">Frequência</TabsTrigger>
+          <TabsTrigger value="videos">Vídeo-aulas</TabsTrigger>
         </TabsList>
         <TabsContent value="notas">
           <GradesTab disciplineId={disciplineId} />
         </TabsContent>
         <TabsContent value="frequencia">
           <AttendanceTab disciplineId={disciplineId} />
+        </TabsContent>
+        <TabsContent value="videos">
+          <VideoLessonsTab disciplineId={disciplineId} />
         </TabsContent>
       </Tabs>
     </PainelShell>
