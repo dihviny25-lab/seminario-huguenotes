@@ -14,6 +14,8 @@ const sampleRows: Array<StudentReportRow> = [
     average: 8.5,
     totalLessons: 5,
     totalFaltas: 1,
+    attendanceRatio: 0.8,
+    assessments: [{ title: "Prova 1", score: 8.5, maxScore: 10, weight: 1 }],
   },
   {
     disciplineId: "d2",
@@ -25,6 +27,8 @@ const sampleRows: Array<StudentReportRow> = [
     average: null,
     totalLessons: 0,
     totalFaltas: 0,
+    attendanceRatio: null,
+    assessments: [],
   },
 ];
 

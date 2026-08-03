@@ -1,3 +1,6 @@
+/** Nota mínima da média para ser considerado aprovado. */
+export const PASSING_AVERAGE = 7;
+
 export type WeightedScore = { score: number; weight: number };
 
 /**

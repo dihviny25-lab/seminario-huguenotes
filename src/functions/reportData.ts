@@ -13,6 +13,13 @@ import {
   teachers,
 } from "@/server/db/schema";
 
+export type StudentAssessmentScore = {
+  title: string;
+  score: number | null;
+  maxScore: number;
+  weight: number;
+};
+
 export type StudentReportRow = {
   disciplineId: string;
   module: string;
@@ -23,6 +30,9 @@ export type StudentReportRow = {
   average: number | null;
   totalLessons: number;
   totalFaltas: number;
+  /** Fração de aulas presentes (0 a 1); `null` quando não há aulas lançadas. */
+  attendanceRatio: number | null;
+  assessments: Array<StudentAssessmentScore>;
 };
 
 export type StudentReport = {
@@ -66,10 +76,13 @@ export async function getStudentReportData(studentId: string): Promise<StudentRe
       .select({
         id: assessments.id,
         disciplineId: assessments.disciplineId,
+        title: assessments.title,
+        maxScore: assessments.maxScore,
         weight: assessments.weight,
       })
       .from(assessments)
-      .where(inArray(assessments.disciplineId, disciplineIds)),
+      .where(inArray(assessments.disciplineId, disciplineIds))
+      .orderBy(asc(assessments.createdAt)),
     db
       .select({ id: lessons.id, disciplineId: lessons.disciplineId })
       .from(lessons)
@@ -109,11 +122,23 @@ export async function getStudentReportData(studentId: string): Promise<StudentRe
       .filter((s): s is { score: number; weight: number } => s !== null);
     const average = computeWeightedAverage(scored);
 
+    const assessmentScores: Array<StudentAssessmentScore> = disciplineAssessments.map((a) => {
+      const rawScore = scoreByAssessment.get(a.id);
+      return {
+        title: a.title,
+        score: rawScore === undefined ? null : Number(rawScore),
+        maxScore: Number(a.maxScore),
+        weight: Number(a.weight),
+      };
+    });
+
     const disciplineLessons = lessonRows.filter((l) => l.disciplineId === discipline.id);
     const totalFaltas = countFaltas(
       disciplineLessons.map((l) => l.id),
       absentLessonIds,
     );
+    const totalLessons = disciplineLessons.length;
+    const attendanceRatio = totalLessons === 0 ? null : (totalLessons - totalFaltas) / totalLessons;
 
     return {
       disciplineId: discipline.id,
@@ -123,8 +148,10 @@ export async function getStudentReportData(studentId: string): Promise<StudentRe
       term: discipline.term,
       teacherName: discipline.teacherName,
       average,
-      totalLessons: disciplineLessons.length,
+      totalLessons,
       totalFaltas,
+      attendanceRatio,
+      assessments: assessmentScores,
     };
   });
 
