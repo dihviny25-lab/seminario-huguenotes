@@ -2,10 +2,10 @@ import { createServerFn } from "@tanstack/react-start";
 import { asc, eq } from "drizzle-orm";
 import { z } from "zod";
 
-import { computeMonthlySeries } from "@/lib/payments";
+import { computeMonthlySeries, formatPeriodLabel } from "@/lib/payments";
 import { requireAdminId, requireStudentId, requireTeacherId } from "@/server/auth/guard";
 import { db } from "@/server/db/client";
-import { charges } from "@/server/db/schema";
+import { charges, students } from "@/server/db/schema";
 import { createPreference } from "@/server/payments/mercadopago";
 
 export type Charge = {
@@ -52,10 +52,16 @@ export const payMyChargeFn = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<{ initPoint: string }> => {
     const studentId = await requireStudentId();
 
-    const [charge] = await db.select().from(charges).where(eq(charges.id, data.chargeId)).limit(1);
-    if (!charge || charge.studentId !== studentId) {
+    const [row] = await db
+      .select({ charge: charges, studentName: students.name })
+      .from(charges)
+      .innerJoin(students, eq(charges.studentId, students.id))
+      .where(eq(charges.id, data.chargeId))
+      .limit(1);
+    if (!row || row.charge.studentId !== studentId) {
       throw new Error("Cobrança não encontrada.");
     }
+    const { charge, studentName } = row;
     if (charge.status !== "pending") {
       throw new Error("Essa cobrança não está mais pendente.");
     }
@@ -65,7 +71,10 @@ export const payMyChargeFn = createServerFn({ method: "POST" })
 
     const { preferenceId, initPoint } = await createPreference({
       chargeId: charge.id,
-      description: charge.description,
+      // Título exibido no histórico de vendas da própria conta do Mercado
+      // Pago — identifica de quem é cada pagamento (a igreja pediu isso
+      // pra separar essa receita das demais contas dela).
+      description: `Pagamento de ${studentName} referente ao seminário — ${charge.description}`,
       amount: Number(charge.amount),
     });
 
@@ -152,7 +161,7 @@ export const generateMonthlyChargesFn = createServerFn({ method: "POST" })
       }
       toInsert.push({
         studentId: data.studentId,
-        description: `${data.description} — ${period}`,
+        description: `${data.description} — ${formatPeriodLabel(period)}`,
         amount: String(data.amount),
         dueDate,
         period,

@@ -33,3 +33,24 @@ export function computeMonthlySeries(
 
   return result;
 }
+
+const MONTH_NAMES = [
+  "Janeiro",
+  "Fevereiro",
+  "Março",
+  "Abril",
+  "Maio",
+  "Junho",
+  "Julho",
+  "Agosto",
+  "Setembro",
+  "Outubro",
+  "Novembro",
+  "Dezembro",
+];
+
+/** Formata "YYYY-MM" como "Mês/Ano" (ex.: "2026-09" → "Setembro/2026"). */
+export function formatPeriodLabel(period: string): string {
+  const [year, month] = period.split("-").map(Number);
+  return `${MONTH_NAMES[month - 1]}/${year}`;
+}

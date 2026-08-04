@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { computeMonthlySeries } from "@/lib/payments";
+import { computeMonthlySeries, formatPeriodLabel } from "@/lib/payments";
 
 describe("computeMonthlySeries", () => {
   it("generates consecutive months with the given due day", () => {
@@ -31,5 +31,15 @@ describe("computeMonthlySeries", () => {
 
   it("returns an empty array when months is zero", () => {
     expect(computeMonthlySeries("2026-01", 0, 10)).toEqual([]);
+  });
+});
+
+describe("formatPeriodLabel", () => {
+  it("formats a YYYY-MM period as Mês/Ano", () => {
+    expect(formatPeriodLabel("2026-09")).toBe("Setembro/2026");
+  });
+
+  it("formats January correctly (month index edge case)", () => {
+    expect(formatPeriodLabel("2027-01")).toBe("Janeiro/2027");
   });
 });
