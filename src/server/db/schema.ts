@@ -20,6 +20,7 @@ import {
 
 export const scheduleStatus = pgEnum("schedule_status", ["confirmed", "pending"]);
 export const teacherRole = pgEnum("teacher_role", ["admin", "teacher"]);
+export const chargeStatus = pgEnum("charge_status", ["pending", "paid", "canceled"]);
 
 export const teachers = pgTable("teachers", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -126,5 +127,27 @@ export const videoLessons = pgTable("video_lessons", {
   title: text("title").notNull(),
   youtubeUrl: text("youtube_url").notNull(),
   sequence: integer("sequence").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const charges = pgTable("charges", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  studentId: uuid("student_id")
+    .notNull()
+    .references(() => students.id, { onDelete: "cascade" }),
+  description: text("description").notNull(),
+  amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
+  dueDate: date("due_date").notNull(),
+  // "YYYY-MM" só para mensalidade gerada em lote (evita cobrar o mesmo mês
+  // duas vezes); nulo para cobrança avulsa.
+  period: text("period"),
+  status: chargeStatus("status").notNull().default("pending"),
+  mpPreferenceId: text("mp_preference_id"),
+  mpInitPoint: text("mp_init_point"),
+  mpPaymentId: text("mp_payment_id"),
+  paidAt: timestamp("paid_at", { withTimezone: true }),
+  paidManually: boolean("paid_manually").notNull().default(false),
+  note: text("note"),
+  createdById: uuid("created_by_id").references(() => teachers.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

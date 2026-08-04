@@ -11,6 +11,7 @@ const painelNavItems = [
   { to: "/painel/professores", label: "Contas de professores" },
   { to: "/painel/alunos", label: "Alunos" },
   { to: "/painel/relatorio", label: "Relatório" },
+  { to: "/painel/pagamentos", label: "Pagamentos" },
 ] as const;
 
 interface PainelShellProps {

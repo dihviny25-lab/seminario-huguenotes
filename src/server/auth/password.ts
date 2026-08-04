@@ -1,3 +1,5 @@
+import { fromHex, toHex } from "@/server/hex";
+
 const ITERATIONS = 210_000;
 const SALT_BYTES = 16;
 const KEY_BYTES = 32;
@@ -8,20 +10,6 @@ const KEY_BYTES = 32;
  * deploy — evita depender de uma lib nativa (bcrypt) que pode não rodar lá.
  * Formato armazenado: "pbkdf2$<iterações>$<saltHex>$<hashHex>".
  */
-
-function toHex(bytes: Uint8Array): string {
-  return Array.from(bytes)
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
-
-function fromHex(hex: string): Uint8Array {
-  const bytes = new Uint8Array(hex.length / 2);
-  for (let i = 0; i < bytes.length; i++) {
-    bytes[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
-  }
-  return bytes;
-}
 
 async function derive(password: string, salt: Uint8Array, iterations: number): Promise<Uint8Array> {
   const keyMaterial = await crypto.subtle.importKey(

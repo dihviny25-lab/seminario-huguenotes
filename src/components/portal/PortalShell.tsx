@@ -14,6 +14,7 @@ interface PortalShellProps {
 const portalNavItems = [
   { to: "/portal", label: "Minhas notas" },
   { to: "/portal/videos", label: "Vídeo-aulas" },
+  { to: "/portal/mensalidades", label: "Mensalidades" },
 ] as const;
 
 /** Cabeçalho do portal do aluno — login protegido. */

@@ -1,0 +1,530 @@
+import { useMemo, useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
+import { Ban, CheckCircle2, Plus, RefreshCcw } from "lucide-react";
+import { toast } from "sonner";
+import { z } from "zod";
+
+import { PainelShell } from "@/components/painel/PainelShell";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { getCurrentTeacherFn } from "@/functions/auth";
+import { listStudentsFn } from "@/functions/students";
+import {
+  cancelChargeFn,
+  createChargeFn,
+  generateMonthlyChargesFn,
+  listStudentChargesFn,
+  markChargePaidManuallyFn,
+  type Charge,
+} from "@/functions/payments";
+
+function errorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
+}
+
+function formatAmount(amount: string): string {
+  return Number(amount).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+function formatDate(iso: string): string {
+  const [year, month, day] = iso.split("-");
+  return `${day}/${month}/${year}`;
+}
+
+const statusLabel: Record<Charge["status"], string> = {
+  pending: "Pendente",
+  paid: "Pago",
+  canceled: "Cancelado",
+};
+
+/** Cobranças de mensalidade/taxas por aluno — cria, gera em lote e confirma pagamentos. */
+export function Payments() {
+  const [query, setQuery] = useState("");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [generateOpen, setGenerateOpen] = useState(false);
+  const queryClient = useQueryClient();
+
+  const { data: students } = useQuery({
+    queryKey: ["students"],
+    queryFn: () => listStudentsFn(),
+  });
+  const { data: me } = useQuery({
+    queryKey: ["current-teacher"],
+    queryFn: () => getCurrentTeacherFn(),
+  });
+  const isAdmin = me?.role === "admin";
+
+  const filtered = useMemo(() => {
+    const term = query.trim().toLowerCase();
+    const active = (students ?? []).filter((s) => s.active);
+    if (!term) return active;
+    return active.filter((s) => s.name.toLowerCase().includes(term));
+  }, [students, query]);
+
+  const selectedStudent = students?.find((s) => s.id === selectedId) ?? null;
+
+  const chargesKey = ["student-charges", selectedId] as const;
+  const { data: charges, isLoading } = useQuery({
+    queryKey: chargesKey,
+    queryFn: () => listStudentChargesFn({ data: { studentId: selectedId! } }),
+    enabled: selectedId !== null,
+  });
+
+  function invalidate() {
+    return queryClient.invalidateQueries({ queryKey: chargesKey });
+  }
+
+  const cancelMutation = useMutation({
+    mutationFn: (chargeId: string) => cancelChargeFn({ data: { chargeId } }),
+    onSuccess: async () => {
+      toast.success("Cobrança cancelada.");
+      await invalidate();
+    },
+    onError: (error) => toast.error(errorMessage(error, "Não foi possível cancelar.")),
+  });
+
+  return (
+    <PainelShell
+      title="Pagamentos"
+      description="Gerencie mensalidades e cobranças avulsas dos alunos."
+    >
+      <div className="print:hidden">
+        <Input
+          placeholder="Buscar aluno pelo nome…"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          className="max-w-sm"
+        />
+        <div className="mt-3 flex flex-wrap gap-2">
+          {filtered.map((student) => (
+            <Button
+              key={student.id}
+              type="button"
+              variant={selectedId === student.id ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSelectedId(student.id)}
+            >
+              {student.name}
+            </Button>
+          ))}
+          {filtered.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhum aluno encontrado.</p>
+          ) : null}
+        </div>
+      </div>
+
+      {selectedId && selectedStudent ? (
+        <div className="mt-8">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="font-display text-xl font-semibold text-foreground">
+              {selectedStudent.name}
+            </h2>
+            {isAdmin ? (
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setGenerateOpen(true)}>
+                  <RefreshCcw className="size-4" aria-hidden />
+                  Gerar mensalidades
+                </Button>
+                <Button onClick={() => setCreateOpen(true)}>
+                  <Plus className="size-4" aria-hidden />
+                  Nova cobrança
+                </Button>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="overflow-hidden rounded-[1.25rem] border border-border/70 bg-card/70 shadow-soft">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Descrição</TableHead>
+                  <TableHead>Valor</TableHead>
+                  <TableHead>Vencimento</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="py-6 text-center text-muted-foreground">
+                      Carregando…
+                    </TableCell>
+                  </TableRow>
+                ) : charges && charges.length > 0 ? (
+                  charges.map((charge) => (
+                    <TableRow key={charge.id}>
+                      <TableCell className="font-medium text-foreground">
+                        {charge.description}
+                      </TableCell>
+                      <TableCell>{formatAmount(charge.amount)}</TableCell>
+                      <TableCell>{formatDate(charge.dueDate)}</TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            charge.status === "paid"
+                              ? "default"
+                              : charge.status === "canceled"
+                                ? "secondary"
+                                : "outline"
+                          }
+                        >
+                          {statusLabel[charge.status]}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {isAdmin && charge.status === "pending" ? (
+                          <div className="flex justify-end gap-1">
+                            <MarkPaidButton chargeId={charge.id} onDone={invalidate} />
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title="Cancelar"
+                              onClick={() => cancelMutation.mutate(charge.id)}
+                            >
+                              <Ban className="size-4" aria-hidden />
+                            </Button>
+                          </div>
+                        ) : null}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={5} className="py-6 text-center text-muted-foreground">
+                      Nenhuma cobrança lançada ainda.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          <CreateChargeDialog
+            studentId={selectedId}
+            open={createOpen}
+            onOpenChange={setCreateOpen}
+            onCreated={invalidate}
+          />
+          <GenerateMonthlyDialog
+            studentId={selectedId}
+            open={generateOpen}
+            onOpenChange={setGenerateOpen}
+            onGenerated={invalidate}
+          />
+        </div>
+      ) : null}
+    </PainelShell>
+  );
+}
+
+function MarkPaidButton({
+  chargeId,
+  onDone,
+}: {
+  chargeId: string;
+  onDone: () => Promise<unknown>;
+}) {
+  const [open, setOpen] = useState(false);
+  const [note, setNote] = useState("");
+
+  const mutation = useMutation({
+    mutationFn: () => markChargePaidManuallyFn({ data: { chargeId, note: note || undefined } }),
+    onSuccess: async () => {
+      toast.success("Cobrança marcada como paga.");
+      setOpen(false);
+      setNote("");
+      await onDone();
+    },
+    onError: (error) => toast.error(errorMessage(error, "Não foi possível atualizar.")),
+  });
+
+  return (
+    <>
+      <Button variant="ghost" size="icon" title="Marcar como pago" onClick={() => setOpen(true)}>
+        <CheckCircle2 className="size-4" aria-hidden />
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Marcar cobrança como paga</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Use isso quando o aluno pagou por fora do site (dinheiro, Pix direto na secretaria
+            etc.).
+          </p>
+          <Textarea
+            placeholder="Observação (opcional)"
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+          />
+          <DialogFooter>
+            <Button onClick={() => mutation.mutate()} disabled={mutation.isPending}>
+              Confirmar pagamento
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+const chargeSchema = z.object({
+  description: z.string().trim().min(1, "Informe a descrição."),
+  amount: z.coerce.number().positive("Deve ser maior que zero."),
+  dueDate: z.string().min(1, "Informe o vencimento."),
+});
+
+function CreateChargeDialog({
+  studentId,
+  open,
+  onOpenChange,
+  onCreated,
+}: {
+  studentId: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onCreated: () => Promise<unknown>;
+}) {
+  const form = useForm<z.infer<typeof chargeSchema>>({
+    resolver: zodResolver(chargeSchema),
+    defaultValues: { description: "", amount: 0, dueDate: "" },
+  });
+
+  const mutation = useMutation({
+    mutationFn: (values: z.infer<typeof chargeSchema>) =>
+      createChargeFn({ data: { studentId, ...values } }),
+    onSuccess: async () => {
+      toast.success("Cobrança criada.");
+      form.reset();
+      onOpenChange(false);
+      await onCreated();
+    },
+    onError: (error) => toast.error(errorMessage(error, "Não foi possível criar a cobrança.")),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Nova cobrança</DialogTitle>
+        </DialogHeader>
+        <Form {...form}>
+          <form
+            className="space-y-4"
+            onSubmit={form.handleSubmit((values) => mutation.mutate(values))}
+          >
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Descrição</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Matrícula 2026" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="amount"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Valor (R$)</FormLabel>
+                  <FormControl>
+                    <Input type="number" step="0.01" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="dueDate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Vencimento</FormLabel>
+                  <FormControl>
+                    <Input type="date" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <DialogFooter>
+              <Button type="submit" disabled={mutation.isPending}>
+                Criar
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+const generateSchema = z.object({
+  description: z.string().trim().min(1, "Informe a descrição."),
+  amount: z.coerce.number().positive("Deve ser maior que zero."),
+  startPeriod: z.string().regex(/^\d{4}-\d{2}$/, "Informe o mês inicial."),
+  months: z.coerce.number().int().min(1).max(36),
+  dueDay: z.coerce.number().int().min(1).max(31),
+});
+
+function GenerateMonthlyDialog({
+  studentId,
+  open,
+  onOpenChange,
+  onGenerated,
+}: {
+  studentId: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onGenerated: () => Promise<unknown>;
+}) {
+  const form = useForm<z.infer<typeof generateSchema>>({
+    resolver: zodResolver(generateSchema),
+    defaultValues: {
+      description: "Mensalidade",
+      amount: 0,
+      startPeriod: "",
+      months: 6,
+      dueDay: 10,
+    },
+  });
+
+  const mutation = useMutation({
+    mutationFn: (values: z.infer<typeof generateSchema>) =>
+      generateMonthlyChargesFn({ data: { studentId, ...values } }),
+    onSuccess: async (result) => {
+      const skippedNote =
+        result.skippedPeriods.length > 0
+          ? `, ${result.skippedPeriods.length} mês(es) já existiam e foram pulados`
+          : "";
+      toast.success(`${result.created} cobrança(s) gerada(s)${skippedNote}.`);
+      form.reset();
+      onOpenChange(false);
+      await onGenerated();
+    },
+    onError: (error) => toast.error(errorMessage(error, "Não foi possível gerar as cobranças.")),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Gerar mensalidades</DialogTitle>
+        </DialogHeader>
+        <Form {...form}>
+          <form
+            className="space-y-4"
+            onSubmit={form.handleSubmit((values) => mutation.mutate(values))}
+          >
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Descrição</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="amount"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Valor mensal (R$)</FormLabel>
+                  <FormControl>
+                    <Input type="number" step="0.01" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="startPeriod"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Mês inicial</FormLabel>
+                  <FormControl>
+                    <Input type="month" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="months"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Quantidade de meses</FormLabel>
+                    <FormControl>
+                      <Input type="number" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="dueDay"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Dia do vencimento</FormLabel>
+                    <FormControl>
+                      <Input type="number" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <DialogFooter>
+              <Button type="submit" disabled={mutation.isPending}>
+                Gerar
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
