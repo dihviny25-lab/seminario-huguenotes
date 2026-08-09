@@ -2,7 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { asc, eq } from "drizzle-orm";
 import { z } from "zod";
 
-import { computeMonthlySeries, formatPeriodLabel } from "@/lib/payments";
+import { computeCurrentAmount, computeMonthlySeries, formatPeriodLabel } from "@/lib/payments";
+import { getPaymentModality, PUNCTUALITY_DISCOUNT_PERCENT } from "@/lib/paymentModalities";
 import { requireAdminId, requireStudentId, requireTeacherId } from "@/server/auth/guard";
 import { db } from "@/server/db/client";
 import { charges, students } from "@/server/db/schema";
@@ -12,7 +13,12 @@ export type Charge = {
   id: string;
   studentId: string;
   description: string;
-  amount: string;
+  modality: string | null;
+  fullAmount: string;
+  discountPercent: string;
+  /** Valor a pagar agora (com desconto se ainda dentro do prazo, cheio se vencido); igual ao valor pago quando já está `paid`. */
+  currentAmount: string;
+  paidAmount: string | null;
   dueDate: string;
   status: "pending" | "paid" | "canceled";
   paidAt: string | null;
@@ -20,33 +26,62 @@ export type Charge = {
   note: string | null;
 };
 
-const chargeColumns = {
-  id: charges.id,
-  studentId: charges.studentId,
-  description: charges.description,
-  amount: charges.amount,
-  dueDate: charges.dueDate,
-  status: charges.status,
-  paidAt: charges.paidAt,
-  paidManually: charges.paidManually,
-  note: charges.note,
-};
+function todayIso(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function toCharge(row: typeof charges.$inferSelect): Charge {
+  const currentAmount =
+    row.status === "paid" && row.paidAmount !== null
+      ? row.paidAmount
+      : String(
+          computeCurrentAmount(
+            {
+              fullAmount: Number(row.fullAmount),
+              discountPercent: Number(row.discountPercent),
+              dueDate: row.dueDate,
+            },
+            todayIso(),
+          ),
+        );
+
+  return {
+    id: row.id,
+    studentId: row.studentId,
+    description: row.description,
+    modality: row.modality,
+    fullAmount: row.fullAmount,
+    discountPercent: row.discountPercent,
+    currentAmount,
+    paidAmount: row.paidAmount,
+    dueDate: row.dueDate,
+    status: row.status,
+    paidAt: row.paidAt ? row.paidAt.toISOString() : null,
+    paidManually: row.paidManually,
+    note: row.note,
+  };
+}
 
 /** Cobranças do próprio aluno logado no portal. */
 export const listMyChargesFn = createServerFn({ method: "GET" }).handler(
   async (): Promise<Array<Charge>> => {
     const studentId = await requireStudentId();
-    return db
-      .select(chargeColumns)
+    const rows = await db
+      .select()
       .from(charges)
       .where(eq(charges.studentId, studentId))
       .orderBy(asc(charges.dueDate));
+    return rows.map(toCharge);
   },
 );
 
 const payChargeSchema = z.object({ chargeId: z.string().uuid() });
 
-/** Cria (ou reaproveita) o link de pagamento do Mercado Pago pra uma cobrança pendente do próprio aluno. */
+/**
+ * Cria uma preference nova do Mercado Pago pra pagar uma cobrança pendente
+ * do próprio aluno — sempre nova (não reaproveita uma antiga) porque o
+ * valor pode ter mudado entre um clique e outro, se o vencimento passou.
+ */
 export const payMyChargeFn = createServerFn({ method: "POST" })
   .validator(payChargeSchema)
   .handler(async ({ data }): Promise<{ initPoint: string }> => {
@@ -65,9 +100,15 @@ export const payMyChargeFn = createServerFn({ method: "POST" })
     if (charge.status !== "pending") {
       throw new Error("Essa cobrança não está mais pendente.");
     }
-    if (charge.mpInitPoint) {
-      return { initPoint: charge.mpInitPoint };
-    }
+
+    const amount = computeCurrentAmount(
+      {
+        fullAmount: Number(charge.fullAmount),
+        discountPercent: Number(charge.discountPercent),
+        dueDate: charge.dueDate,
+      },
+      todayIso(),
+    );
 
     const { preferenceId, initPoint } = await createPreference({
       chargeId: charge.id,
@@ -75,7 +116,7 @@ export const payMyChargeFn = createServerFn({ method: "POST" })
       // Pago — identifica de quem é cada pagamento (a igreja pediu isso
       // pra separar essa receita das demais contas dela).
       description: `Pagamento de ${studentName} referente ao seminário — ${charge.description}`,
-      amount: Number(charge.amount),
+      amount,
     });
 
     await db
@@ -93,11 +134,12 @@ export const listStudentChargesFn = createServerFn({ method: "GET" })
   .validator(studentIdSchema)
   .handler(async ({ data }): Promise<Array<Charge>> => {
     await requireTeacherId();
-    return db
-      .select(chargeColumns)
+    const rows = await db
+      .select()
       .from(charges)
       .where(eq(charges.studentId, data.studentId))
       .orderBy(asc(charges.dueDate));
+    return rows.map(toCharge);
   });
 
 const createChargeSchema = z.object({
@@ -107,7 +149,7 @@ const createChargeSchema = z.object({
   dueDate: z.string().min(1, "Informe o vencimento."),
 });
 
-/** Cria uma cobrança avulsa (matrícula, taxa pontual). */
+/** Cria uma cobrança avulsa (matrícula, taxa pontual) — valor livre, sem modalidade/desconto. */
 export const createChargeFn = createServerFn({ method: "POST" })
   .validator(createChargeSchema)
   .handler(async ({ data }) => {
@@ -117,7 +159,8 @@ export const createChargeFn = createServerFn({ method: "POST" })
       .values({
         studentId: data.studentId,
         description: data.description,
-        amount: String(data.amount),
+        fullAmount: String(data.amount),
+        discountPercent: "0",
         dueDate: data.dueDate,
         createdById: teacherId,
       })
@@ -127,8 +170,7 @@ export const createChargeFn = createServerFn({ method: "POST" })
 
 const generateMonthlyChargesSchema = z.object({
   studentId: z.string().uuid(),
-  description: z.string().trim().min(1, "Informe a descrição."),
-  amount: z.number().positive("O valor precisa ser maior que zero."),
+  modalityId: z.string().min(1, "Escolha a modalidade."),
   startPeriod: z.string().regex(/^\d{4}-\d{2}$/, "Informe o mês inicial."),
   months: z.number().int().min(1).max(36),
   dueDay: z.number().int().min(1).max(31),
@@ -136,11 +178,16 @@ const generateMonthlyChargesSchema = z.object({
 
 export type GenerateMonthlyChargesResult = { created: number; skippedPeriods: Array<string> };
 
-/** Gera uma série de cobranças mensais, pulando meses já cobrados desse aluno. */
+/** Gera uma série de mensalidades numa modalidade, pulando meses já cobrados desse aluno. */
 export const generateMonthlyChargesFn = createServerFn({ method: "POST" })
   .validator(generateMonthlyChargesSchema)
   .handler(async ({ data }): Promise<GenerateMonthlyChargesResult> => {
     const teacherId = await requireAdminId();
+
+    const modality = getPaymentModality(data.modalityId);
+    if (!modality) {
+      throw new Error("Modalidade inválida.");
+    }
 
     const series = computeMonthlySeries(data.startPeriod, data.months, data.dueDay);
 
@@ -161,8 +208,10 @@ export const generateMonthlyChargesFn = createServerFn({ method: "POST" })
       }
       toInsert.push({
         studentId: data.studentId,
-        description: `${data.description} — ${formatPeriodLabel(period)}`,
-        amount: String(data.amount),
+        description: `Mensalidade — ${formatPeriodLabel(period)}`,
+        modality: modality.name,
+        fullAmount: String(modality.fullValue),
+        discountPercent: String(PUNCTUALITY_DISCOUNT_PERCENT),
         dueDate,
         period,
         createdById: teacherId,
@@ -178,6 +227,7 @@ export const generateMonthlyChargesFn = createServerFn({ method: "POST" })
 
 const markPaidSchema = z.object({
   chargeId: z.string().uuid(),
+  paidAmount: z.number().positive("Informe o valor recebido."),
   note: z.string().trim().optional(),
 });
 
@@ -192,6 +242,7 @@ export const markChargePaidManuallyFn = createServerFn({ method: "POST" })
         status: "paid",
         paidManually: true,
         paidAt: new Date(),
+        paidAmount: String(data.paidAmount),
         note: data.note || null,
       })
       .where(eq(charges.id, data.chargeId));
@@ -205,3 +256,123 @@ export const cancelChargeFn = createServerFn({ method: "POST" })
     await requireAdminId();
     await db.update(charges).set({ status: "canceled" }).where(eq(charges.id, data.chargeId));
   });
+
+export type OverdueCharge = {
+  chargeId: string;
+  studentName: string;
+  description: string;
+  amount: number;
+  daysOverdue: number;
+};
+
+export type FinancialSummary = {
+  receivedThisMonth: number;
+  pendingNotYetDue: number;
+  overdue: number;
+  canceled: number;
+  overdueList: Array<OverdueCharge>;
+  monthlyRevenue: Array<{ month: string; revenue: number }>;
+  paidAutomaticallyCount: number;
+  paidAutomaticallyTotal: number;
+  paidManuallyCount: number;
+  paidManuallyTotal: number;
+};
+
+/** Resumo pro dashboard financeiro — só admin. Agrega em memória (volume pequeno), como já é feito em reportData.ts. */
+export const getFinancialSummaryFn = createServerFn({ method: "GET" }).handler(
+  async (): Promise<FinancialSummary> => {
+    await requireAdminId();
+
+    const rows = await db
+      .select({ charge: charges, studentName: students.name })
+      .from(charges)
+      .innerJoin(students, eq(charges.studentId, students.id));
+
+    const today = todayIso();
+    const currentMonthPrefix = today.slice(0, 7);
+
+    let receivedThisMonth = 0;
+    let pendingNotYetDue = 0;
+    let overdue = 0;
+    let canceled = 0;
+    let paidAutomaticallyCount = 0;
+    let paidAutomaticallyTotal = 0;
+    let paidManuallyCount = 0;
+    let paidManuallyTotal = 0;
+    const overdueList: Array<OverdueCharge> = [];
+    const revenueByMonth = new Map<string, number>();
+
+    for (const { charge, studentName } of rows) {
+      if (charge.status === "paid") {
+        const paid = Number(charge.paidAmount ?? charge.fullAmount);
+        if (charge.paidManually) {
+          paidManuallyCount += 1;
+          paidManuallyTotal += paid;
+        } else {
+          paidAutomaticallyCount += 1;
+          paidAutomaticallyTotal += paid;
+        }
+        if (charge.paidAt) {
+          const paidMonth = charge.paidAt.toISOString().slice(0, 7);
+          revenueByMonth.set(paidMonth, (revenueByMonth.get(paidMonth) ?? 0) + paid);
+          if (paidMonth === currentMonthPrefix) {
+            receivedThisMonth += paid;
+          }
+        }
+      } else if (charge.status === "pending") {
+        const isOverdue = charge.dueDate < today;
+        const amount = computeCurrentAmount(
+          {
+            fullAmount: Number(charge.fullAmount),
+            discountPercent: Number(charge.discountPercent),
+            dueDate: charge.dueDate,
+          },
+          today,
+        );
+        if (isOverdue) {
+          overdue += amount;
+          const daysOverdue = Math.round(
+            (Date.parse(today) - Date.parse(charge.dueDate)) / (1000 * 60 * 60 * 24),
+          );
+          overdueList.push({
+            chargeId: charge.id,
+            studentName,
+            description: charge.description,
+            amount,
+            daysOverdue,
+          });
+        } else {
+          pendingNotYetDue += amount;
+        }
+      } else {
+        canceled += Number(charge.fullAmount);
+      }
+    }
+
+    overdueList.sort((a, b) => b.daysOverdue - a.daysOverdue);
+
+    const monthlyRevenue: Array<{ month: string; revenue: number }> = [];
+    const now = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
+      const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+      monthlyRevenue.push({
+        month: formatPeriodLabel(key),
+        revenue: revenueByMonth.get(key) ?? 0,
+      });
+    }
+
+    return {
+      receivedThisMonth,
+      pendingNotYetDue,
+      overdue,
+      canceled,
+      overdueList,
+      monthlyRevenue,
+      paidAutomaticallyCount,
+      paidAutomaticallyTotal,
+      paidManuallyCount,
+      paidManuallyTotal,
+    };
+  },
+);

@@ -1,9 +1,10 @@
 import { useState, type ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { LogOut } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { logoutFn } from "@/functions/auth";
+import { getCurrentTeacherFn, logoutFn } from "@/functions/auth";
 
 const painelNavItems = [
   { to: "/painel", label: "Painel" },
@@ -13,6 +14,8 @@ const painelNavItems = [
   { to: "/painel/relatorio", label: "Relatório" },
   { to: "/painel/pagamentos", label: "Pagamentos" },
 ] as const;
+
+const adminOnlyNavItems = [{ to: "/painel/financeiro", label: "Financeiro" }] as const;
 
 interface PainelShellProps {
   title: string;
@@ -24,6 +27,12 @@ interface PainelShellProps {
 export function PainelShell({ title, description, children }: PainelShellProps) {
   const navigate = useNavigate();
   const [signingOut, setSigningOut] = useState(false);
+  const { data: me } = useQuery({
+    queryKey: ["current-teacher"],
+    queryFn: () => getCurrentTeacherFn(),
+  });
+  const navItems =
+    me?.role === "admin" ? [...painelNavItems, ...adminOnlyNavItems] : painelNavItems;
 
   async function handleLogout() {
     setSigningOut(true);
@@ -44,7 +53,7 @@ export function PainelShell({ title, description, children }: PainelShellProps) 
             </Link>
             <nav aria-label="Navegação do painel">
               <ul className="flex items-center gap-1">
-                {painelNavItems.map((item) => (
+                {navItems.map((item) => (
                   <li key={item.to}>
                     <Link
                       to={item.to}

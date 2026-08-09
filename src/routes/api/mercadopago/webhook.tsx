@@ -46,6 +46,7 @@ export const Route = createFileRoute("/api/mercadopago/webhook")({
               status: "paid",
               mpPaymentId: dataId,
               paidAt: new Date(),
+              paidAmount: String(payment.transactionAmount),
               paidManually: false,
             })
             .where(eq(charges.id, payment.externalReference));

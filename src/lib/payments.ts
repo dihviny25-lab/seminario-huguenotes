@@ -54,3 +54,27 @@ export function formatPeriodLabel(period: string): string {
   const [year, month] = period.split("-").map(Number);
   return `${MONTH_NAMES[month - 1]}/${year}`;
 }
+
+/** Valor com o desconto por pontualidade aplicado. */
+export function computeDiscountedAmount(fullAmount: number, discountPercent: number): number {
+  return fullAmount * (1 - discountPercent / 100);
+}
+
+export type CurrentAmountInput = {
+  fullAmount: number;
+  discountPercent: number;
+  /** ISO "YYYY-MM-DD". */
+  dueDate: string;
+};
+
+/**
+ * Valor a cobrar hoje: com desconto se ainda dentro do prazo (até o
+ * vencimento, inclusive), valor cheio se já venceu. Comparação de string
+ * ISO é segura lexicograficamente (mesmo padrão de `compareChronologically`
+ * em schedule-utils.ts).
+ */
+export function computeCurrentAmount(charge: CurrentAmountInput, todayIso: string): number {
+  return todayIso <= charge.dueDate
+    ? computeDiscountedAmount(charge.fullAmount, charge.discountPercent)
+    : charge.fullAmount;
+}

@@ -136,7 +136,13 @@ export const charges = pgTable("charges", {
     .notNull()
     .references(() => students.id, { onDelete: "cascade" }),
   description: text("description").notNull(),
-  amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
+  // Valor cheio (sem desconto) — pra avulsa é o que o admin digitou; pra
+  // mensalidade é o valor da modalidade escolhida, copiado na criação.
+  fullAmount: numeric("full_amount", { precision: 10, scale: 2 }).notNull(),
+  // Desconto por pontualidade (%) — 0 pra avulsa, 20 pra mensalidade.
+  discountPercent: numeric("discount_percent", { precision: 5, scale: 2 }).notNull().default("0"),
+  // Nome da modalidade escolhida (nulo pra cobrança avulsa).
+  modality: text("modality"),
   dueDate: date("due_date").notNull(),
   // "YYYY-MM" só para mensalidade gerada em lote (evita cobrar o mesmo mês
   // duas vezes); nulo para cobrança avulsa.
@@ -146,6 +152,9 @@ export const charges = pgTable("charges", {
   mpInitPoint: text("mp_init_point"),
   mpPaymentId: text("mp_payment_id"),
   paidAt: timestamp("paid_at", { withTimezone: true }),
+  // Valor efetivamente recebido (pode ser com ou sem desconto, dependendo
+  // de quando foi pago) — o que entra de verdade no dashboard financeiro.
+  paidAmount: numeric("paid_amount", { precision: 10, scale: 2 }),
   paidManually: boolean("paid_manually").notNull().default(false),
   note: text("note"),
   createdById: uuid("created_by_id").references(() => teachers.id, { onDelete: "set null" }),

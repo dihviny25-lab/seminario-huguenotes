@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
-import { requireTeacherId } from "@/server/auth/guard";
+import { requireAdminId, requireTeacherId } from "@/server/auth/guard";
 import { hashPassword, verifyPassword } from "@/server/auth/password";
 import { readAppSession, useAppSession } from "@/server/auth/session";
 import { db } from "@/server/db/client";
@@ -69,6 +69,11 @@ export const requireTeacherFn = createServerFn({ method: "GET" }).handler(async 
     .where(eq(teachers.id, teacherId))
     .limit(1);
   return { mustChangePassword: teacher?.mustChangePassword ?? false };
+});
+
+/** Usado pelo guard de rota do /painel/financeiro: lança se o professor logado não for admin. */
+export const requireAdminFn = createServerFn({ method: "GET" }).handler(async () => {
+  await requireAdminId();
 });
 
 const changePasswordSchema = z.object({

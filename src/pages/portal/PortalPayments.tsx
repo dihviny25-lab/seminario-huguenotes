@@ -93,8 +93,30 @@ export function PortalPayments() {
                 <TableRow key={charge.id}>
                   <TableCell className="font-medium text-foreground">
                     {charge.description}
+                    {charge.modality ? (
+                      <span className="block text-xs font-normal text-muted-foreground">
+                        {charge.modality}
+                      </span>
+                    ) : null}
                   </TableCell>
-                  <TableCell>{formatAmount(charge.amount)}</TableCell>
+                  <TableCell>
+                    {charge.status === "pending" && charge.currentAmount !== charge.fullAmount ? (
+                      <span className="flex flex-col">
+                        <span className="font-medium text-success">
+                          {formatAmount(charge.currentAmount)}
+                        </span>
+                        <span className="text-xs text-muted-foreground line-through">
+                          {formatAmount(charge.fullAmount)}
+                        </span>
+                      </span>
+                    ) : (
+                      formatAmount(
+                        charge.status === "paid"
+                          ? (charge.paidAmount ?? charge.currentAmount)
+                          : charge.currentAmount,
+                      )
+                    )}
+                  </TableCell>
                   <TableCell>{formatDate(charge.dueDate)}</TableCell>
                   <TableCell>
                     <Badge

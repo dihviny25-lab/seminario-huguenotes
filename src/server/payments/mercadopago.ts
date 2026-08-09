@@ -74,6 +74,8 @@ export async function createPreference(
 export type MercadoPagoPayment = {
   status: string;
   externalReference: string | null;
+  /** Valor efetivamente pago, segundo o Mercado Pago. */
+  transactionAmount: number;
 };
 
 /** Busca o status oficial de um pagamento — nunca confiar só no corpo do webhook. */
@@ -87,8 +89,16 @@ export async function getPayment(paymentId: string): Promise<MercadoPagoPayment>
     throw new Error(`Falha ao consultar pagamento no Mercado Pago: ${response.status} ${body}`);
   }
 
-  const data = (await response.json()) as { status: string; external_reference: string | null };
-  return { status: data.status, externalReference: data.external_reference ?? null };
+  const data = (await response.json()) as {
+    status: string;
+    external_reference: string | null;
+    transaction_amount: number;
+  };
+  return {
+    status: data.status,
+    externalReference: data.external_reference ?? null,
+    transactionAmount: data.transaction_amount,
+  };
 }
 
 /**

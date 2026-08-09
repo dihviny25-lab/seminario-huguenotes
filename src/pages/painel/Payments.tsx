@@ -25,6 +25,13 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Table,
@@ -44,12 +51,14 @@ import {
   markChargePaidManuallyFn,
   type Charge,
 } from "@/functions/payments";
+import { computeDiscountedAmount } from "@/lib/payments";
+import { PAYMENT_MODALITIES, PUNCTUALITY_DISCOUNT_PERCENT } from "@/lib/paymentModalities";
 
 function errorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
 }
 
-function formatAmount(amount: string): string {
+function formatAmount(amount: string | number): string {
   return Number(amount).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
@@ -184,8 +193,31 @@ export function Payments() {
                     <TableRow key={charge.id}>
                       <TableCell className="font-medium text-foreground">
                         {charge.description}
+                        {charge.modality ? (
+                          <span className="block text-xs font-normal text-muted-foreground">
+                            {charge.modality}
+                          </span>
+                        ) : null}
                       </TableCell>
-                      <TableCell>{formatAmount(charge.amount)}</TableCell>
+                      <TableCell>
+                        {charge.status === "pending" &&
+                        charge.currentAmount !== charge.fullAmount ? (
+                          <span className="flex flex-col">
+                            <span className="font-medium text-success">
+                              {formatAmount(charge.currentAmount)}
+                            </span>
+                            <span className="text-xs text-muted-foreground line-through">
+                              {formatAmount(charge.fullAmount)}
+                            </span>
+                          </span>
+                        ) : (
+                          formatAmount(
+                            charge.status === "paid"
+                              ? (charge.paidAmount ?? charge.currentAmount)
+                              : charge.currentAmount,
+                          )
+                        )}
+                      </TableCell>
                       <TableCell>{formatDate(charge.dueDate)}</TableCell>
                       <TableCell>
                         <Badge
@@ -203,7 +235,11 @@ export function Payments() {
                       <TableCell>
                         {isAdmin && charge.status === "pending" ? (
                           <div className="flex justify-end gap-1">
-                            <MarkPaidButton chargeId={charge.id} onDone={invalidate} />
+                            <MarkPaidButton
+                              chargeId={charge.id}
+                              suggestedAmount={charge.currentAmount}
+                              onDone={invalidate}
+                            />
                             <Button
                               variant="ghost"
                               size="icon"
@@ -248,16 +284,22 @@ export function Payments() {
 
 function MarkPaidButton({
   chargeId,
+  suggestedAmount,
   onDone,
 }: {
   chargeId: string;
+  suggestedAmount: string;
   onDone: () => Promise<unknown>;
 }) {
   const [open, setOpen] = useState(false);
+  const [paidAmount, setPaidAmount] = useState(suggestedAmount);
   const [note, setNote] = useState("");
 
   const mutation = useMutation({
-    mutationFn: () => markChargePaidManuallyFn({ data: { chargeId, note: note || undefined } }),
+    mutationFn: () =>
+      markChargePaidManuallyFn({
+        data: { chargeId, paidAmount: Number(paidAmount), note: note || undefined },
+      }),
     onSuccess: async () => {
       toast.success("Cobrança marcada como paga.");
       setOpen(false);
@@ -269,7 +311,15 @@ function MarkPaidButton({
 
   return (
     <>
-      <Button variant="ghost" size="icon" title="Marcar como pago" onClick={() => setOpen(true)}>
+      <Button
+        variant="ghost"
+        size="icon"
+        title="Marcar como pago"
+        onClick={() => {
+          setPaidAmount(suggestedAmount);
+          setOpen(true);
+        }}
+      >
         <CheckCircle2 className="size-4" aria-hidden />
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
@@ -281,6 +331,16 @@ function MarkPaidButton({
             Use isso quando o aluno pagou por fora do site (dinheiro, Pix direto na secretaria
             etc.).
           </p>
+          <div>
+            <label className="text-sm font-medium text-foreground">Valor recebido (R$)</label>
+            <Input
+              type="number"
+              step="0.01"
+              value={paidAmount}
+              onChange={(event) => setPaidAmount(event.target.value)}
+              className="mt-1.5"
+            />
+          </div>
           <Textarea
             placeholder="Observação (opcional)"
             value={note}
@@ -394,8 +454,7 @@ function CreateChargeDialog({
 }
 
 const generateSchema = z.object({
-  description: z.string().trim().min(1, "Informe a descrição."),
-  amount: z.coerce.number().positive("Deve ser maior que zero."),
+  modalityId: z.string().min(1, "Escolha a modalidade."),
   startPeriod: z.string().regex(/^\d{4}-\d{2}$/, "Informe o mês inicial."),
   months: z.coerce.number().int().min(1).max(36),
   dueDay: z.coerce.number().int().min(1).max(31),
@@ -415,8 +474,7 @@ function GenerateMonthlyDialog({
   const form = useForm<z.infer<typeof generateSchema>>({
     resolver: zodResolver(generateSchema),
     defaultValues: {
-      description: "Mensalidade",
-      amount: 0,
+      modalityId: "",
       startPeriod: "",
       months: 6,
       dueDay: 10,
@@ -452,26 +510,31 @@ function GenerateMonthlyDialog({
           >
             <FormField
               control={form.control}
-              name="description"
+              name="modalityId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Descrição</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="amount"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Valor mensal (R$)</FormLabel>
-                  <FormControl>
-                    <Input type="number" step="0.01" {...field} />
-                  </FormControl>
+                  <FormLabel>Modalidade</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Escolha a modalidade" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {PAYMENT_MODALITIES.map((modality) => (
+                        <SelectItem key={modality.id} value={modality.id}>
+                          {modality.name} — {formatAmount(modality.fullValue)} cheio /{" "}
+                          {formatAmount(
+                            computeDiscountedAmount(
+                              modality.fullValue,
+                              PUNCTUALITY_DISCOUNT_PERCENT,
+                            ),
+                          )}{" "}
+                          pontual
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
