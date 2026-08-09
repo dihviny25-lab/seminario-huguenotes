@@ -2,15 +2,21 @@ import { createServerFn } from "@tanstack/react-start";
 import { asc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
-import { requireOwnDiscipline } from "@/server/auth/guard";
-import { attendance, lessons, students } from "@/server/db/schema";
+import { requireOwnDiscipline, requireStudentId } from "@/server/auth/guard";
+import { attendance, disciplines, lessons, students } from "@/server/db/schema";
 import { db } from "@/server/db/client";
 
 const disciplineIdSchema = z.object({ disciplineId: z.string().uuid() });
 
 export type AttendanceBoard = {
   students: Array<{ id: string; name: string }>;
-  lessons: Array<{ id: string; date: string | null; sequence: number }>;
+  lessons: Array<{
+    id: string;
+    date: string | null;
+    sequence: number;
+    checkInOpen: boolean;
+    checkInToken: string | null;
+  }>;
   attendance: Array<{ lessonId: string; studentId: string; present: boolean }>;
 };
 
@@ -27,7 +33,13 @@ export const getAttendanceBoardFn = createServerFn({ method: "GET" })
         .where(eq(students.active, true))
         .orderBy(asc(students.name)),
       db
-        .select({ id: lessons.id, date: lessons.date, sequence: lessons.sequence })
+        .select({
+          id: lessons.id,
+          date: lessons.date,
+          sequence: lessons.sequence,
+          checkInOpen: lessons.checkInOpen,
+          checkInToken: lessons.checkInToken,
+        })
         .from(lessons)
         .where(eq(lessons.disciplineId, data.disciplineId))
         .orderBy(asc(lessons.sequence)),
@@ -101,4 +113,72 @@ export const setAttendanceFn = createServerFn({ method: "POST" })
         target: [attendance.lessonId, attendance.studentId],
         set: { present: data.present, updatedAt: new Date() },
       });
+  });
+
+const lessonCheckInSchema = z.object({
+  disciplineId: z.string().uuid(),
+  lessonId: z.string().uuid(),
+});
+
+/** Abre a chamada por QR code pra uma aula — gera um token novo e aceita check-ins até ser encerrada. */
+export const openLessonCheckInFn = createServerFn({ method: "POST" })
+  .validator(lessonCheckInSchema)
+  .handler(async ({ data }): Promise<{ token: string }> => {
+    await requireOwnDiscipline(data.disciplineId);
+    const token = crypto.randomUUID();
+    await db
+      .update(lessons)
+      .set({ checkInOpen: true, checkInToken: token })
+      .where(eq(lessons.id, data.lessonId));
+    return { token };
+  });
+
+export const closeLessonCheckInFn = createServerFn({ method: "POST" })
+  .validator(lessonCheckInSchema)
+  .handler(async ({ data }) => {
+    await requireOwnDiscipline(data.disciplineId);
+    await db
+      .update(lessons)
+      .set({ checkInOpen: false, checkInToken: null })
+      .where(eq(lessons.id, data.lessonId));
+  });
+
+const checkInSchema = z.object({
+  lessonId: z.string().uuid(),
+  token: z.string().min(1),
+});
+
+export type CheckInResult = { disciplineName: string; lessonLabel: string };
+
+/** O próprio aluno confirma presença escaneando o QR — marca só a presença dele mesmo. */
+export const checkInFn = createServerFn({ method: "POST" })
+  .validator(checkInSchema)
+  .handler(async ({ data }): Promise<CheckInResult> => {
+    const studentId = await requireStudentId();
+
+    const [row] = await db
+      .select({
+        checkInOpen: lessons.checkInOpen,
+        checkInToken: lessons.checkInToken,
+        sequence: lessons.sequence,
+        disciplineName: disciplines.discipline,
+      })
+      .from(lessons)
+      .innerJoin(disciplines, eq(lessons.disciplineId, disciplines.id))
+      .where(eq(lessons.id, data.lessonId))
+      .limit(1);
+
+    if (!row || !row.checkInOpen || row.checkInToken !== data.token) {
+      throw new Error("Chamada não está aberta ou QR code inválido.");
+    }
+
+    await db
+      .insert(attendance)
+      .values({ lessonId: data.lessonId, studentId, present: true })
+      .onConflictDoUpdate({
+        target: [attendance.lessonId, attendance.studentId],
+        set: { present: true, updatedAt: new Date() },
+      });
+
+    return { disciplineName: row.disciplineName, lessonLabel: `Aula ${row.sequence}` };
   });

@@ -100,6 +100,10 @@ export const lessons = pgTable("lessons", {
     .references(() => disciplines.id, { onDelete: "cascade" }),
   date: date("date"),
   sequence: integer("sequence").notNull(),
+  // Chamada por QR code: enquanto aberta, o token na URL escaneada
+  // confirma a presença do próprio aluno logado automaticamente.
+  checkInOpen: boolean("check_in_open").notNull().default(false),
+  checkInToken: text("check_in_token"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

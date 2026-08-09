@@ -27,6 +27,7 @@ import { Route as PainelPagamentosRouteImport } from './routes/painel/pagamentos
 import { Route as PainelFinanceiroRouteImport } from './routes/painel/financeiro'
 import { Route as PainelAlunosRouteImport } from './routes/painel/alunos'
 import { Route as PainelAgendaRouteImport } from './routes/painel/agenda'
+import { Route as PortalCheckinLessonIdRouteImport } from './routes/portal/checkin/$lessonId'
 import { Route as PainelDisciplinasDisciplineIdRouteImport } from './routes/painel/disciplinas/$disciplineId'
 import { Route as ApiMercadopagoWebhookRouteImport } from './routes/api/mercadopago/webhook'
 import { Route as PainelRelatorioStudentIdPdfRouteImport } from './routes/painel/relatorio/$studentId/pdf'
@@ -121,6 +122,11 @@ const PainelAgendaRoute = PainelAgendaRouteImport.update({
   path: '/agenda',
   getParentRoute: () => PainelRouteRoute,
 } as any)
+const PortalCheckinLessonIdRoute = PortalCheckinLessonIdRouteImport.update({
+  id: '/checkin/$lessonId',
+  path: '/checkin/$lessonId',
+  getParentRoute: () => PortalRouteRoute,
+} as any)
 const PainelDisciplinasDisciplineIdRoute =
   PainelDisciplinasDisciplineIdRouteImport.update({
     id: '/disciplinas/$disciplineId',
@@ -160,6 +166,7 @@ export interface FileRoutesByFullPath {
   '/portal/': typeof PortalIndexRoute
   '/api/mercadopago/webhook': typeof ApiMercadopagoWebhookRoute
   '/painel/disciplinas/$disciplineId': typeof PainelDisciplinasDisciplineIdRoute
+  '/portal/checkin/$lessonId': typeof PortalCheckinLessonIdRoute
   '/painel/relatorio/$studentId/pdf': typeof PainelRelatorioStudentIdPdfRoute
 }
 export interface FileRoutesByTo {
@@ -181,6 +188,7 @@ export interface FileRoutesByTo {
   '/portal': typeof PortalIndexRoute
   '/api/mercadopago/webhook': typeof ApiMercadopagoWebhookRoute
   '/painel/disciplinas/$disciplineId': typeof PainelDisciplinasDisciplineIdRoute
+  '/portal/checkin/$lessonId': typeof PortalCheckinLessonIdRoute
   '/painel/relatorio/$studentId/pdf': typeof PainelRelatorioStudentIdPdfRoute
 }
 export interface FileRoutesById {
@@ -205,6 +213,7 @@ export interface FileRoutesById {
   '/portal/': typeof PortalIndexRoute
   '/api/mercadopago/webhook': typeof ApiMercadopagoWebhookRoute
   '/painel/disciplinas/$disciplineId': typeof PainelDisciplinasDisciplineIdRoute
+  '/portal/checkin/$lessonId': typeof PortalCheckinLessonIdRoute
   '/painel/relatorio/$studentId/pdf': typeof PainelRelatorioStudentIdPdfRoute
 }
 export interface FileRouteTypes {
@@ -230,6 +239,7 @@ export interface FileRouteTypes {
     | '/portal/'
     | '/api/mercadopago/webhook'
     | '/painel/disciplinas/$disciplineId'
+    | '/portal/checkin/$lessonId'
     | '/painel/relatorio/$studentId/pdf'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -251,6 +261,7 @@ export interface FileRouteTypes {
     | '/portal'
     | '/api/mercadopago/webhook'
     | '/painel/disciplinas/$disciplineId'
+    | '/portal/checkin/$lessonId'
     | '/painel/relatorio/$studentId/pdf'
   id:
     | '__root__'
@@ -274,6 +285,7 @@ export interface FileRouteTypes {
     | '/portal/'
     | '/api/mercadopago/webhook'
     | '/painel/disciplinas/$disciplineId'
+    | '/portal/checkin/$lessonId'
     | '/painel/relatorio/$studentId/pdf'
   fileRoutesById: FileRoutesById
 }
@@ -414,6 +426,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PainelAgendaRouteImport
       parentRoute: typeof PainelRouteRoute
     }
+    '/portal/checkin/$lessonId': {
+      id: '/portal/checkin/$lessonId'
+      path: '/checkin/$lessonId'
+      fullPath: '/portal/checkin/$lessonId'
+      preLoaderRoute: typeof PortalCheckinLessonIdRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
     '/painel/disciplinas/$disciplineId': {
       id: '/painel/disciplinas/$disciplineId'
       path: '/disciplinas/$disciplineId'
@@ -484,6 +503,7 @@ interface PortalRouteRouteChildren {
   PortalTrocarSenhaRoute: typeof PortalTrocarSenhaRoute
   PortalVideosRoute: typeof PortalVideosRoute
   PortalIndexRoute: typeof PortalIndexRoute
+  PortalCheckinLessonIdRoute: typeof PortalCheckinLessonIdRoute
 }
 
 const PortalRouteRouteChildren: PortalRouteRouteChildren = {
@@ -492,6 +512,7 @@ const PortalRouteRouteChildren: PortalRouteRouteChildren = {
   PortalTrocarSenhaRoute: PortalTrocarSenhaRoute,
   PortalVideosRoute: PortalVideosRoute,
   PortalIndexRoute: PortalIndexRoute,
+  PortalCheckinLessonIdRoute: PortalCheckinLessonIdRoute,
 }
 
 const PortalRouteRouteWithChildren = PortalRouteRoute._addFileChildren(
