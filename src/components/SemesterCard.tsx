@@ -16,7 +16,7 @@ export function SemesterCard({ semester }: SemesterCardProps) {
   return (
     <section
       aria-labelledby={`semestre-${semester.semester}`}
-      className="relative overflow-hidden rounded-[2rem] border border-border/70 bg-gradient-to-b from-card to-background/95 p-5 shadow-soft sm:p-8"
+      className="relative overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-b from-card to-background/95 p-5 shadow-soft sm:p-8"
     >
       <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-accent to-transparent" />
       <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-border/70 pb-5">

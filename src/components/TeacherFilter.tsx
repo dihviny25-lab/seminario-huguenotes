@@ -32,7 +32,7 @@ export function TeacherFilter({
           onChange={(event) => onQueryChange(event.target.value)}
           placeholder="Pesquisar professor..."
           aria-label="Pesquisar professor"
-          className="h-12 rounded-[1rem] border-border/70 bg-background/80 pl-9 shadow-sm"
+          className="h-12 rounded-md border-border/70 bg-background/80 pl-9 shadow-sm"
         />
       </div>
 

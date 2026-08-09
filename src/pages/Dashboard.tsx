@@ -34,7 +34,7 @@ export function Dashboard({ disciplines }: { disciplines: Discipline[] }) {
         <StatisticCard label="Professores" value={statistics.teachers} icon={Users} />
       </div>
 
-      <div className="mt-6 rounded-[1.5rem] border border-warning-border/70 bg-gradient-to-br from-warning-soft to-background px-4 py-4 text-sm leading-relaxed text-warning shadow-soft sm:px-5">
+      <div className="mt-6 rounded-lg border border-warning-border/70 bg-gradient-to-br from-warning-soft to-background px-4 py-4 text-sm leading-relaxed text-warning shadow-soft sm:px-5">
         <p className="font-medium">Nota da coordenação</p>
         <p className="mt-1">{scheduleNote}</p>
       </div>

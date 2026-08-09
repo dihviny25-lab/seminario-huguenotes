@@ -36,7 +36,7 @@ export function PortalVideos() {
       {isLoading ? (
         <p className="text-muted-foreground">Carregando…</p>
       ) : semesters.length === 0 ? (
-        <p className="rounded-[1.25rem] border border-border/70 bg-card/70 p-6 text-center text-muted-foreground shadow-soft">
+        <p className="rounded-md border border-border/70 bg-card/70 p-6 text-center text-muted-foreground shadow-soft">
           Nenhuma vídeo-aula disponível no momento.
         </p>
       ) : (
@@ -65,7 +65,7 @@ export function PortalVideos() {
                             return (
                               <div
                                 key={video.id}
-                                className="overflow-hidden rounded-[1.25rem] border border-border/70 bg-card/70 shadow-soft"
+                                className="overflow-hidden rounded-md border border-border/70 bg-card/70 shadow-soft"
                               >
                                 <div className="aspect-video w-full">
                                   <iframe

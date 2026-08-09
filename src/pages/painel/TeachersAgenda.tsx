@@ -42,7 +42,7 @@ export function TeachersAgenda() {
         <p className="text-muted-foreground">Carregando…</p>
       ) : (
         <>
-          <div className="rounded-[1.75rem] border border-border/70 bg-card/70 p-4 shadow-soft sm:p-6">
+          <div className="rounded-xl border border-border/70 bg-card/70 p-4 shadow-soft sm:p-6">
             <TeacherFilter
               teachers={filteredTeachers}
               query={query}

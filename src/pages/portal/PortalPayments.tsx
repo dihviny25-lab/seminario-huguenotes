@@ -65,12 +65,12 @@ export function PortalPayments() {
       description="Acompanhe e pague suas mensalidades e taxas do seminário."
     >
       {returnedFromCheckout ? (
-        <p className="mb-4 rounded-[1.25rem] border border-warning-border bg-warning-soft px-4 py-3 text-sm text-warning">
+        <p className="mb-4 rounded-md border border-warning-border bg-warning-soft px-4 py-3 text-sm text-warning">
           Estamos confirmando seu pagamento — pode levar alguns instantes até o status atualizar
           aqui embaixo.
         </p>
       ) : null}
-      <div className="overflow-hidden rounded-[1.25rem] border border-border/70 bg-card/70 shadow-soft">
+      <div className="overflow-hidden rounded-md border border-border/70 bg-card/70 shadow-soft">
         <Table>
           <TableHeader>
             <TableRow>

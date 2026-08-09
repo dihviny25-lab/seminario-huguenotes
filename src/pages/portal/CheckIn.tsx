@@ -31,7 +31,7 @@ export function CheckIn({ lessonId, token }: { lessonId: string; token: string }
 
   return (
     <PortalShell title="Chamada" description="Confirmação de presença por QR code.">
-      <div className="flex flex-col items-center gap-4 rounded-[1.25rem] border border-border/70 bg-card/70 p-10 text-center shadow-soft">
+      <div className="flex flex-col items-center gap-4 rounded-md border border-border/70 bg-card/70 p-10 text-center shadow-soft">
         {status === "loading" ? (
           <p className="text-muted-foreground">Confirmando sua presença…</p>
         ) : status === "success" ? (

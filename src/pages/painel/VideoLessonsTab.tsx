@@ -69,7 +69,7 @@ export function VideoLessonsTab({ disciplineId }: { disciplineId: string }) {
       </div>
 
       {videos.length === 0 ? (
-        <p className="rounded-[1.25rem] border border-border/70 bg-card/70 p-6 text-center text-muted-foreground shadow-soft">
+        <p className="rounded-md border border-border/70 bg-card/70 p-6 text-center text-muted-foreground shadow-soft">
           Nenhuma vídeo-aula cadastrada ainda.
         </p>
       ) : (
@@ -79,7 +79,7 @@ export function VideoLessonsTab({ disciplineId }: { disciplineId: string }) {
             return (
               <div
                 key={video.id}
-                className="overflow-hidden rounded-[1.25rem] border border-border/70 bg-card/70 shadow-soft"
+                className="overflow-hidden rounded-md border border-border/70 bg-card/70 shadow-soft"
               >
                 {youtubeId ? (
                   <a href={video.youtubeUrl} target="_blank" rel="noreferrer" className="block">

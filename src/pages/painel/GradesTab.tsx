@@ -87,7 +87,7 @@ export function GradesTab({ disciplineId }: { disciplineId: string }) {
         </Button>
       </div>
 
-      <div className="overflow-hidden rounded-[1.25rem] border border-border/70 bg-card/70 shadow-soft">
+      <div className="overflow-hidden rounded-md border border-border/70 bg-card/70 shadow-soft">
         <Table>
           <TableHeader>
             <TableRow>

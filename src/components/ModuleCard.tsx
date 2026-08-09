@@ -14,7 +14,7 @@ export function ModuleCard({ module, value }: ModuleCardProps) {
   return (
     <AccordionItem
       value={value}
-      className="overflow-hidden rounded-[1.35rem] border border-border/70 bg-gradient-to-r from-surface to-card/70 transition-colors last:border-b data-[state=open]:border-accent/50"
+      className="overflow-hidden rounded-md border border-border/70 bg-gradient-to-r from-surface to-card/70 transition-colors last:border-b data-[state=open]:border-accent/50"
     >
       <AccordionTrigger className="px-4 py-4 text-left hover:no-underline sm:px-6">
         <div className="grid w-full grid-cols-[minmax(0,1fr)] gap-2 pr-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-4">

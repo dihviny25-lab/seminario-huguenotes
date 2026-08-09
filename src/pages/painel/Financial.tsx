@@ -65,7 +65,7 @@ export function Financial() {
             <StatisticCard label="Cancelado" value={formatCurrency(summary.canceled)} icon={Ban} />
           </div>
 
-          <div className="rounded-[1.5rem] border border-border/70 bg-card/80 p-5 shadow-soft">
+          <div className="rounded-lg border border-border/70 bg-card/80 p-5 shadow-soft">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
               <h2 className="font-display text-lg font-semibold text-foreground">Receita mensal</h2>
               <p className="text-sm text-muted-foreground">
@@ -88,7 +88,7 @@ export function Financial() {
             </ChartContainer>
           </div>
 
-          <div className="overflow-hidden rounded-[1.5rem] border border-border/70 bg-card/80 shadow-soft">
+          <div className="overflow-hidden rounded-lg border border-border/70 bg-card/80 shadow-soft">
             <div className="p-5 pb-0">
               <h2 className="font-display text-lg font-semibold text-foreground">
                 Alunos inadimplentes

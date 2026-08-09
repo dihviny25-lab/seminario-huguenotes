@@ -75,7 +75,7 @@ export function Report() {
           {isLoading || !report ? (
             <p className="text-muted-foreground">Carregando relatório…</p>
           ) : (
-            <div className="rounded-[1.25rem] border border-border/70 bg-card/70 p-6 shadow-soft print:border-none print:bg-transparent print:p-0 print:shadow-none">
+            <div className="rounded-md border border-border/70 bg-card/70 p-6 shadow-soft print:border-none print:bg-transparent print:p-0 print:shadow-none">
               <div className="mb-6 flex items-center justify-between">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.22em] text-accent">

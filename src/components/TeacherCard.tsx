@@ -11,7 +11,7 @@ interface TeacherCardProps {
 /** Agenda completa de um professor, em ordem cronológica. */
 export function TeacherCard({ teacher }: TeacherCardProps) {
   return (
-    <section className="relative overflow-hidden rounded-[2rem] border border-border/70 bg-gradient-to-b from-card to-background/95 p-5 shadow-soft sm:p-8">
+    <section className="relative overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-b from-card to-background/95 p-5 shadow-soft sm:p-8">
       <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-accent via-primary to-transparent" />
       <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-border/70 pb-5">
         <div className="flex min-w-0 items-center gap-4">
@@ -47,7 +47,7 @@ export function TeacherCard({ teacher }: TeacherCardProps) {
         {teacher.disciplines.map((discipline) => (
           <li
             key={discipline.id}
-            className="rounded-[1.2rem] border border-border/70 bg-gradient-to-r from-surface to-card/70 p-4 transition-all duration-200 hover:border-accent/60 hover:shadow-soft sm:p-5"
+            className="rounded-md border border-border/70 bg-gradient-to-r from-surface to-card/70 p-4 transition-all duration-200 hover:border-accent/60 hover:shadow-soft sm:p-5"
           >
             <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
               <div className="min-w-0">

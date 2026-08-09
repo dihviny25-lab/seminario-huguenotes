@@ -11,7 +11,7 @@ interface DisciplineRowProps {
 /** Linha de disciplina em formato de cartão leve (sem tabela). */
 export function DisciplineRow({ discipline, hideTeacher }: DisciplineRowProps) {
   return (
-    <li className="group rounded-[1.1rem] border border-border/70 bg-card/90 p-4 transition-all duration-200 hover:border-accent/60 hover:shadow-soft sm:p-5">
+    <li className="group rounded-md border border-border/70 bg-card/90 p-4 transition-all duration-200 hover:border-accent/60 hover:shadow-soft sm:p-5">
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 sm:flex sm:justify-between">
         <h4 className="min-w-0 text-balance font-medium leading-snug text-foreground">
           {discipline.discipline}

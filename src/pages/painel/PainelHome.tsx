@@ -37,11 +37,9 @@ export function PainelHome() {
           <Link
             key={item.to}
             to={item.to}
-            className="flex items-center gap-4 rounded-[1.5rem] border border-border/70 bg-card/70 p-5 shadow-soft transition-colors hover:border-primary/50"
+            className="flex items-start gap-3 rounded-lg border border-t-2 border-border/70 border-t-accent bg-card/70 p-5 shadow-soft transition-colors hover:border-primary/50"
           >
-            <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
-              <item.icon className="size-5" aria-hidden />
-            </span>
+            <item.icon className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden />
             <span>
               <span className="block font-display text-base font-semibold text-foreground">
                 {item.title}
@@ -68,11 +66,9 @@ export function PainelHome() {
               key={discipline.id}
               to="/painel/disciplinas/$disciplineId"
               params={{ disciplineId: discipline.id }}
-              className="flex items-center gap-3 rounded-[1.25rem] border border-border/70 bg-card/70 p-4 shadow-soft transition-colors hover:border-primary/50"
+              className="flex items-start gap-3 rounded-md border border-t-2 border-border/70 border-t-accent bg-card/70 p-4 shadow-soft transition-colors hover:border-primary/50"
             >
-              <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-accent/10 text-accent">
-                <BookOpen className="size-4" aria-hidden />
-              </span>
+              <BookOpen className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden />
               <span className="min-w-0">
                 <span className="block truncate font-medium text-foreground">
                   {discipline.discipline}
