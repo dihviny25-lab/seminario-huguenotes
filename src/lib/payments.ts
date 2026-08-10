@@ -78,3 +78,36 @@ export function computeCurrentAmount(charge: CurrentAmountInput, todayIso: strin
     ? computeDiscountedAmount(charge.fullAmount, charge.discountPercent)
     : charge.fullAmount;
 }
+
+export type ReminderType = "upcoming" | "overdue";
+
+export type ReminderCheckInput = {
+  /** ISO "YYYY-MM-DD". */
+  dueDate: string;
+  reminderUpcomingSentAt: string | null;
+  reminderOverdueSentAt: string | null;
+};
+
+/**
+ * Qual lembrete de vencimento mandar hoje pra essa cobrança (ou nenhum).
+ * Baseado em flags "já enviado" em vez de bater a data exata — sobrevive a
+ * um dia em que o cron não rodar, sem mandar o mesmo lembrete duas vezes.
+ */
+export function getReminderToSend(
+  charge: ReminderCheckInput,
+  todayIso: string,
+  upcomingWindowDays = 3,
+): ReminderType | null {
+  if (todayIso > charge.dueDate) {
+    return charge.reminderOverdueSentAt === null ? "overdue" : null;
+  }
+
+  const daysUntilDue = Math.round(
+    (Date.parse(charge.dueDate) - Date.parse(todayIso)) / (1000 * 60 * 60 * 24),
+  );
+  if (daysUntilDue <= upcomingWindowDays && charge.reminderUpcomingSentAt === null) {
+    return "upcoming";
+  }
+
+  return null;
+}

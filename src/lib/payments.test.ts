@@ -5,6 +5,7 @@ import {
   computeDiscountedAmount,
   computeMonthlySeries,
   formatPeriodLabel,
+  getReminderToSend,
 } from "@/lib/payments";
 
 describe("computeMonthlySeries", () => {
@@ -80,5 +81,39 @@ describe("computeCurrentAmount", () => {
     const avulsa = { fullAmount: 300, discountPercent: 0, dueDate: "2026-09-10" };
     expect(computeCurrentAmount(avulsa, "2026-09-05")).toBe(300);
     expect(computeCurrentAmount(avulsa, "2026-09-11")).toBe(300);
+  });
+});
+
+describe("getReminderToSend", () => {
+  const base = { dueDate: "2026-09-10", reminderUpcomingSentAt: null, reminderOverdueSentAt: null };
+
+  it("sends the upcoming reminder when within the window and not yet sent", () => {
+    expect(getReminderToSend(base, "2026-09-08")).toBe("upcoming");
+    expect(getReminderToSend(base, "2026-09-10")).toBe("upcoming");
+  });
+
+  it("does not send the upcoming reminder outside the window", () => {
+    expect(getReminderToSend(base, "2026-09-05")).toBeNull();
+  });
+
+  it("does not resend the upcoming reminder once already sent", () => {
+    expect(
+      getReminderToSend({ ...base, reminderUpcomingSentAt: "2026-09-08T00:00:00Z" }, "2026-09-09"),
+    ).toBeNull();
+  });
+
+  it("sends the overdue reminder once the due date has passed", () => {
+    expect(getReminderToSend(base, "2026-09-11")).toBe("overdue");
+  });
+
+  it("does not resend the overdue reminder once already sent", () => {
+    expect(
+      getReminderToSend({ ...base, reminderOverdueSentAt: "2026-09-11T00:00:00Z" }, "2026-09-15"),
+    ).toBeNull();
+  });
+
+  it("respects a custom upcoming window", () => {
+    expect(getReminderToSend(base, "2026-09-06", 5)).toBe("upcoming");
+    expect(getReminderToSend(base, "2026-09-04", 5)).toBeNull();
   });
 });

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
@@ -81,6 +81,12 @@ export function Login() {
                 </FormItem>
               )}
             />
+
+            <p className="text-right">
+              <Link to="/esqueci-senha" className="text-xs font-medium text-accent hover:underline">
+                Esqueci minha senha
+              </Link>
+            </p>
 
             {serverError ? (
               <p className="text-sm font-medium text-destructive">{serverError}</p>

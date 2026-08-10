@@ -34,6 +34,9 @@ export const teachers = pgTable("teachers", {
   // admin: acesso completo (gerenciar professores e alunos).
   // teacher: só visualiza professores/alunos, edita apenas o próprio perfil.
   role: teacherRole("role").notNull().default("teacher"),
+  // Recuperação de senha self-service — token opaco de uso único, expira em 1h.
+  resetToken: text("reset_token"),
+  resetTokenExpiresAt: timestamp("reset_token_expires_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -63,6 +66,9 @@ export const students = pgTable("students", {
   // Nulo = aluno sem login no portal ainda (precisa que um admin defina a senha).
   passwordHash: text("password_hash"),
   mustChangePassword: boolean("must_change_password").notNull().default(true),
+  // Recuperação de senha self-service — token opaco de uso único, expira em 1h.
+  resetToken: text("reset_token"),
+  resetTokenExpiresAt: timestamp("reset_token_expires_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -163,4 +169,7 @@ export const charges = pgTable("charges", {
   note: text("note"),
   createdById: uuid("created_by_id").references(() => teachers.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  // Controla o lembrete de vencimento por e-mail — evita mandar duas vezes.
+  reminderUpcomingSentAt: timestamp("reminder_upcoming_sent_at", { withTimezone: true }),
+  reminderOverdueSentAt: timestamp("reminder_overdue_sent_at", { withTimezone: true }),
 });

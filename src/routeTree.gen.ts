@@ -9,8 +9,12 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as RedefinirSenhaAlunoRouteImport } from './routes/redefinir-senha-aluno'
+import { Route as RedefinirSenhaRouteImport } from './routes/redefinir-senha'
 import { Route as LoginAlunoRouteImport } from './routes/login-aluno'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as EsqueciSenhaAlunoRouteImport } from './routes/esqueci-senha-aluno'
+import { Route as EsqueciSenhaRouteImport } from './routes/esqueci-senha'
 import { Route as PortalRouteRouteImport } from './routes/portal/route'
 import { Route as PainelRouteRouteImport } from './routes/painel/route'
 import { Route as IndexRouteImport } from './routes/index'
@@ -30,8 +34,19 @@ import { Route as PainelAgendaRouteImport } from './routes/painel/agenda'
 import { Route as PortalCheckinLessonIdRouteImport } from './routes/portal/checkin/$lessonId'
 import { Route as PainelDisciplinasDisciplineIdRouteImport } from './routes/painel/disciplinas/$disciplineId'
 import { Route as ApiMercadopagoWebhookRouteImport } from './routes/api/mercadopago/webhook'
+import { Route as ApiCronPaymentRemindersRouteImport } from './routes/api/cron/payment-reminders'
 import { Route as PainelRelatorioStudentIdPdfRouteImport } from './routes/painel/relatorio/$studentId/pdf'
 
+const RedefinirSenhaAlunoRoute = RedefinirSenhaAlunoRouteImport.update({
+  id: '/redefinir-senha-aluno',
+  path: '/redefinir-senha-aluno',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RedefinirSenhaRoute = RedefinirSenhaRouteImport.update({
+  id: '/redefinir-senha',
+  path: '/redefinir-senha',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginAlunoRoute = LoginAlunoRouteImport.update({
   id: '/login-aluno',
   path: '/login-aluno',
@@ -40,6 +55,16 @@ const LoginAlunoRoute = LoginAlunoRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EsqueciSenhaAlunoRoute = EsqueciSenhaAlunoRouteImport.update({
+  id: '/esqueci-senha-aluno',
+  path: '/esqueci-senha-aluno',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EsqueciSenhaRoute = EsqueciSenhaRouteImport.update({
+  id: '/esqueci-senha',
+  path: '/esqueci-senha',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PortalRouteRoute = PortalRouteRouteImport.update({
@@ -138,6 +163,11 @@ const ApiMercadopagoWebhookRoute = ApiMercadopagoWebhookRouteImport.update({
   path: '/api/mercadopago/webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCronPaymentRemindersRoute = ApiCronPaymentRemindersRouteImport.update({
+  id: '/api/cron/payment-reminders',
+  path: '/api/cron/payment-reminders',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PainelRelatorioStudentIdPdfRoute =
   PainelRelatorioStudentIdPdfRouteImport.update({
     id: '/$studentId/pdf',
@@ -149,8 +179,12 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/painel': typeof PainelRouteRouteWithChildren
   '/portal': typeof PortalRouteRouteWithChildren
+  '/esqueci-senha': typeof EsqueciSenhaRoute
+  '/esqueci-senha-aluno': typeof EsqueciSenhaAlunoRoute
   '/login': typeof LoginRoute
   '/login-aluno': typeof LoginAlunoRoute
+  '/redefinir-senha': typeof RedefinirSenhaRoute
+  '/redefinir-senha-aluno': typeof RedefinirSenhaAlunoRoute
   '/painel/agenda': typeof PainelAgendaRoute
   '/painel/alunos': typeof PainelAlunosRoute
   '/painel/financeiro': typeof PainelFinanceiroRoute
@@ -164,6 +198,7 @@ export interface FileRoutesByFullPath {
   '/portal/videos': typeof PortalVideosRoute
   '/painel/': typeof PainelIndexRoute
   '/portal/': typeof PortalIndexRoute
+  '/api/cron/payment-reminders': typeof ApiCronPaymentRemindersRoute
   '/api/mercadopago/webhook': typeof ApiMercadopagoWebhookRoute
   '/painel/disciplinas/$disciplineId': typeof PainelDisciplinasDisciplineIdRoute
   '/portal/checkin/$lessonId': typeof PortalCheckinLessonIdRoute
@@ -171,8 +206,12 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/esqueci-senha': typeof EsqueciSenhaRoute
+  '/esqueci-senha-aluno': typeof EsqueciSenhaAlunoRoute
   '/login': typeof LoginRoute
   '/login-aluno': typeof LoginAlunoRoute
+  '/redefinir-senha': typeof RedefinirSenhaRoute
+  '/redefinir-senha-aluno': typeof RedefinirSenhaAlunoRoute
   '/painel/agenda': typeof PainelAgendaRoute
   '/painel/alunos': typeof PainelAlunosRoute
   '/painel/financeiro': typeof PainelFinanceiroRoute
@@ -186,6 +225,7 @@ export interface FileRoutesByTo {
   '/portal/videos': typeof PortalVideosRoute
   '/painel': typeof PainelIndexRoute
   '/portal': typeof PortalIndexRoute
+  '/api/cron/payment-reminders': typeof ApiCronPaymentRemindersRoute
   '/api/mercadopago/webhook': typeof ApiMercadopagoWebhookRoute
   '/painel/disciplinas/$disciplineId': typeof PainelDisciplinasDisciplineIdRoute
   '/portal/checkin/$lessonId': typeof PortalCheckinLessonIdRoute
@@ -196,8 +236,12 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/painel': typeof PainelRouteRouteWithChildren
   '/portal': typeof PortalRouteRouteWithChildren
+  '/esqueci-senha': typeof EsqueciSenhaRoute
+  '/esqueci-senha-aluno': typeof EsqueciSenhaAlunoRoute
   '/login': typeof LoginRoute
   '/login-aluno': typeof LoginAlunoRoute
+  '/redefinir-senha': typeof RedefinirSenhaRoute
+  '/redefinir-senha-aluno': typeof RedefinirSenhaAlunoRoute
   '/painel/agenda': typeof PainelAgendaRoute
   '/painel/alunos': typeof PainelAlunosRoute
   '/painel/financeiro': typeof PainelFinanceiroRoute
@@ -211,6 +255,7 @@ export interface FileRoutesById {
   '/portal/videos': typeof PortalVideosRoute
   '/painel/': typeof PainelIndexRoute
   '/portal/': typeof PortalIndexRoute
+  '/api/cron/payment-reminders': typeof ApiCronPaymentRemindersRoute
   '/api/mercadopago/webhook': typeof ApiMercadopagoWebhookRoute
   '/painel/disciplinas/$disciplineId': typeof PainelDisciplinasDisciplineIdRoute
   '/portal/checkin/$lessonId': typeof PortalCheckinLessonIdRoute
@@ -222,8 +267,12 @@ export interface FileRouteTypes {
     | '/'
     | '/painel'
     | '/portal'
+    | '/esqueci-senha'
+    | '/esqueci-senha-aluno'
     | '/login'
     | '/login-aluno'
+    | '/redefinir-senha'
+    | '/redefinir-senha-aluno'
     | '/painel/agenda'
     | '/painel/alunos'
     | '/painel/financeiro'
@@ -237,6 +286,7 @@ export interface FileRouteTypes {
     | '/portal/videos'
     | '/painel/'
     | '/portal/'
+    | '/api/cron/payment-reminders'
     | '/api/mercadopago/webhook'
     | '/painel/disciplinas/$disciplineId'
     | '/portal/checkin/$lessonId'
@@ -244,8 +294,12 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/esqueci-senha'
+    | '/esqueci-senha-aluno'
     | '/login'
     | '/login-aluno'
+    | '/redefinir-senha'
+    | '/redefinir-senha-aluno'
     | '/painel/agenda'
     | '/painel/alunos'
     | '/painel/financeiro'
@@ -259,6 +313,7 @@ export interface FileRouteTypes {
     | '/portal/videos'
     | '/painel'
     | '/portal'
+    | '/api/cron/payment-reminders'
     | '/api/mercadopago/webhook'
     | '/painel/disciplinas/$disciplineId'
     | '/portal/checkin/$lessonId'
@@ -268,8 +323,12 @@ export interface FileRouteTypes {
     | '/'
     | '/painel'
     | '/portal'
+    | '/esqueci-senha'
+    | '/esqueci-senha-aluno'
     | '/login'
     | '/login-aluno'
+    | '/redefinir-senha'
+    | '/redefinir-senha-aluno'
     | '/painel/agenda'
     | '/painel/alunos'
     | '/painel/financeiro'
@@ -283,6 +342,7 @@ export interface FileRouteTypes {
     | '/portal/videos'
     | '/painel/'
     | '/portal/'
+    | '/api/cron/payment-reminders'
     | '/api/mercadopago/webhook'
     | '/painel/disciplinas/$disciplineId'
     | '/portal/checkin/$lessonId'
@@ -293,13 +353,32 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   PainelRouteRoute: typeof PainelRouteRouteWithChildren
   PortalRouteRoute: typeof PortalRouteRouteWithChildren
+  EsqueciSenhaRoute: typeof EsqueciSenhaRoute
+  EsqueciSenhaAlunoRoute: typeof EsqueciSenhaAlunoRoute
   LoginRoute: typeof LoginRoute
   LoginAlunoRoute: typeof LoginAlunoRoute
+  RedefinirSenhaRoute: typeof RedefinirSenhaRoute
+  RedefinirSenhaAlunoRoute: typeof RedefinirSenhaAlunoRoute
+  ApiCronPaymentRemindersRoute: typeof ApiCronPaymentRemindersRoute
   ApiMercadopagoWebhookRoute: typeof ApiMercadopagoWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/redefinir-senha-aluno': {
+      id: '/redefinir-senha-aluno'
+      path: '/redefinir-senha-aluno'
+      fullPath: '/redefinir-senha-aluno'
+      preLoaderRoute: typeof RedefinirSenhaAlunoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/redefinir-senha': {
+      id: '/redefinir-senha'
+      path: '/redefinir-senha'
+      fullPath: '/redefinir-senha'
+      preLoaderRoute: typeof RedefinirSenhaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login-aluno': {
       id: '/login-aluno'
       path: '/login-aluno'
@@ -312,6 +391,20 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/esqueci-senha-aluno': {
+      id: '/esqueci-senha-aluno'
+      path: '/esqueci-senha-aluno'
+      fullPath: '/esqueci-senha-aluno'
+      preLoaderRoute: typeof EsqueciSenhaAlunoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/esqueci-senha': {
+      id: '/esqueci-senha'
+      path: '/esqueci-senha'
+      fullPath: '/esqueci-senha'
+      preLoaderRoute: typeof EsqueciSenhaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/portal': {
@@ -447,6 +540,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiMercadopagoWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/cron/payment-reminders': {
+      id: '/api/cron/payment-reminders'
+      path: '/api/cron/payment-reminders'
+      fullPath: '/api/cron/payment-reminders'
+      preLoaderRoute: typeof ApiCronPaymentRemindersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/painel/relatorio/$studentId/pdf': {
       id: '/painel/relatorio/$studentId/pdf'
       path: '/$studentId/pdf'
@@ -523,8 +623,13 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   PainelRouteRoute: PainelRouteRouteWithChildren,
   PortalRouteRoute: PortalRouteRouteWithChildren,
+  EsqueciSenhaRoute: EsqueciSenhaRoute,
+  EsqueciSenhaAlunoRoute: EsqueciSenhaAlunoRoute,
   LoginRoute: LoginRoute,
   LoginAlunoRoute: LoginAlunoRoute,
+  RedefinirSenhaRoute: RedefinirSenhaRoute,
+  RedefinirSenhaAlunoRoute: RedefinirSenhaAlunoRoute,
+  ApiCronPaymentRemindersRoute: ApiCronPaymentRemindersRoute,
   ApiMercadopagoWebhookRoute: ApiMercadopagoWebhookRoute,
 }
 export const routeTree = rootRouteImport
