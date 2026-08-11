@@ -15,7 +15,7 @@ export function TeacherCard({ teacher }: TeacherCardProps) {
       <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-accent via-primary to-transparent" />
       <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-border/70 pb-5">
         <div className="flex min-w-0 items-center gap-4">
-          <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-accent to-accent/70 text-accent-foreground shadow-sm">
+          <span className="grid size-11 shrink-0 place-items-center rounded-full bg-gradient-to-br from-accent to-accent/70 text-accent-foreground shadow-sm">
             <GraduationCap className="size-5" aria-hidden />
           </span>
           <div className="min-w-0">

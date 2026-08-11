@@ -21,7 +21,7 @@ export function SemesterCard({ semester }: SemesterCardProps) {
       <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-accent to-transparent" />
       <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-border/70 pb-5">
         <div className="flex min-w-0 items-center gap-4">
-          <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-primary to-primary/80 font-display text-lg font-semibold text-primary-foreground shadow-sm">
+          <span className="grid size-11 shrink-0 place-items-center rounded-full bg-gradient-to-br from-primary to-primary/80 font-display text-lg font-semibold text-primary-foreground shadow-sm">
             {semester.semester}
           </span>
           <div className="min-w-0">
@@ -40,7 +40,11 @@ export function SemesterCard({ semester }: SemesterCardProps) {
         </div>
       </header>
 
-      <Accordion type="multiple" defaultValue={defaultOpen} className="mt-5 grid gap-3">
+      <Accordion
+        type="multiple"
+        defaultValue={defaultOpen}
+        className="mt-2 divide-y divide-border/70"
+      >
         {semester.modules.map((module) => (
           <ModuleCard
             key={module.module}

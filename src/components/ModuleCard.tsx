@@ -12,11 +12,8 @@ interface ModuleCardProps {
 /** Módulo expansível com suas disciplinas. */
 export function ModuleCard({ module, value }: ModuleCardProps) {
   return (
-    <AccordionItem
-      value={value}
-      className="overflow-hidden rounded-md border border-border/70 bg-gradient-to-r from-surface to-card/70 transition-colors last:border-b data-[state=open]:border-accent/50"
-    >
-      <AccordionTrigger className="px-4 py-4 text-left hover:no-underline sm:px-6">
+    <AccordionItem value={value} className="border-none">
+      <AccordionTrigger className="rounded-md px-2 py-4 text-left transition-colors hover:bg-surface/70 hover:no-underline data-[state=open]:bg-surface/50">
         <div className="grid w-full grid-cols-[minmax(0,1fr)] gap-2 pr-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-4">
           <div className="min-w-0">
             <p className="truncate font-display text-base font-semibold text-foreground">
@@ -41,7 +38,7 @@ export function ModuleCard({ module, value }: ModuleCardProps) {
         </div>
       </AccordionTrigger>
 
-      <AccordionContent className="px-4 pb-5 sm:px-6">
+      <AccordionContent className="px-2 pb-5">
         <ul className="grid gap-3">
           {module.disciplines.map((discipline) => (
             <DisciplineRow key={discipline.id} discipline={discipline} />
