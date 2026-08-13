@@ -1,14 +1,7 @@
 import { Link } from "@tanstack/react-router";
-import { GraduationCap, LayoutGrid, LogIn } from "lucide-react";
+import { GraduationCap, LayoutDashboard } from "lucide-react";
 
-/** Itens do menu principal. Adicionar novas seções aqui. */
-const navigationItems = [
-  { to: "/", label: "Visão Geral", icon: LayoutGrid },
-  { to: "/login-aluno", label: "Portal do Aluno", icon: GraduationCap },
-  { to: "/painel", label: "Painel", icon: LogIn },
-] as const;
-
-/** Cabeçalho fixo com identidade do seminário e navegação principal. */
+/** Cabeçalho fixo com identidade do seminário e acesso às duas áreas logadas. */
 export function Navigation() {
   return (
     <header className="sticky top-0 z-50 border-b border-border/80 bg-background/85 backdrop-blur-md">
@@ -25,21 +18,30 @@ export function Navigation() {
           </span>
         </Link>
 
-        <nav aria-label="Navegação principal">
-          <ul className="flex items-center gap-1 rounded-full border border-border bg-surface p-1">
-            {navigationItems.map((item) => (
-              <li key={item.to}>
-                <Link
-                  to={item.to}
-                  activeOptions={{ exact: item.to === "/" }}
-                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground data-[status=active]:bg-primary data-[status=active]:text-primary-foreground"
-                >
-                  <item.icon className="size-4 shrink-0" aria-hidden />
-                  <span className="hidden sm:inline">{item.label}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
+        <nav aria-label="Navegação principal" className="flex items-center gap-2 sm:gap-3">
+          <Link
+            to="/"
+            activeOptions={{ exact: true }}
+            className="hidden text-sm font-medium text-muted-foreground transition-colors hover:text-foreground data-[status=active]:text-foreground sm:inline-block"
+          >
+            Visão Geral
+          </Link>
+
+          <Link
+            to="/login-aluno"
+            className="inline-flex items-center gap-1.5 rounded-full border border-accent/30 bg-accent-soft px-3 py-1.5 text-sm font-semibold text-accent transition-colors hover:border-accent/50 hover:bg-accent-soft/70"
+          >
+            <GraduationCap className="size-4 shrink-0" aria-hidden />
+            <span className="hidden sm:inline">Portal do Aluno</span>
+          </Link>
+
+          <Link
+            to="/painel"
+            className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+          >
+            <LayoutDashboard className="size-4 shrink-0" aria-hidden />
+            <span className="hidden sm:inline">Painel</span>
+          </Link>
         </nav>
       </div>
     </header>

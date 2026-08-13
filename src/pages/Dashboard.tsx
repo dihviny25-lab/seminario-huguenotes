@@ -1,6 +1,14 @@
 import { useMemo } from "react";
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, BookOpen, CalendarRange, Layers, Users } from "lucide-react";
+import {
+  ArrowRight,
+  BookOpen,
+  CalendarRange,
+  GraduationCap,
+  LayoutDashboard,
+  Layers,
+  Users,
+} from "lucide-react";
 
 import { BackToTopButton } from "@/components/BackToTopButton";
 import { Navigation } from "@/components/Navigation";
@@ -58,12 +66,12 @@ export function Dashboard({ disciplines }: { disciplines: Discipline[] }) {
                 Ver semestres
                 <ArrowRight className="size-4 shrink-0" aria-hidden />
               </a>
-              <Link
-                to="/login-aluno"
+              <a
+                href="#acesso"
                 className="inline-flex items-center gap-2 rounded-full border border-primary-foreground/25 px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-foreground/10"
               >
-                Portal do Aluno
-              </Link>
+                Já tenho login
+              </a>
             </div>
           </div>
 
@@ -97,7 +105,66 @@ export function Dashboard({ disciplines }: { disciplines: Discipline[] }) {
       </div>
 
       <main className="mx-auto max-w-6xl px-4 pb-24 pt-16 sm:px-6">
-        <div className="rounded-lg border border-warning-border/70 bg-gradient-to-br from-warning-soft to-background px-4 py-4 text-sm leading-relaxed text-warning shadow-soft sm:px-5">
+        <section id="acesso" className="scroll-mt-24">
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-accent">
+            Já faz parte da turma?
+          </p>
+          <h2 className="mt-3 font-display text-3xl font-semibold tracking-tight text-foreground">
+            Acesse sua área
+          </h2>
+
+          <div className="mt-6 grid gap-5 sm:grid-cols-2">
+            <Link
+              to="/login-aluno"
+              className="group flex items-start gap-4 rounded-2xl border border-accent/30 bg-accent-soft/50 p-6 shadow-soft transition-all duration-200 hover:-translate-y-1 hover:border-accent/60 hover:shadow-lg"
+            >
+              <span className="grid size-12 shrink-0 place-items-center rounded-full bg-accent text-accent-foreground shadow-sm">
+                <GraduationCap className="size-6" aria-hidden />
+              </span>
+              <div className="min-w-0">
+                <h3 className="font-display text-xl font-semibold tracking-tight text-foreground">
+                  Portal do Aluno
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Notas, frequência, boletim e mensalidades.
+                </p>
+                <span className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-accent">
+                  Entrar
+                  <ArrowRight
+                    className="size-4 shrink-0 transition-transform group-hover:translate-x-1"
+                    aria-hidden
+                  />
+                </span>
+              </div>
+            </Link>
+
+            <Link
+              to="/painel"
+              className="group flex items-start gap-4 rounded-2xl border border-primary/20 bg-primary p-6 text-primary-foreground shadow-soft transition-all duration-200 hover:-translate-y-1 hover:shadow-lg"
+            >
+              <span className="grid size-12 shrink-0 place-items-center rounded-full bg-primary-foreground/15 text-primary-foreground shadow-sm">
+                <LayoutDashboard className="size-6" aria-hidden />
+              </span>
+              <div className="min-w-0">
+                <h3 className="font-display text-xl font-semibold tracking-tight text-primary-foreground">
+                  Painel do Professor
+                </h3>
+                <p className="mt-1 text-sm text-primary-foreground/70">
+                  Lançamento de notas, presença e gestão acadêmica.
+                </p>
+                <span className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-accent">
+                  Entrar
+                  <ArrowRight
+                    className="size-4 shrink-0 transition-transform group-hover:translate-x-1"
+                    aria-hidden
+                  />
+                </span>
+              </div>
+            </Link>
+          </div>
+        </section>
+
+        <div className="mt-10 rounded-lg border border-warning-border/70 bg-gradient-to-br from-warning-soft to-background px-4 py-4 text-sm leading-relaxed text-warning shadow-soft sm:px-5">
           <p className="font-medium">Nota da coordenação</p>
           <p className="mt-1">{scheduleNote}</p>
         </div>
