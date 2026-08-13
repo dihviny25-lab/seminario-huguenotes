@@ -20,6 +20,7 @@ import { Route as PainelRouteRouteImport } from './routes/painel/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PortalIndexRouteImport } from './routes/portal/index'
 import { Route as PainelIndexRouteImport } from './routes/painel/index'
+import { Route as SemestreSemesterRouteImport } from './routes/semestre/$semester'
 import { Route as PortalVideosRouteImport } from './routes/portal/videos'
 import { Route as PortalTrocarSenhaRouteImport } from './routes/portal/trocar-senha'
 import { Route as PortalPdfRouteImport } from './routes/portal/pdf'
@@ -91,6 +92,11 @@ const PainelIndexRoute = PainelIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => PainelRouteRoute,
+} as any)
+const SemestreSemesterRoute = SemestreSemesterRouteImport.update({
+  id: '/semestre/$semester',
+  path: '/semestre/$semester',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const PortalVideosRoute = PortalVideosRouteImport.update({
   id: '/videos',
@@ -196,6 +202,7 @@ export interface FileRoutesByFullPath {
   '/portal/pdf': typeof PortalPdfRoute
   '/portal/trocar-senha': typeof PortalTrocarSenhaRoute
   '/portal/videos': typeof PortalVideosRoute
+  '/semestre/$semester': typeof SemestreSemesterRoute
   '/painel/': typeof PainelIndexRoute
   '/portal/': typeof PortalIndexRoute
   '/api/cron/payment-reminders': typeof ApiCronPaymentRemindersRoute
@@ -223,6 +230,7 @@ export interface FileRoutesByTo {
   '/portal/pdf': typeof PortalPdfRoute
   '/portal/trocar-senha': typeof PortalTrocarSenhaRoute
   '/portal/videos': typeof PortalVideosRoute
+  '/semestre/$semester': typeof SemestreSemesterRoute
   '/painel': typeof PainelIndexRoute
   '/portal': typeof PortalIndexRoute
   '/api/cron/payment-reminders': typeof ApiCronPaymentRemindersRoute
@@ -253,6 +261,7 @@ export interface FileRoutesById {
   '/portal/pdf': typeof PortalPdfRoute
   '/portal/trocar-senha': typeof PortalTrocarSenhaRoute
   '/portal/videos': typeof PortalVideosRoute
+  '/semestre/$semester': typeof SemestreSemesterRoute
   '/painel/': typeof PainelIndexRoute
   '/portal/': typeof PortalIndexRoute
   '/api/cron/payment-reminders': typeof ApiCronPaymentRemindersRoute
@@ -284,6 +293,7 @@ export interface FileRouteTypes {
     | '/portal/pdf'
     | '/portal/trocar-senha'
     | '/portal/videos'
+    | '/semestre/$semester'
     | '/painel/'
     | '/portal/'
     | '/api/cron/payment-reminders'
@@ -311,6 +321,7 @@ export interface FileRouteTypes {
     | '/portal/pdf'
     | '/portal/trocar-senha'
     | '/portal/videos'
+    | '/semestre/$semester'
     | '/painel'
     | '/portal'
     | '/api/cron/payment-reminders'
@@ -340,6 +351,7 @@ export interface FileRouteTypes {
     | '/portal/pdf'
     | '/portal/trocar-senha'
     | '/portal/videos'
+    | '/semestre/$semester'
     | '/painel/'
     | '/portal/'
     | '/api/cron/payment-reminders'
@@ -359,6 +371,7 @@ export interface RootRouteChildren {
   LoginAlunoRoute: typeof LoginAlunoRoute
   RedefinirSenhaRoute: typeof RedefinirSenhaRoute
   RedefinirSenhaAlunoRoute: typeof RedefinirSenhaAlunoRoute
+  SemestreSemesterRoute: typeof SemestreSemesterRoute
   ApiCronPaymentRemindersRoute: typeof ApiCronPaymentRemindersRoute
   ApiMercadopagoWebhookRoute: typeof ApiMercadopagoWebhookRoute
 }
@@ -441,6 +454,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/painel/'
       preLoaderRoute: typeof PainelIndexRouteImport
       parentRoute: typeof PainelRouteRoute
+    }
+    '/semestre/$semester': {
+      id: '/semestre/$semester'
+      path: '/semestre/$semester'
+      fullPath: '/semestre/$semester'
+      preLoaderRoute: typeof SemestreSemesterRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/portal/videos': {
       id: '/portal/videos'
@@ -629,6 +649,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginAlunoRoute: LoginAlunoRoute,
   RedefinirSenhaRoute: RedefinirSenhaRoute,
   RedefinirSenhaAlunoRoute: RedefinirSenhaAlunoRoute,
+  SemestreSemesterRoute: SemestreSemesterRoute,
   ApiCronPaymentRemindersRoute: ApiCronPaymentRemindersRoute,
   ApiMercadopagoWebhookRoute: ApiMercadopagoWebhookRoute,
 }
