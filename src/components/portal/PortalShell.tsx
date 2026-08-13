@@ -1,9 +1,14 @@
 import { useState, type ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { LogOut } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { studentLogoutFn } from "@/functions/studentAuth";
+import { getCurrentStudentFn, studentLogoutFn } from "@/functions/studentAuth";
+
+function firstName(fullName: string): string {
+  return fullName.trim().split(/\s+/)[0];
+}
 
 interface PortalShellProps {
   title: string;
@@ -21,6 +26,10 @@ const portalNavItems = [
 export function PortalShell({ title, description, children }: PortalShellProps) {
   const navigate = useNavigate();
   const [signingOut, setSigningOut] = useState(false);
+  const { data: student } = useQuery({
+    queryKey: ["current-student"],
+    queryFn: () => getCurrentStudentFn(),
+  });
 
   async function handleLogout() {
     setSigningOut(true);
@@ -32,10 +41,13 @@ export function PortalShell({ title, description, children }: PortalShellProps) 
     <div className="min-h-screen">
       <header className="sticky top-0 z-50 border-b border-border/80 bg-background/85 backdrop-blur-md print:hidden">
         <div className="mx-auto flex max-w-4xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 items-center gap-2">
             <img src="/logo.png" alt="" className="size-8 shrink-0" aria-hidden />
-            <span className="font-display text-sm font-semibold text-foreground">
-              Portal do aluno
+            <span className="min-w-0">
+              <span className="block truncate font-display text-sm font-semibold text-foreground">
+                {student ? `Olá, ${firstName(student.name)}` : "Portal do aluno"}
+              </span>
+              <span className="hidden text-xs text-muted-foreground sm:block">Portal do aluno</span>
             </span>
           </div>
           <nav className="flex items-center gap-1">

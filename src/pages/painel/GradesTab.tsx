@@ -23,6 +23,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -73,7 +74,23 @@ export function GradesTab({ disciplineId }: { disciplineId: string }) {
   });
 
   if (isLoading || !data) {
-    return <p className="py-6 text-center text-muted-foreground">Carregando…</p>;
+    return (
+      <div className="overflow-hidden rounded-md border border-border/70 bg-card/70 shadow-soft">
+        <div className="flex items-center gap-6 border-b border-border/70 p-3">
+          <Skeleton className="h-4 w-16" />
+          <Skeleton className="ml-auto h-4 w-14" />
+        </div>
+        {Array.from({ length: 6 }).map((_, index) => (
+          <div
+            key={index}
+            className="flex items-center gap-6 border-b border-border/70 p-3 last:border-b-0"
+          >
+            <Skeleton className="h-4 w-40" />
+            <Skeleton className="ml-auto h-4 w-8" />
+          </div>
+        ))}
+      </div>
+    );
   }
 
   const gradeByKey = new Map(data.grades.map((g) => [`${g.assessmentId}:${g.studentId}`, g.score]));
@@ -87,91 +104,97 @@ export function GradesTab({ disciplineId }: { disciplineId: string }) {
         </Button>
       </div>
 
-      <div className="overflow-hidden rounded-md border border-border/70 bg-card/70 shadow-soft">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Aluno</TableHead>
-              {data.assessments.map((a) => (
-                <TableHead key={a.id} className="text-center">
-                  <div className="flex items-center justify-center gap-1">
-                    <span>
-                      {a.title} <span className="text-muted-foreground">/ {a.maxScore}</span>
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-6"
-                      title="Remover avaliação"
-                      onClick={() => deleteMutation.mutate(a.id)}
-                    >
-                      <Trash2 className="size-3.5" aria-hidden />
-                    </Button>
-                  </div>
-                </TableHead>
-              ))}
-              <TableHead className="text-center">Média</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data.students.length === 0 ? (
+      {data.assessments.length === 0 ? (
+        <p className="rounded-md border border-border/70 bg-card/70 p-6 text-center text-muted-foreground shadow-soft">
+          Nenhuma avaliação criada ainda — clique em "Nova avaliação" para lançar a primeira nota.
+        </p>
+      ) : (
+        <div className="overflow-hidden rounded-md border border-border/70 bg-card/70 shadow-soft">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell
-                  colSpan={data.assessments.length + 2}
-                  className="py-6 text-center text-muted-foreground"
-                >
-                  Nenhum aluno ativo cadastrado.
-                </TableCell>
+                <TableHead>Aluno</TableHead>
+                {data.assessments.map((a) => (
+                  <TableHead key={a.id} className="text-center">
+                    <div className="flex items-center justify-center gap-1">
+                      <span>
+                        {a.title} <span className="text-muted-foreground">/ {a.maxScore}</span>
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-6"
+                        title="Remover avaliação"
+                        onClick={() => deleteMutation.mutate(a.id)}
+                      >
+                        <Trash2 className="size-3.5" aria-hidden />
+                      </Button>
+                    </div>
+                  </TableHead>
+                ))}
+                <TableHead className="text-center">Média</TableHead>
               </TableRow>
-            ) : (
-              data.students.map((student) => {
-                const scores = data.assessments
-                  .map((a) => {
-                    const raw = gradeByKey.get(`${a.id}:${student.id}`);
-                    return raw === undefined
-                      ? null
-                      : { score: Number(raw), weight: Number(a.weight) };
-                  })
-                  .filter((s): s is { score: number; weight: number } => s !== null);
-                const avg = computeWeightedAverage(scores);
+            </TableHeader>
+            <TableBody>
+              {data.students.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={data.assessments.length + 2}
+                    className="py-6 text-center text-muted-foreground"
+                  >
+                    Nenhum aluno ativo cadastrado.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                data.students.map((student) => {
+                  const scores = data.assessments
+                    .map((a) => {
+                      const raw = gradeByKey.get(`${a.id}:${student.id}`);
+                      return raw === undefined
+                        ? null
+                        : { score: Number(raw), weight: Number(a.weight) };
+                    })
+                    .filter((s): s is { score: number; weight: number } => s !== null);
+                  const avg = computeWeightedAverage(scores);
 
-                return (
-                  <TableRow key={student.id} className="even:bg-muted/30">
-                    <TableCell className="font-medium text-foreground">{student.name}</TableCell>
-                    {data.assessments.map((a) => {
-                      const key = `${a.id}:${student.id}`;
-                      const value = gradeByKey.get(key);
-                      return (
-                        <TableCell key={a.id} className="text-center">
-                          <Input
-                            type="number"
-                            min={0}
-                            step="0.1"
-                            defaultValue={value ?? ""}
-                            className="mx-auto h-8 w-20 text-center"
-                            onBlur={(event) => {
-                              const parsed = Number(event.target.value);
-                              if (event.target.value === "" || Number.isNaN(parsed)) return;
-                              gradeMutation.mutate({
-                                assessmentId: a.id,
-                                studentId: student.id,
-                                score: parsed,
-                              });
-                            }}
-                          />
-                        </TableCell>
-                      );
-                    })}
-                    <TableCell className="text-center font-medium text-foreground">
-                      {avg === null ? "—" : avg.toFixed(1)}
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
-      </div>
+                  return (
+                    <TableRow key={student.id} className="even:bg-muted/30">
+                      <TableCell className="font-medium text-foreground">{student.name}</TableCell>
+                      {data.assessments.map((a) => {
+                        const key = `${a.id}:${student.id}`;
+                        const value = gradeByKey.get(key);
+                        return (
+                          <TableCell key={a.id} className="text-center">
+                            <Input
+                              type="number"
+                              min={0}
+                              step="0.1"
+                              defaultValue={value ?? ""}
+                              className="mx-auto h-8 w-20 text-center"
+                              onBlur={(event) => {
+                                const parsed = Number(event.target.value);
+                                if (event.target.value === "" || Number.isNaN(parsed)) return;
+                                gradeMutation.mutate({
+                                  assessmentId: a.id,
+                                  studentId: student.id,
+                                  score: parsed,
+                                });
+                              }}
+                            />
+                          </TableCell>
+                        );
+                      })}
+                      <TableCell className="text-center font-medium text-foreground">
+                        {avg === null ? "—" : avg.toFixed(1)}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      )}
 
       <CreateAssessmentDialog
         disciplineId={disciplineId}

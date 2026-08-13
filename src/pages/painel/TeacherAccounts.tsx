@@ -143,7 +143,7 @@ export function TeacherAccounts() {
                 const isSelf = teacher.id === me?.id;
                 const canEdit = isAdmin || isSelf;
                 return (
-                  <TableRow key={teacher.id}>
+                  <TableRow key={teacher.id} className="even:bg-muted/30">
                     <TableCell className="font-medium text-foreground">{teacher.name}</TableCell>
                     <TableCell className="text-muted-foreground">{teacher.email}</TableCell>
                     <TableCell>

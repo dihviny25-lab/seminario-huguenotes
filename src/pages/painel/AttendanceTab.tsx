@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -77,7 +78,23 @@ export function AttendanceTab({ disciplineId }: { disciplineId: string }) {
   });
 
   if (isLoading || !data) {
-    return <p className="py-6 text-center text-muted-foreground">Carregando…</p>;
+    return (
+      <div className="overflow-hidden rounded-md border border-border/70 bg-card/70 shadow-soft">
+        <div className="flex items-center gap-6 border-b border-border/70 p-3">
+          <Skeleton className="h-4 w-16" />
+          <Skeleton className="ml-auto h-4 w-14" />
+        </div>
+        {Array.from({ length: 6 }).map((_, index) => (
+          <div
+            key={index}
+            className="flex items-center gap-6 border-b border-border/70 p-3 last:border-b-0"
+          >
+            <Skeleton className="h-4 w-40" />
+            <Skeleton className="ml-auto h-4 w-8" />
+          </div>
+        ))}
+      </div>
+    );
   }
 
   const presentByKey = new Map(

@@ -23,6 +23,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   createVideoLessonFn,
   deleteVideoLessonFn,
@@ -56,7 +57,21 @@ export function VideoLessonsTab({ disciplineId }: { disciplineId: string }) {
   });
 
   if (isLoading || !videos) {
-    return <p className="py-6 text-center text-muted-foreground">Carregando…</p>;
+    return (
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <div
+            key={index}
+            className="overflow-hidden rounded-md border border-border/70 bg-card/70 shadow-soft"
+          >
+            <Skeleton className="aspect-video w-full rounded-none" />
+            <div className="p-3">
+              <Skeleton className="h-4 w-3/4" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
   }
 
   return (

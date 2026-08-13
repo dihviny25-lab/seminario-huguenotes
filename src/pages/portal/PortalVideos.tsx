@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { PortalShell } from "@/components/portal/PortalShell";
+import { Skeleton } from "@/components/ui/skeleton";
 import { getPublicDisciplinesFn } from "@/functions/schedule";
 import { listAllVideoLessonsFn, type VideoLesson } from "@/functions/videoLessons";
 import { groupBySemester, semesterLabel } from "@/lib/schedule-utils";
@@ -34,7 +35,26 @@ export function PortalVideos() {
       description="Assista às vídeo-aulas disponibilizadas pelos professores em cada disciplina."
     >
       {isLoading ? (
-        <p className="text-muted-foreground">Carregando…</p>
+        <div className="space-y-10">
+          {Array.from({ length: 2 }).map((_, sectionIndex) => (
+            <div key={sectionIndex}>
+              <Skeleton className="h-5 w-32" />
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                {Array.from({ length: 2 }).map((_, cardIndex) => (
+                  <div
+                    key={cardIndex}
+                    className="overflow-hidden rounded-md border border-border/70 bg-card/70 shadow-soft"
+                  >
+                    <Skeleton className="aspect-video w-full rounded-none" />
+                    <div className="p-3">
+                      <Skeleton className="h-4 w-3/4" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       ) : semesters.length === 0 ? (
         <p className="rounded-md border border-border/70 bg-card/70 p-6 text-center text-muted-foreground shadow-soft">
           Nenhuma vídeo-aula disponível no momento.

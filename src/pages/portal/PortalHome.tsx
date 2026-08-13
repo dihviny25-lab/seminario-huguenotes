@@ -5,6 +5,7 @@ import { ChevronDown, Download, Printer } from "lucide-react";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -43,7 +44,18 @@ export function PortalHome() {
       description="Consulte suas notas e faltas em todas as disciplinas do curso."
     >
       {isLoading || !report ? (
-        <p className="text-muted-foreground">Carregando…</p>
+        <div className="overflow-hidden rounded-md border border-border/70 bg-card/70 p-6 shadow-soft">
+          <div className="mb-6 flex items-center justify-between">
+            <Skeleton className="h-3 w-32" />
+            <Skeleton className="h-9 w-28" />
+          </div>
+          <div className="space-y-3">
+            <Skeleton className="h-4 w-full" />
+            {Array.from({ length: 5 }).map((_, index) => (
+              <Skeleton key={index} className="h-10 w-full" />
+            ))}
+          </div>
+        </div>
       ) : (
         <div className="rounded-md border border-border/70 bg-card/70 p-6 shadow-soft print:border-none print:bg-transparent print:p-0 print:shadow-none">
           <div className="mb-6 flex items-center justify-between print:hidden">

@@ -189,7 +189,7 @@ export function Students() {
               </TableRow>
             ) : students && students.length > 0 ? (
               students.map((student) => (
-                <TableRow key={student.id}>
+                <TableRow key={student.id} className="even:bg-muted/30">
                   <TableCell className="font-medium text-foreground">{student.name}</TableCell>
                   <TableCell className="text-muted-foreground">{student.email ?? "—"}</TableCell>
                   <TableCell>
