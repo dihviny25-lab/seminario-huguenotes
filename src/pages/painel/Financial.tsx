@@ -10,6 +10,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -41,7 +42,29 @@ export function Financial() {
       description="Visão geral de mensalidades e cobranças do seminário."
     >
       {isLoading || !summary ? (
-        <p className="text-muted-foreground">Carregando…</p>
+        <div className="space-y-8">
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div
+                key={index}
+                className="rounded-lg border border-t-2 border-border/70 border-t-border bg-card/80 p-5 shadow-soft"
+              >
+                <Skeleton className="h-3 w-24" />
+                <Skeleton className="mt-3 h-8 w-28" />
+              </div>
+            ))}
+          </div>
+          <div className="rounded-lg border border-border/70 bg-card/80 p-5 shadow-soft">
+            <Skeleton className="h-5 w-40" />
+            <Skeleton className="mt-4 h-64 w-full" />
+          </div>
+          <div className="space-y-3 rounded-lg border border-border/70 bg-card/80 p-5 shadow-soft">
+            <Skeleton className="h-5 w-48" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+        </div>
       ) : (
         <div className="space-y-8">
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">

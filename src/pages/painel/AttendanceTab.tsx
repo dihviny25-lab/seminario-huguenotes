@@ -152,7 +152,7 @@ export function AttendanceTab({ disciplineId }: { disciplineId: string }) {
                 ).length;
 
                 return (
-                  <TableRow key={student.id}>
+                  <TableRow key={student.id} className="even:bg-muted/30">
                     <TableCell className="font-medium text-foreground">{student.name}</TableCell>
                     {data.lessons.map((lesson) => {
                       const key = `${lesson.id}:${student.id}`;

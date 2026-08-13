@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { BookOpen, GraduationCap, Users } from "lucide-react";
 
 import { PainelShell } from "@/components/painel/PainelShell";
+import { Skeleton } from "@/components/ui/skeleton";
 import { listMyDisciplinesFn } from "@/functions/disciplines";
 
 const shortcuts = [
@@ -59,7 +60,18 @@ export function PainelHome() {
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {isLoading ? (
-          <p className="text-muted-foreground">Carregando…</p>
+          Array.from({ length: 3 }).map((_, index) => (
+            <div
+              key={index}
+              className="flex items-start gap-3 rounded-md border border-t-2 border-border/70 border-t-border bg-card/70 p-4 shadow-soft"
+            >
+              <Skeleton className="mt-0.5 size-4 shrink-0 rounded-full" />
+              <div className="min-w-0 flex-1 space-y-2">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-3 w-1/2" />
+              </div>
+            </div>
+          ))
         ) : disciplines && disciplines.length > 0 ? (
           disciplines.map((discipline) => (
             <Link

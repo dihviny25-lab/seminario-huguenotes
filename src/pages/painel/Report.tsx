@@ -70,6 +70,12 @@ export function Report() {
         </div>
       </div>
 
+      {!selectedId ? (
+        <p className="mt-8 text-sm text-muted-foreground">
+          Busque um aluno acima pra ver e imprimir o relatório dele.
+        </p>
+      ) : null}
+
       {selectedId && (
         <div className="mt-8">
           {isLoading || !report ? (

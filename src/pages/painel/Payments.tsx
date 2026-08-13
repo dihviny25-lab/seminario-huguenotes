@@ -150,6 +150,12 @@ export function Payments() {
         </div>
       </div>
 
+      {!selectedId ? (
+        <p className="mt-8 text-sm text-muted-foreground">
+          Busque um aluno acima pra ver e gerenciar as cobranças dele.
+        </p>
+      ) : null}
+
       {selectedId && selectedStudent ? (
         <div className="mt-8">
           <div className="mb-4 flex items-center justify-between">

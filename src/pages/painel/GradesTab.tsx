@@ -136,7 +136,7 @@ export function GradesTab({ disciplineId }: { disciplineId: string }) {
                 const avg = computeWeightedAverage(scores);
 
                 return (
-                  <TableRow key={student.id}>
+                  <TableRow key={student.id} className="even:bg-muted/30">
                     <TableCell className="font-medium text-foreground">{student.name}</TableCell>
                     {data.assessments.map((a) => {
                       const key = `${a.id}:${student.id}`;
