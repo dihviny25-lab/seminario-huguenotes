@@ -54,7 +54,11 @@ export function TeachersAgenda() {
 
           <div className="mt-8 grid gap-6">
             {visibleTeachers.map((teacher) => (
-              <TeacherCard key={teacher.name} teacher={teacher} />
+              <TeacherCard
+                key={`${teacher.name}-${selected ?? "all"}`}
+                teacher={teacher}
+                defaultOpen={visibleTeachers.length === 1}
+              />
             ))}
           </div>
         </>
