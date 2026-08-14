@@ -33,7 +33,11 @@ export const listStudentsFn = createServerFn({ method: "GET" }).handler(
 );
 
 const createSchema = z.object({
-  name: z.string().trim().min(1, "Informe o nome."),
+  name: z
+    .string()
+    .trim()
+    .min(1, "Informe o nome.")
+    .transform((name) => name.toUpperCase()),
   email: z
     .string()
     .trim()
@@ -56,7 +60,11 @@ export const createStudentFn = createServerFn({ method: "POST" })
 
 const updateSchema = z.object({
   id: z.string().uuid(),
-  name: z.string().trim().min(1, "Informe o nome."),
+  name: z
+    .string()
+    .trim()
+    .min(1, "Informe o nome.")
+    .transform((name) => name.toUpperCase()),
   email: z
     .string()
     .trim()
@@ -133,7 +141,11 @@ export const deleteStudentFn = createServerFn({ method: "POST" })
 const bulkCreateSchema = z.object({
   students: z.array(
     z.object({
-      name: z.string().trim().min(1),
+      name: z
+        .string()
+        .trim()
+        .min(1)
+        .transform((name) => name.toUpperCase()),
       email: z.string().trim().nullable(),
     }),
   ),
