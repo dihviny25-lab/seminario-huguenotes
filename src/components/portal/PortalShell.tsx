@@ -53,7 +53,11 @@ export function PortalShell({ title, description, children }: PortalShellProps) 
           <nav className="flex items-center gap-1">
             {portalNavItems.map((item) => (
               <Button key={item.to} variant="ghost" size="sm" asChild>
-                <Link to={item.to} activeProps={{ className: "bg-accent/10 text-accent" }}>
+                <Link
+                  to={item.to}
+                  activeOptions={{ exact: item.to === "/portal" }}
+                  activeProps={{ className: "bg-accent/10 text-accent" }}
+                >
                   {item.label}
                 </Link>
               </Button>
