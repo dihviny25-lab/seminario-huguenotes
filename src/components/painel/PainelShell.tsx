@@ -1,21 +1,44 @@
 import { useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link, useNavigate } from "@tanstack/react-router";
-import { LogOut } from "lucide-react";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import {
+  BarChart3,
+  CalendarRange,
+  FileText,
+  GraduationCap,
+  LayoutGrid,
+  LogOut,
+  Users,
+  Wallet,
+} from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
 import { getCurrentTeacherFn, logoutFn } from "@/functions/auth";
 
 const painelNavItems = [
-  { to: "/painel", label: "Painel" },
-  { to: "/painel/agenda", label: "Agenda" },
-  { to: "/painel/professores", label: "Contas de professores" },
-  { to: "/painel/alunos", label: "Alunos" },
-  { to: "/painel/relatorio", label: "Relatório" },
-  { to: "/painel/pagamentos", label: "Pagamentos" },
+  { to: "/painel", label: "Painel", icon: LayoutGrid },
+  { to: "/painel/agenda", label: "Agenda", icon: CalendarRange },
+  { to: "/painel/professores", label: "Contas de professores", icon: Users },
+  { to: "/painel/alunos", label: "Alunos", icon: GraduationCap },
+  { to: "/painel/relatorio", label: "Relatório", icon: FileText },
+  { to: "/painel/pagamentos", label: "Pagamentos", icon: Wallet },
 ] as const;
 
-const adminOnlyNavItems = [{ to: "/painel/financeiro", label: "Financeiro" }] as const;
+const adminOnlyNavItems = [
+  { to: "/painel/financeiro", label: "Financeiro", icon: BarChart3 },
+] as const;
 
 interface PainelShellProps {
   title: string;
@@ -23,9 +46,10 @@ interface PainelShellProps {
   children: ReactNode;
 }
 
-/** Cabeçalho comum das telas internas (protegidas por login). */
+/** Estrutura comum das telas internas (protegidas por login): sidebar + conteúdo. */
 export function PainelShell({ title, description, children }: PainelShellProps) {
   const navigate = useNavigate();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [signingOut, setSigningOut] = useState(false);
   const { data: me } = useQuery({
     queryKey: ["current-teacher"],
@@ -41,51 +65,69 @@ export function PainelShell({ title, description, children }: PainelShellProps) 
   }
 
   return (
-    <div className="min-h-screen">
-      <header className="sticky top-0 z-50 border-b border-border/80 bg-background/85 backdrop-blur-md print:hidden">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
-          <div className="flex items-center gap-4">
-            <Link to="/painel" className="flex items-center gap-2">
-              <img src="/logo.png" alt="" className="size-8 shrink-0" aria-hidden />
-              <span className="font-display text-sm font-semibold text-foreground">
-                Painel do professor
-              </span>
-            </Link>
-            <nav aria-label="Navegação do painel">
-              <ul className="flex items-center gap-1">
-                {navItems.map((item) => (
-                  <li key={item.to}>
-                    <Link
-                      to={item.to}
-                      activeOptions={{ exact: item.to === "/painel" }}
-                      className="rounded-full px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground data-[status=active]:bg-primary data-[status=active]:text-primary-foreground"
-                    >
-                      {item.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </nav>
-          </div>
-          <Button variant="ghost" size="sm" onClick={handleLogout} disabled={signingOut}>
-            <LogOut className="size-4" aria-hidden />
-            Sair
-          </Button>
-        </div>
-      </header>
+    <SidebarProvider>
+      <Sidebar>
+        <SidebarHeader className="px-3 py-4">
+          <Link to="/painel" className="flex items-center gap-2.5 px-1">
+            <img src="/logo.png" alt="" className="size-8 shrink-0" aria-hidden />
+            <span className="min-w-0 font-display text-sm font-semibold text-sidebar-foreground">
+              Painel do professor
+            </span>
+          </Link>
+        </SidebarHeader>
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarMenu>
+              {navItems.map((item) => {
+                const isActive =
+                  item.to === "/painel" ? pathname === item.to : pathname.startsWith(item.to);
+                return (
+                  <SidebarMenuItem key={item.to}>
+                    <SidebarMenuButton asChild isActive={isActive}>
+                      <Link to={item.to}>
+                        <item.icon />
+                        <span>{item.label}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroup>
+        </SidebarContent>
+        <SidebarFooter className="px-3 pb-3">
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton onClick={handleLogout} disabled={signingOut}>
+                <LogOut />
+                <span>Sair</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarFooter>
+      </Sidebar>
 
-      <main className="mx-auto max-w-6xl px-4 pb-24 pt-10 sm:px-6 print:p-0">
-        <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground print:hidden">
-          {title}
-        </h1>
-        {description ? (
-          <p className="mt-2 max-w-2xl text-pretty leading-relaxed text-muted-foreground print:hidden">
-            {description}
-          </p>
-        ) : null}
+      <SidebarInset>
+        <header className="sticky top-0 z-40 flex items-center gap-2 border-b border-border/80 bg-background/85 px-4 py-3 backdrop-blur-md md:hidden print:hidden">
+          <SidebarTrigger />
+          <span className="font-display text-sm font-semibold text-foreground">
+            Painel do professor
+          </span>
+        </header>
 
-        <div className="mt-8">{children}</div>
-      </main>
-    </div>
+        <main className="mx-auto w-full max-w-6xl px-4 pb-24 pt-10 sm:px-6 sm:pt-10 print:p-0">
+          <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground print:hidden">
+            {title}
+          </h1>
+          {description ? (
+            <p className="mt-2 max-w-2xl text-pretty leading-relaxed text-muted-foreground print:hidden">
+              {description}
+            </p>
+          ) : null}
+
+          <div className="mt-8">{children}</div>
+        </main>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

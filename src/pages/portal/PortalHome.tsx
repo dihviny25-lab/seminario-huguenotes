@@ -18,6 +18,7 @@ import {
 import { getMyStudentReportFn } from "@/functions/report";
 import type { StudentReportRow } from "@/functions/reportData";
 import { MINIMUM_ATTENDANCE_RATIO } from "@/lib/attendance";
+import { toDisplayName } from "@/lib/formatName";
 import { PASSING_AVERAGE } from "@/lib/grades";
 import { cn } from "@/lib/utils";
 
@@ -40,7 +41,7 @@ export function PortalHome() {
 
   return (
     <PortalShell
-      title={report ? report.student.name : "Minhas notas e faltas"}
+      title={report ? toDisplayName(report.student.name) : "Minhas notas e faltas"}
       description="Consulte suas notas e faltas em todas as disciplinas do curso."
     >
       {isLoading || !report ? (

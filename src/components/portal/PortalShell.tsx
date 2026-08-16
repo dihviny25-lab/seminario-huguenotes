@@ -1,14 +1,23 @@
 import { useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link, useNavigate } from "@tanstack/react-router";
-import { LogOut } from "lucide-react";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { ClipboardList, LogOut, Video, Wallet } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
 import { getCurrentStudentFn, studentLogoutFn } from "@/functions/studentAuth";
-
-function firstName(fullName: string): string {
-  return fullName.trim().split(/\s+/)[0];
-}
+import { toDisplayFirstName } from "@/lib/formatName";
 
 interface PortalShellProps {
   title: string;
@@ -17,14 +26,15 @@ interface PortalShellProps {
 }
 
 const portalNavItems = [
-  { to: "/portal", label: "Minhas notas" },
-  { to: "/portal/videos", label: "Vídeo-aulas" },
-  { to: "/portal/mensalidades", label: "Mensalidades" },
+  { to: "/portal", label: "Minhas notas", icon: ClipboardList },
+  { to: "/portal/videos", label: "Vídeo-aulas", icon: Video },
+  { to: "/portal/mensalidades", label: "Mensalidades", icon: Wallet },
 ] as const;
 
-/** Cabeçalho do portal do aluno — login protegido. */
+/** Cabeçalho do portal do aluno — login protegido: sidebar + conteúdo. */
 export function PortalShell({ title, description, children }: PortalShellProps) {
   const navigate = useNavigate();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [signingOut, setSigningOut] = useState(false);
   const { data: student } = useQuery({
     queryKey: ["current-student"],
@@ -38,50 +48,68 @@ export function PortalShell({ title, description, children }: PortalShellProps) 
   }
 
   return (
-    <div className="min-h-screen">
-      <header className="sticky top-0 z-50 border-b border-border/80 bg-background/85 backdrop-blur-md print:hidden">
-        <div className="mx-auto flex max-w-4xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
-          <div className="flex min-w-0 items-center gap-2">
+    <SidebarProvider>
+      <Sidebar>
+        <SidebarHeader className="px-3 py-4">
+          <div className="flex items-center gap-2.5 px-1">
             <img src="/logo.png" alt="" className="size-8 shrink-0" aria-hidden />
             <span className="min-w-0">
-              <span className="block truncate font-display text-sm font-semibold text-foreground">
-                {student ? `Olá, ${firstName(student.name)}` : "Portal do aluno"}
+              <span className="block truncate font-display text-sm font-semibold text-sidebar-foreground">
+                {student ? `Olá, ${toDisplayFirstName(student.name)}` : "Portal do aluno"}
               </span>
-              <span className="hidden text-xs text-muted-foreground sm:block">Portal do aluno</span>
+              <span className="block text-xs text-sidebar-foreground/70">Portal do aluno</span>
             </span>
           </div>
-          <nav className="flex items-center gap-1">
-            {portalNavItems.map((item) => (
-              <Button key={item.to} variant="ghost" size="sm" asChild>
-                <Link
-                  to={item.to}
-                  activeOptions={{ exact: item.to === "/portal" }}
-                  activeProps={{ className: "bg-accent/10 text-accent" }}
-                >
-                  {item.label}
-                </Link>
-              </Button>
-            ))}
-            <Button variant="ghost" size="sm" onClick={handleLogout} disabled={signingOut}>
-              <LogOut className="size-4" aria-hidden />
-              Sair
-            </Button>
-          </nav>
-        </div>
-      </header>
+        </SidebarHeader>
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarMenu>
+              {portalNavItems.map((item) => (
+                <SidebarMenuItem key={item.to}>
+                  <SidebarMenuButton asChild isActive={pathname === item.to}>
+                    <Link to={item.to}>
+                      <item.icon />
+                      <span>{item.label}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroup>
+        </SidebarContent>
+        <SidebarFooter className="px-3 pb-3">
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton onClick={handleLogout} disabled={signingOut}>
+                <LogOut />
+                <span>Sair</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarFooter>
+      </Sidebar>
 
-      <main className="mx-auto max-w-4xl px-4 pb-24 pt-10 sm:px-6 print:p-0">
-        <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground print:hidden">
-          {title}
-        </h1>
-        {description ? (
-          <p className="mt-2 max-w-2xl text-pretty leading-relaxed text-muted-foreground print:hidden">
-            {description}
-          </p>
-        ) : null}
+      <SidebarInset>
+        <header className="sticky top-0 z-40 flex items-center gap-2 border-b border-border/80 bg-background/85 px-4 py-3 backdrop-blur-md md:hidden print:hidden">
+          <SidebarTrigger />
+          <span className="font-display text-sm font-semibold text-foreground">
+            Portal do aluno
+          </span>
+        </header>
 
-        <div className="mt-8">{children}</div>
-      </main>
-    </div>
+        <main className="mx-auto w-full max-w-4xl px-4 pb-24 pt-10 sm:px-6 sm:pt-10 print:p-0">
+          <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground print:hidden">
+            {title}
+          </h1>
+          {description ? (
+            <p className="mt-2 max-w-2xl text-pretty leading-relaxed text-muted-foreground print:hidden">
+              {description}
+            </p>
+          ) : null}
+
+          <div className="mt-8">{children}</div>
+        </main>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
