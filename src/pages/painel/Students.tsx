@@ -137,37 +137,48 @@ export function Students() {
       title="Alunos"
       description="Cadastre os alunos do seminário para lançar notas e faltas por disciplina."
     >
-      {isAdmin ? (
-        <div className="mb-4 flex justify-end gap-2">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".xlsx,.xls,.csv"
-            className="hidden"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              event.target.value = "";
-              if (file) importMutation.mutate(file);
-            }}
-          />
-          <Button
-            variant="outline"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={importMutation.isPending}
-          >
-            <Upload className="size-4" aria-hidden />
-            {importMutation.isPending ? "Importando…" : "Importar planilha"}
-          </Button>
-          <Button onClick={() => setCreateOpen(true)}>
-            <Plus className="size-4" aria-hidden />
-            Novo aluno
-          </Button>
-        </div>
-      ) : (
-        <p className="mb-4 text-sm text-muted-foreground">
-          Você só visualiza a lista de alunos — cadastro e edição são feitos pelos admins.
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-muted-foreground">
+          {students
+            ? `${students.length} ${students.length === 1 ? "aluno cadastrado" : "alunos cadastrados"}${
+                students.length > 0
+                  ? ` · ${students.filter((s) => s.active).length} ${students.filter((s) => s.active).length === 1 ? "ativo" : "ativos"}`
+                  : ""
+              }`
+            : "Carregando…"}
         </p>
-      )}
+        {isAdmin ? (
+          <div className="flex gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              className="hidden"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                event.target.value = "";
+                if (file) importMutation.mutate(file);
+              }}
+            />
+            <Button
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={importMutation.isPending}
+            >
+              <Upload className="size-4" aria-hidden />
+              {importMutation.isPending ? "Importando…" : "Importar planilha"}
+            </Button>
+            <Button onClick={() => setCreateOpen(true)}>
+              <Plus className="size-4" aria-hidden />
+              Novo aluno
+            </Button>
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Você só visualiza a lista de alunos — cadastro e edição são feitos pelos admins.
+          </p>
+        )}
+      </div>
 
       <div className="overflow-hidden rounded-md border border-border/70 bg-card/70 shadow-soft">
         <Table>

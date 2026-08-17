@@ -59,11 +59,11 @@ export function PortalHome() {
         </div>
       ) : (
         <div className="rounded-md border border-border/70 bg-card/70 p-6 shadow-soft print:border-none print:bg-transparent print:p-0 print:shadow-none">
-          <div className="mb-6 flex items-center justify-between print:hidden">
+          <div className="mb-6 flex flex-col gap-3 print:hidden sm:flex-row sm:items-center sm:justify-between">
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-accent">
               Seminário Huguenotes
             </p>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button variant="outline" asChild>
                 <a href="/portal/pdf">
                   <Download className="size-4" aria-hidden />
