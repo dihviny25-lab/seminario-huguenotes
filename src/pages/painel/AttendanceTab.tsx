@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, QrCode, Trash2 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
@@ -61,6 +61,19 @@ export function AttendanceTab({ disciplineId }: { disciplineId: string }) {
     onError: () => toast.error("Não foi possível adicionar a aula."),
   });
 
+  const startTodayCheckInMutation = useMutation({
+    mutationFn: async () => {
+      const todayISO = new Date().toISOString().slice(0, 10);
+      const existing = data?.lessons.find((lesson) => lesson.date === todayISO);
+      if (existing) return existing.id;
+      const created = await createLessonFn({ data: { disciplineId, date: todayISO } });
+      await invalidate();
+      return created.id;
+    },
+    onSuccess: (lessonId) => setCheckInDialogLessonId(lessonId),
+    onError: () => toast.error("Não foi possível iniciar a chamada."),
+  });
+
   const deleteLessonMutation = useMutation({
     mutationFn: (lessonId: string) => deleteLessonFn({ data: { disciplineId, lessonId } }),
     onSuccess: async () => {
@@ -103,20 +116,31 @@ export function AttendanceTab({ disciplineId }: { disciplineId: string }) {
 
   return (
     <div>
-      <div className="mb-4 flex items-center justify-end gap-2">
-        <Input
-          type="date"
-          value={newDate}
-          onChange={(event) => setNewDate(event.target.value)}
-          className="w-40"
-        />
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <Button
-          onClick={() => createLessonMutation.mutate()}
-          disabled={createLessonMutation.isPending}
+          onClick={() => startTodayCheckInMutation.mutate()}
+          disabled={startTodayCheckInMutation.isPending}
         >
-          <Plus className="size-4" aria-hidden />
-          Nova aula
+          <QrCode className="size-4" aria-hidden />
+          {startTodayCheckInMutation.isPending ? "Abrindo…" : "Chamada de hoje"}
         </Button>
+
+        <div className="flex items-center gap-2">
+          <Input
+            type="date"
+            value={newDate}
+            onChange={(event) => setNewDate(event.target.value)}
+            className="w-40"
+          />
+          <Button
+            variant="outline"
+            onClick={() => createLessonMutation.mutate()}
+            disabled={createLessonMutation.isPending}
+          >
+            <Plus className="size-4" aria-hidden />
+            Nova aula
+          </Button>
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-md border border-border/70 bg-card/70 shadow-soft">
@@ -238,9 +262,18 @@ function LessonCheckInDialog({
     onSuccess: async () => {
       toast.success("Chamada encerrada.");
       await onChanged();
+      onOpenChange(false);
     },
     onError: () => toast.error("Não foi possível encerrar a chamada."),
   });
+
+  // Abre a chamada sozinha assim que o diálogo aparece — sem passo manual extra.
+  useEffect(() => {
+    if (lesson && !lesson.checkInOpen) {
+      openMutation.mutate(lesson.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lesson?.id]);
 
   const checkinUrl =
     lesson?.checkInOpen && lesson.checkInToken && typeof window !== "undefined"
@@ -253,14 +286,14 @@ function LessonCheckInDialog({
 
   return (
     <Dialog open={lesson !== null} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Chamada por QR code</DialogTitle>
         </DialogHeader>
         {checkinUrl ? (
           <div className="flex flex-col items-center gap-4">
-            <div className="rounded-xl bg-white p-4">
-              <QRCodeSVG value={checkinUrl} size={220} />
+            <div className="rounded-xl bg-white p-5">
+              <QRCodeSVG value={checkinUrl} size={320} />
             </div>
             <p className="text-sm text-muted-foreground">
               {confirmedCount} aluno(s) já confirmaram presença.
@@ -274,17 +307,8 @@ function LessonCheckInDialog({
             </Button>
           </div>
         ) : (
-          <div className="flex flex-col items-center gap-4">
-            <p className="text-center text-sm text-muted-foreground">
-              Abra a chamada pra gerar o QR code — os alunos confirmam presença escaneando com o
-              celular, já logados no portal.
-            </p>
-            <Button
-              onClick={() => lesson && openMutation.mutate(lesson.id)}
-              disabled={openMutation.isPending}
-            >
-              Iniciar chamada por QR code
-            </Button>
+          <div className="flex flex-col items-center gap-4 py-8">
+            <p className="text-sm text-muted-foreground">Abrindo chamada…</p>
           </div>
         )}
       </DialogContent>
