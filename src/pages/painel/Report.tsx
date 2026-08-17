@@ -1,9 +1,17 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Download, Printer } from "lucide-react";
+import { ChevronsUpDown, Download, Printer } from "lucide-react";
 
 import { PainelShell } from "@/components/painel/PainelShell";
-import { Input } from "@/components/ui/input";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Table,
   TableBody,
@@ -19,7 +27,7 @@ import { getStudentReportFn } from "@/functions/report";
 
 /** Busca de aluno + relatório consolidado de notas/faltas, pronto pra imprimir. */
 export function Report() {
-  const [query, setQuery] = useState("");
+  const [comboOpen, setComboOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const { data: students } = useQuery({
@@ -27,12 +35,8 @@ export function Report() {
     queryFn: () => listStudentsFn(),
   });
 
-  const filtered = useMemo(() => {
-    const term = query.trim().toLowerCase();
-    const active = (students ?? []).filter((s) => s.active);
-    if (!term) return active;
-    return active.filter((s) => s.name.toLowerCase().includes(term));
-  }, [students, query]);
+  const activeStudents = useMemo(() => (students ?? []).filter((s) => s.active), [students]);
+  const selectedStudent = activeStudents.find((s) => s.id === selectedId) ?? null;
 
   const { data: report, isLoading } = useQuery({
     queryKey: ["student-report", selectedId],
@@ -46,28 +50,43 @@ export function Report() {
       description="Busque um aluno para ver e imprimir o boletim consolidado de notas e faltas."
     >
       <div className="print:hidden">
-        <Input
-          placeholder="Buscar aluno pelo nome…"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          className="max-w-sm"
-        />
-        <div className="mt-3 flex flex-wrap gap-2">
-          {filtered.map((student) => (
+        <Popover open={comboOpen} onOpenChange={setComboOpen}>
+          <PopoverTrigger asChild>
             <Button
-              key={student.id}
-              type="button"
-              variant={selectedId === student.id ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSelectedId(student.id)}
+              variant="outline"
+              role="combobox"
+              aria-expanded={comboOpen}
+              className="w-full justify-between sm:max-w-sm"
             >
-              {student.name}
+              <span className="truncate">
+                {selectedStudent ? selectedStudent.name : "Buscar aluno pelo nome…"}
+              </span>
+              <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" aria-hidden />
             </Button>
-          ))}
-          {filtered.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhum aluno encontrado.</p>
-          ) : null}
-        </div>
+          </PopoverTrigger>
+          <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+            <Command>
+              <CommandInput placeholder="Buscar aluno…" />
+              <CommandList>
+                <CommandEmpty>Nenhum aluno encontrado.</CommandEmpty>
+                <CommandGroup>
+                  {activeStudents.map((student) => (
+                    <CommandItem
+                      key={student.id}
+                      value={student.name}
+                      onSelect={() => {
+                        setSelectedId(student.id);
+                        setComboOpen(false);
+                      }}
+                    >
+                      {student.name}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
       </div>
 
       {!selectedId ? (
