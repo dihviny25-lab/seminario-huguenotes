@@ -18,17 +18,17 @@ export function DisciplineDetail({ disciplineId }: { disciplineId: string }) {
       title={discipline?.discipline ?? (isLoading ? "Carregando…" : "Disciplina")}
       description={discipline ? `${discipline.module} — ${discipline.term}` : undefined}
     >
-      <Tabs defaultValue="notas">
+      <Tabs defaultValue="frequencia">
         <TabsList>
-          <TabsTrigger value="notas">Notas</TabsTrigger>
           <TabsTrigger value="frequencia">Frequência</TabsTrigger>
+          <TabsTrigger value="notas">Notas</TabsTrigger>
           <TabsTrigger value="videos">Vídeo-aulas</TabsTrigger>
         </TabsList>
-        <TabsContent value="notas">
-          <GradesTab disciplineId={disciplineId} />
-        </TabsContent>
         <TabsContent value="frequencia">
           <AttendanceTab disciplineId={disciplineId} />
+        </TabsContent>
+        <TabsContent value="notas">
+          <GradesTab disciplineId={disciplineId} />
         </TabsContent>
         <TabsContent value="videos">
           <VideoLessonsTab disciplineId={disciplineId} />

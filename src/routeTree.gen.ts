@@ -32,10 +32,15 @@ import { Route as PainelPagamentosRouteImport } from './routes/painel/pagamentos
 import { Route as PainelFinanceiroRouteImport } from './routes/painel/financeiro'
 import { Route as PainelAlunosRouteImport } from './routes/painel/alunos'
 import { Route as PainelAgendaRouteImport } from './routes/painel/agenda'
+import { Route as PortalProvasIndexRouteImport } from './routes/portal/provas/index'
+import { Route as PainelProvasIndexRouteImport } from './routes/painel/provas/index'
+import { Route as PortalProvasExamIdRouteImport } from './routes/portal/provas/$examId'
 import { Route as PortalCheckinLessonIdRouteImport } from './routes/portal/checkin/$lessonId'
+import { Route as PainelProvasExamIdRouteImport } from './routes/painel/provas/$examId'
 import { Route as PainelDisciplinasDisciplineIdRouteImport } from './routes/painel/disciplinas/$disciplineId'
 import { Route as ApiMercadopagoWebhookRouteImport } from './routes/api/mercadopago/webhook'
 import { Route as ApiCronPaymentRemindersRouteImport } from './routes/api/cron/payment-reminders'
+import { Route as ApiCronFinalizeExpiredExamsRouteImport } from './routes/api/cron/finalize-expired-exams'
 import { Route as PainelRelatorioStudentIdPdfRouteImport } from './routes/painel/relatorio/$studentId/pdf'
 
 const RedefinirSenhaAlunoRoute = RedefinirSenhaAlunoRouteImport.update({
@@ -153,10 +158,30 @@ const PainelAgendaRoute = PainelAgendaRouteImport.update({
   path: '/agenda',
   getParentRoute: () => PainelRouteRoute,
 } as any)
+const PortalProvasIndexRoute = PortalProvasIndexRouteImport.update({
+  id: '/provas/',
+  path: '/provas/',
+  getParentRoute: () => PortalRouteRoute,
+} as any)
+const PainelProvasIndexRoute = PainelProvasIndexRouteImport.update({
+  id: '/provas/',
+  path: '/provas/',
+  getParentRoute: () => PainelRouteRoute,
+} as any)
+const PortalProvasExamIdRoute = PortalProvasExamIdRouteImport.update({
+  id: '/provas/$examId',
+  path: '/provas/$examId',
+  getParentRoute: () => PortalRouteRoute,
+} as any)
 const PortalCheckinLessonIdRoute = PortalCheckinLessonIdRouteImport.update({
   id: '/checkin/$lessonId',
   path: '/checkin/$lessonId',
   getParentRoute: () => PortalRouteRoute,
+} as any)
+const PainelProvasExamIdRoute = PainelProvasExamIdRouteImport.update({
+  id: '/provas/$examId',
+  path: '/provas/$examId',
+  getParentRoute: () => PainelRouteRoute,
 } as any)
 const PainelDisciplinasDisciplineIdRoute =
   PainelDisciplinasDisciplineIdRouteImport.update({
@@ -174,6 +199,12 @@ const ApiCronPaymentRemindersRoute = ApiCronPaymentRemindersRouteImport.update({
   path: '/api/cron/payment-reminders',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCronFinalizeExpiredExamsRoute =
+  ApiCronFinalizeExpiredExamsRouteImport.update({
+    id: '/api/cron/finalize-expired-exams',
+    path: '/api/cron/finalize-expired-exams',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const PainelRelatorioStudentIdPdfRoute =
   PainelRelatorioStudentIdPdfRouteImport.update({
     id: '/$studentId/pdf',
@@ -205,10 +236,15 @@ export interface FileRoutesByFullPath {
   '/semestre/$semester': typeof SemestreSemesterRoute
   '/painel/': typeof PainelIndexRoute
   '/portal/': typeof PortalIndexRoute
+  '/api/cron/finalize-expired-exams': typeof ApiCronFinalizeExpiredExamsRoute
   '/api/cron/payment-reminders': typeof ApiCronPaymentRemindersRoute
   '/api/mercadopago/webhook': typeof ApiMercadopagoWebhookRoute
   '/painel/disciplinas/$disciplineId': typeof PainelDisciplinasDisciplineIdRoute
+  '/painel/provas/$examId': typeof PainelProvasExamIdRoute
   '/portal/checkin/$lessonId': typeof PortalCheckinLessonIdRoute
+  '/portal/provas/$examId': typeof PortalProvasExamIdRoute
+  '/painel/provas/': typeof PainelProvasIndexRoute
+  '/portal/provas/': typeof PortalProvasIndexRoute
   '/painel/relatorio/$studentId/pdf': typeof PainelRelatorioStudentIdPdfRoute
 }
 export interface FileRoutesByTo {
@@ -233,10 +269,15 @@ export interface FileRoutesByTo {
   '/semestre/$semester': typeof SemestreSemesterRoute
   '/painel': typeof PainelIndexRoute
   '/portal': typeof PortalIndexRoute
+  '/api/cron/finalize-expired-exams': typeof ApiCronFinalizeExpiredExamsRoute
   '/api/cron/payment-reminders': typeof ApiCronPaymentRemindersRoute
   '/api/mercadopago/webhook': typeof ApiMercadopagoWebhookRoute
   '/painel/disciplinas/$disciplineId': typeof PainelDisciplinasDisciplineIdRoute
+  '/painel/provas/$examId': typeof PainelProvasExamIdRoute
   '/portal/checkin/$lessonId': typeof PortalCheckinLessonIdRoute
+  '/portal/provas/$examId': typeof PortalProvasExamIdRoute
+  '/painel/provas': typeof PainelProvasIndexRoute
+  '/portal/provas': typeof PortalProvasIndexRoute
   '/painel/relatorio/$studentId/pdf': typeof PainelRelatorioStudentIdPdfRoute
 }
 export interface FileRoutesById {
@@ -264,10 +305,15 @@ export interface FileRoutesById {
   '/semestre/$semester': typeof SemestreSemesterRoute
   '/painel/': typeof PainelIndexRoute
   '/portal/': typeof PortalIndexRoute
+  '/api/cron/finalize-expired-exams': typeof ApiCronFinalizeExpiredExamsRoute
   '/api/cron/payment-reminders': typeof ApiCronPaymentRemindersRoute
   '/api/mercadopago/webhook': typeof ApiMercadopagoWebhookRoute
   '/painel/disciplinas/$disciplineId': typeof PainelDisciplinasDisciplineIdRoute
+  '/painel/provas/$examId': typeof PainelProvasExamIdRoute
   '/portal/checkin/$lessonId': typeof PortalCheckinLessonIdRoute
+  '/portal/provas/$examId': typeof PortalProvasExamIdRoute
+  '/painel/provas/': typeof PainelProvasIndexRoute
+  '/portal/provas/': typeof PortalProvasIndexRoute
   '/painel/relatorio/$studentId/pdf': typeof PainelRelatorioStudentIdPdfRoute
 }
 export interface FileRouteTypes {
@@ -296,10 +342,15 @@ export interface FileRouteTypes {
     | '/semestre/$semester'
     | '/painel/'
     | '/portal/'
+    | '/api/cron/finalize-expired-exams'
     | '/api/cron/payment-reminders'
     | '/api/mercadopago/webhook'
     | '/painel/disciplinas/$disciplineId'
+    | '/painel/provas/$examId'
     | '/portal/checkin/$lessonId'
+    | '/portal/provas/$examId'
+    | '/painel/provas/'
+    | '/portal/provas/'
     | '/painel/relatorio/$studentId/pdf'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -324,10 +375,15 @@ export interface FileRouteTypes {
     | '/semestre/$semester'
     | '/painel'
     | '/portal'
+    | '/api/cron/finalize-expired-exams'
     | '/api/cron/payment-reminders'
     | '/api/mercadopago/webhook'
     | '/painel/disciplinas/$disciplineId'
+    | '/painel/provas/$examId'
     | '/portal/checkin/$lessonId'
+    | '/portal/provas/$examId'
+    | '/painel/provas'
+    | '/portal/provas'
     | '/painel/relatorio/$studentId/pdf'
   id:
     | '__root__'
@@ -354,10 +410,15 @@ export interface FileRouteTypes {
     | '/semestre/$semester'
     | '/painel/'
     | '/portal/'
+    | '/api/cron/finalize-expired-exams'
     | '/api/cron/payment-reminders'
     | '/api/mercadopago/webhook'
     | '/painel/disciplinas/$disciplineId'
+    | '/painel/provas/$examId'
     | '/portal/checkin/$lessonId'
+    | '/portal/provas/$examId'
+    | '/painel/provas/'
+    | '/portal/provas/'
     | '/painel/relatorio/$studentId/pdf'
   fileRoutesById: FileRoutesById
 }
@@ -372,6 +433,7 @@ export interface RootRouteChildren {
   RedefinirSenhaRoute: typeof RedefinirSenhaRoute
   RedefinirSenhaAlunoRoute: typeof RedefinirSenhaAlunoRoute
   SemestreSemesterRoute: typeof SemestreSemesterRoute
+  ApiCronFinalizeExpiredExamsRoute: typeof ApiCronFinalizeExpiredExamsRoute
   ApiCronPaymentRemindersRoute: typeof ApiCronPaymentRemindersRoute
   ApiMercadopagoWebhookRoute: typeof ApiMercadopagoWebhookRoute
 }
@@ -539,12 +601,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PainelAgendaRouteImport
       parentRoute: typeof PainelRouteRoute
     }
+    '/portal/provas/': {
+      id: '/portal/provas/'
+      path: '/provas'
+      fullPath: '/portal/provas/'
+      preLoaderRoute: typeof PortalProvasIndexRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
+    '/painel/provas/': {
+      id: '/painel/provas/'
+      path: '/provas'
+      fullPath: '/painel/provas/'
+      preLoaderRoute: typeof PainelProvasIndexRouteImport
+      parentRoute: typeof PainelRouteRoute
+    }
+    '/portal/provas/$examId': {
+      id: '/portal/provas/$examId'
+      path: '/provas/$examId'
+      fullPath: '/portal/provas/$examId'
+      preLoaderRoute: typeof PortalProvasExamIdRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
     '/portal/checkin/$lessonId': {
       id: '/portal/checkin/$lessonId'
       path: '/checkin/$lessonId'
       fullPath: '/portal/checkin/$lessonId'
       preLoaderRoute: typeof PortalCheckinLessonIdRouteImport
       parentRoute: typeof PortalRouteRoute
+    }
+    '/painel/provas/$examId': {
+      id: '/painel/provas/$examId'
+      path: '/provas/$examId'
+      fullPath: '/painel/provas/$examId'
+      preLoaderRoute: typeof PainelProvasExamIdRouteImport
+      parentRoute: typeof PainelRouteRoute
     }
     '/painel/disciplinas/$disciplineId': {
       id: '/painel/disciplinas/$disciplineId'
@@ -565,6 +655,13 @@ declare module '@tanstack/react-router' {
       path: '/api/cron/payment-reminders'
       fullPath: '/api/cron/payment-reminders'
       preLoaderRoute: typeof ApiCronPaymentRemindersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/cron/finalize-expired-exams': {
+      id: '/api/cron/finalize-expired-exams'
+      path: '/api/cron/finalize-expired-exams'
+      fullPath: '/api/cron/finalize-expired-exams'
+      preLoaderRoute: typeof ApiCronFinalizeExpiredExamsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/painel/relatorio/$studentId/pdf': {
@@ -599,6 +696,8 @@ interface PainelRouteRouteChildren {
   PainelTrocarSenhaRoute: typeof PainelTrocarSenhaRoute
   PainelIndexRoute: typeof PainelIndexRoute
   PainelDisciplinasDisciplineIdRoute: typeof PainelDisciplinasDisciplineIdRoute
+  PainelProvasExamIdRoute: typeof PainelProvasExamIdRoute
+  PainelProvasIndexRoute: typeof PainelProvasIndexRoute
 }
 
 const PainelRouteRouteChildren: PainelRouteRouteChildren = {
@@ -611,6 +710,8 @@ const PainelRouteRouteChildren: PainelRouteRouteChildren = {
   PainelTrocarSenhaRoute: PainelTrocarSenhaRoute,
   PainelIndexRoute: PainelIndexRoute,
   PainelDisciplinasDisciplineIdRoute: PainelDisciplinasDisciplineIdRoute,
+  PainelProvasExamIdRoute: PainelProvasExamIdRoute,
+  PainelProvasIndexRoute: PainelProvasIndexRoute,
 }
 
 const PainelRouteRouteWithChildren = PainelRouteRoute._addFileChildren(
@@ -624,6 +725,8 @@ interface PortalRouteRouteChildren {
   PortalVideosRoute: typeof PortalVideosRoute
   PortalIndexRoute: typeof PortalIndexRoute
   PortalCheckinLessonIdRoute: typeof PortalCheckinLessonIdRoute
+  PortalProvasExamIdRoute: typeof PortalProvasExamIdRoute
+  PortalProvasIndexRoute: typeof PortalProvasIndexRoute
 }
 
 const PortalRouteRouteChildren: PortalRouteRouteChildren = {
@@ -633,6 +736,8 @@ const PortalRouteRouteChildren: PortalRouteRouteChildren = {
   PortalVideosRoute: PortalVideosRoute,
   PortalIndexRoute: PortalIndexRoute,
   PortalCheckinLessonIdRoute: PortalCheckinLessonIdRoute,
+  PortalProvasExamIdRoute: PortalProvasExamIdRoute,
+  PortalProvasIndexRoute: PortalProvasIndexRoute,
 }
 
 const PortalRouteRouteWithChildren = PortalRouteRoute._addFileChildren(
@@ -650,6 +755,7 @@ const rootRouteChildren: RootRouteChildren = {
   RedefinirSenhaRoute: RedefinirSenhaRoute,
   RedefinirSenhaAlunoRoute: RedefinirSenhaAlunoRoute,
   SemestreSemesterRoute: SemestreSemesterRoute,
+  ApiCronFinalizeExpiredExamsRoute: ApiCronFinalizeExpiredExamsRoute,
   ApiCronPaymentRemindersRoute: ApiCronPaymentRemindersRoute,
   ApiMercadopagoWebhookRoute: ApiMercadopagoWebhookRoute,
 }

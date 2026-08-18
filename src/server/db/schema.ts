@@ -156,6 +156,84 @@ export const videoWatches = pgTable(
   (table) => [unique().on(table.videoLessonId, table.studentId)],
 );
 
+export const exams = pgTable("exams", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  disciplineId: uuid("discipline_id")
+    .notNull()
+    .references(() => disciplines.id, { onDelete: "cascade" }),
+  // Elo com a aba Notas — a nota da prova é a nota dessa avaliação.
+  assessmentId: uuid("assessment_id")
+    .notNull()
+    .unique()
+    .references(() => assessments.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  instructions: text("instructions"),
+  durationMinutes: integer("duration_minutes").notNull(),
+  // Nulo = rascunho (invisível pro aluno, perguntas ainda editáveis).
+  // Definido = agendada: some vez que chega essa data, fica visível e trava.
+  opensAt: timestamp("opens_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const examQuestions = pgTable("exam_questions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  examId: uuid("exam_id")
+    .notNull()
+    .references(() => exams.id, { onDelete: "cascade" }),
+  text: text("text").notNull(),
+  points: numeric("points", { precision: 5, scale: 2 }).notNull().default("1"),
+  sequence: integer("sequence").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const examOptions = pgTable("exam_options", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  questionId: uuid("question_id")
+    .notNull()
+    .references(() => examQuestions.id, { onDelete: "cascade" }),
+  text: text("text").notNull(),
+  isCorrect: boolean("is_correct").notNull().default(false),
+  sequence: integer("sequence").notNull(),
+});
+
+export const examAttempts = pgTable(
+  "exam_attempts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    examId: uuid("exam_id")
+      .notNull()
+      .references(() => exams.id, { onDelete: "cascade" }),
+    studentId: uuid("student_id")
+      .notNull()
+      .references(() => students.id, { onDelete: "cascade" }),
+    // Relógio do servidor — nunca aceito do cliente. É a partir daqui que o
+    // prazo (duration_minutes) é calculado.
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+    submittedAt: timestamp("submitted_at", { withTimezone: true }),
+    // true quando finalizada pelo fim do tempo (cliente ou cron), não por
+    // clique manual em "Finalizar prova".
+    autoSubmitted: boolean("auto_submitted").notNull().default(false),
+    score: numeric("score", { precision: 5, scale: 2 }),
+  },
+  (table) => [unique().on(table.examId, table.studentId)],
+);
+
+export const examAnswers = pgTable(
+  "exam_answers",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    attemptId: uuid("attempt_id")
+      .notNull()
+      .references(() => examAttempts.id, { onDelete: "cascade" }),
+    questionId: uuid("question_id")
+      .notNull()
+      .references(() => examQuestions.id, { onDelete: "cascade" }),
+    optionId: uuid("option_id").references(() => examOptions.id, { onDelete: "set null" }),
+    answeredAt: timestamp("answered_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [unique().on(table.attemptId, table.questionId)],
+);
+
 export const charges = pgTable("charges", {
   id: uuid("id").primaryKey().defaultRandom(),
   studentId: uuid("student_id")

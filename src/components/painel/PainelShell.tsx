@@ -4,6 +4,7 @@ import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   BarChart3,
   CalendarRange,
+  ClipboardList,
   FileText,
   GraduationCap,
   LayoutGrid,
@@ -32,6 +33,7 @@ const painelNavItems = [
   { to: "/painel/agenda", label: "Agenda", icon: CalendarRange },
   { to: "/painel/professores", label: "Contas de professores", icon: Users },
   { to: "/painel/alunos", label: "Alunos", icon: GraduationCap },
+  { to: "/painel/provas", label: "Provas", icon: ClipboardList },
   { to: "/painel/relatorio", label: "Relatório", icon: FileText },
   { to: "/painel/pagamentos", label: "Pagamentos", icon: Wallet },
 ] as const;
