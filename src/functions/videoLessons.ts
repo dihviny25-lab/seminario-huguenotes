@@ -1,11 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
 import { extractYouTubeId } from "@/lib/youtube";
-import { requireAnyLogin, requireOwnDiscipline } from "@/server/auth/guard";
+import { requireAnyLogin, requireOwnDiscipline, requireStudentId } from "@/server/auth/guard";
 import { db } from "@/server/db/client";
-import { videoLessons } from "@/server/db/schema";
+import { students, videoLessons, videoWatches } from "@/server/db/schema";
 
 export type VideoLesson = {
   id: string;
@@ -27,6 +27,52 @@ export const listMyDisciplineVideosFn = createServerFn({ method: "GET" })
       .from(videoLessons)
       .where(eq(videoLessons.disciplineId, data.disciplineId))
       .orderBy(asc(videoLessons.sequence));
+  });
+
+export type VideoWatchBoard = {
+  totalActiveStudents: number;
+  videos: Array<VideoLesson & { watchedCount: number; watchedByNames: string[] }>;
+};
+
+/** Vídeo-aulas + quantos/quais alunos já assistiram cada uma até o fim. */
+export const getMyDisciplineVideoBoardFn = createServerFn({ method: "GET" })
+  .validator(disciplineIdSchema)
+  .handler(async ({ data }): Promise<VideoWatchBoard> => {
+    await requireOwnDiscipline(data.disciplineId);
+
+    const [activeStudents, videoRows] = await Promise.all([
+      db.select({ id: students.id }).from(students).where(eq(students.active, true)),
+      db
+        .select()
+        .from(videoLessons)
+        .where(eq(videoLessons.disciplineId, data.disciplineId))
+        .orderBy(asc(videoLessons.sequence)),
+    ]);
+
+    const videoIds = videoRows.map((v) => v.id);
+    const watchRows =
+      videoIds.length === 0
+        ? []
+        : await db
+            .select({ videoLessonId: videoWatches.videoLessonId, studentName: students.name })
+            .from(videoWatches)
+            .innerJoin(students, eq(videoWatches.studentId, students.id))
+            .where(inArray(videoWatches.videoLessonId, videoIds));
+
+    const namesByVideo = new Map<string, string[]>();
+    for (const row of watchRows) {
+      const list = namesByVideo.get(row.videoLessonId) ?? [];
+      list.push(row.studentName);
+      namesByVideo.set(row.videoLessonId, list);
+    }
+
+    return {
+      totalActiveStudents: activeStudents.length,
+      videos: videoRows.map((video) => {
+        const names = (namesByVideo.get(video.id) ?? []).sort();
+        return { ...video, watchedCount: names.length, watchedByNames: names };
+      }),
+    };
   });
 
 const createSchema = z.object({
@@ -80,3 +126,28 @@ export const listAllVideoLessonsFn = createServerFn({ method: "GET" }).handler(
     return db.select().from(videoLessons).orderBy(asc(videoLessons.sequence));
   },
 );
+
+/** IDs das vídeo-aulas que o próprio aluno já concluiu. */
+export const listMyWatchedVideosFn = createServerFn({ method: "GET" }).handler(
+  async (): Promise<Array<string>> => {
+    const studentId = await requireStudentId();
+    const rows = await db
+      .select({ videoLessonId: videoWatches.videoLessonId })
+      .from(videoWatches)
+      .where(eq(videoWatches.studentId, studentId));
+    return rows.map((r) => r.videoLessonId);
+  },
+);
+
+const markWatchedSchema = z.object({ videoLessonId: z.string().uuid() });
+
+/** Chamado automaticamente pelo player quando o vídeo chega ao fim. Idempotente. */
+export const markVideoWatchedFn = createServerFn({ method: "POST" })
+  .validator(markWatchedSchema)
+  .handler(async ({ data }) => {
+    const studentId = await requireStudentId();
+    await db
+      .insert(videoWatches)
+      .values({ videoLessonId: data.videoLessonId, studentId })
+      .onConflictDoNothing();
+  });

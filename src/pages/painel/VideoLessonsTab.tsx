@@ -2,7 +2,7 @@ import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
-import { Plus, Trash2 } from "lucide-react";
+import { CheckCircle2, Plus, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -23,12 +23,14 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   createVideoLessonFn,
   deleteVideoLessonFn,
-  listMyDisciplineVideosFn,
+  getMyDisciplineVideoBoardFn,
 } from "@/functions/videoLessons";
+import { cn } from "@/lib/utils";
 import { extractYouTubeId, youtubeThumbnailUrl } from "@/lib/youtube";
 
 function videosKey(disciplineId: string) {
@@ -37,9 +39,9 @@ function videosKey(disciplineId: string) {
 
 export function VideoLessonsTab({ disciplineId }: { disciplineId: string }) {
   const queryClient = useQueryClient();
-  const { data: videos, isLoading } = useQuery({
+  const { data: board, isLoading } = useQuery({
     queryKey: videosKey(disciplineId),
-    queryFn: () => listMyDisciplineVideosFn({ data: { disciplineId } }),
+    queryFn: () => getMyDisciplineVideoBoardFn({ data: { disciplineId } }),
   });
   const [createOpen, setCreateOpen] = useState(false);
 
@@ -56,7 +58,7 @@ export function VideoLessonsTab({ disciplineId }: { disciplineId: string }) {
     onError: () => toast.error("Não foi possível remover o vídeo."),
   });
 
-  if (isLoading || !videos) {
+  if (isLoading || !board) {
     return (
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {Array.from({ length: 3 }).map((_, index) => (
@@ -83,13 +85,13 @@ export function VideoLessonsTab({ disciplineId }: { disciplineId: string }) {
         </Button>
       </div>
 
-      {videos.length === 0 ? (
+      {board.videos.length === 0 ? (
         <p className="rounded-md border border-border/70 bg-card/70 p-6 text-center text-muted-foreground shadow-soft">
           Nenhuma vídeo-aula cadastrada ainda.
         </p>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {videos.map((video) => {
+          {board.videos.map((video) => {
             const youtubeId = extractYouTubeId(video.youtubeUrl);
             return (
               <div
@@ -117,6 +119,39 @@ export function VideoLessonsTab({ disciplineId }: { disciplineId: string }) {
                   >
                     <Trash2 className="size-4" aria-hidden />
                   </Button>
+                </div>
+                <div className="border-t border-border/70 px-3 py-2">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button
+                        type="button"
+                        disabled={video.watchedCount === 0}
+                        className={cn(
+                          "inline-flex items-center gap-1.5 text-xs font-medium",
+                          video.watchedCount > 0
+                            ? "cursor-pointer text-success hover:underline"
+                            : "cursor-default text-muted-foreground",
+                        )}
+                      >
+                        {video.watchedCount > 0 ? (
+                          <CheckCircle2 className="size-3.5 shrink-0" aria-hidden />
+                        ) : (
+                          <Users className="size-3.5 shrink-0" aria-hidden />
+                        )}
+                        {video.watchedCount} de {board.totalActiveStudents} assistiram
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-64" align="start">
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Assistiram até o fim
+                      </p>
+                      <ul className="space-y-1 text-sm text-foreground">
+                        {video.watchedByNames.map((name) => (
+                          <li key={name}>{name}</li>
+                        ))}
+                      </ul>
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </div>
             );

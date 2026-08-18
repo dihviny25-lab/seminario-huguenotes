@@ -140,6 +140,22 @@ export const videoLessons = pgTable("video_lessons", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const videoWatches = pgTable(
+  "video_watches",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    videoLessonId: uuid("video_lesson_id")
+      .notNull()
+      .references(() => videoLessons.id, { onDelete: "cascade" }),
+    studentId: uuid("student_id")
+      .notNull()
+      .references(() => students.id, { onDelete: "cascade" }),
+    // Marcado automaticamente quando o player do YouTube reporta o vídeo como concluído.
+    completedAt: timestamp("completed_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [unique().on(table.videoLessonId, table.studentId)],
+);
+
 export const charges = pgTable("charges", {
   id: uuid("id").primaryKey().defaultRandom(),
   studentId: uuid("student_id")

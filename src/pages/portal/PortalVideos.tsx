@@ -1,14 +1,25 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { CheckCircle2 } from "lucide-react";
 
 import { PortalShell } from "@/components/portal/PortalShell";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getPublicDisciplinesFn } from "@/functions/schedule";
-import { listAllVideoLessonsFn, type VideoLesson } from "@/functions/videoLessons";
+import {
+  listAllVideoLessonsFn,
+  listMyWatchedVideosFn,
+  markVideoWatchedFn,
+  type VideoLesson,
+} from "@/functions/videoLessons";
 import { groupBySemester, semesterLabel } from "@/lib/schedule-utils";
+import { cn } from "@/lib/utils";
+import { useYouTubeCompletion } from "@/lib/useYouTubeCompletion";
 import { youtubeEmbedUrl, extractYouTubeId } from "@/lib/youtube";
+
+const WATCHED_KEY = ["my-watched-videos"] as const;
 
 /** Biblioteca de vídeo-aulas — todas as disciplinas que têm vídeo, agrupadas por semestre. */
 export function PortalVideos() {
+  const queryClient = useQueryClient();
   const { data: disciplines, isLoading: loadingDisciplines } = useQuery({
     queryKey: ["public-disciplines"],
     queryFn: () => getPublicDisciplinesFn(),
@@ -17,8 +28,18 @@ export function PortalVideos() {
     queryKey: ["all-video-lessons"],
     queryFn: () => listAllVideoLessonsFn(),
   });
+  const { data: watchedIds } = useQuery({
+    queryKey: WATCHED_KEY,
+    queryFn: () => listMyWatchedVideosFn(),
+  });
+
+  const markWatchedMutation = useMutation({
+    mutationFn: (videoLessonId: string) => markVideoWatchedFn({ data: { videoLessonId } }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: WATCHED_KEY }),
+  });
 
   const isLoading = loadingDisciplines || loadingVideos;
+  const watchedSet = new Set(watchedIds ?? []);
   const videosByDiscipline = new Map<string, Array<VideoLesson>>();
   for (const video of videos ?? []) {
     const list = videosByDiscipline.get(video.disciplineId) ?? [];
@@ -79,29 +100,14 @@ export function PortalVideos() {
                           <p className="text-sm text-muted-foreground">{discipline.teacher}</p>
                         ) : null}
                         <div className="mt-3 grid gap-4 sm:grid-cols-2">
-                          {disciplineVideos.map((video) => {
-                            const youtubeId = extractYouTubeId(video.youtubeUrl);
-                            if (!youtubeId) return null;
-                            return (
-                              <div
-                                key={video.id}
-                                className="overflow-hidden rounded-md border border-border/70 bg-card/70 shadow-soft"
-                              >
-                                <div className="aspect-video w-full">
-                                  <iframe
-                                    src={youtubeEmbedUrl(youtubeId)}
-                                    title={video.title}
-                                    className="size-full"
-                                    allowFullScreen
-                                    loading="lazy"
-                                  />
-                                </div>
-                                <p className="p-3 text-sm font-medium text-foreground">
-                                  {video.title}
-                                </p>
-                              </div>
-                            );
-                          })}
+                          {disciplineVideos.map((video) => (
+                            <VideoCard
+                              key={video.id}
+                              video={video}
+                              watched={watchedSet.has(video.id)}
+                              onWatched={() => markWatchedMutation.mutate(video.id)}
+                            />
+                          ))}
                         </div>
                       </div>
                     );
@@ -113,5 +119,49 @@ export function PortalVideos() {
         </div>
       )}
     </PortalShell>
+  );
+}
+
+function VideoCard({
+  video,
+  watched,
+  onWatched,
+}: {
+  video: VideoLesson;
+  watched: boolean;
+  onWatched: () => void;
+}) {
+  const iframeRef = useYouTubeCompletion(onWatched);
+  const youtubeId = extractYouTubeId(video.youtubeUrl);
+  if (!youtubeId) return null;
+
+  return (
+    <div
+      className={cn(
+        "overflow-hidden rounded-md border shadow-soft transition-colors",
+        watched ? "border-success/50 bg-success-soft/40" : "border-border/70 bg-card/70",
+      )}
+    >
+      <div className="aspect-video w-full">
+        <iframe
+          ref={iframeRef}
+          src={youtubeEmbedUrl(youtubeId, { trackCompletion: true })}
+          title={video.title}
+          className="size-full"
+          allowFullScreen
+          allow="autoplay; encrypted-media"
+          loading="lazy"
+        />
+      </div>
+      <div className="flex items-center justify-between gap-2 p-3">
+        <p className="min-w-0 truncate text-sm font-medium text-foreground">{video.title}</p>
+        {watched ? (
+          <span className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-success">
+            <CheckCircle2 className="size-3.5 shrink-0" aria-hidden />
+            Assistido
+          </span>
+        ) : null}
+      </div>
+    </div>
   );
 }

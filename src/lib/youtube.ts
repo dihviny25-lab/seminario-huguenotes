@@ -32,9 +32,20 @@ export function extractYouTubeId(url: string): string | null {
   return null;
 }
 
-/** URL de embed pronta pra usar num <iframe>. */
-export function youtubeEmbedUrl(videoId: string): string {
-  return `https://www.youtube-nocookie.com/embed/${videoId}`;
+/**
+ * URL de embed pronta pra usar num <iframe>. Com `trackCompletion`, habilita
+ * a IFrame API do YouTube (`enablejsapi`) pra detectar quando o vídeo termina.
+ */
+export function youtubeEmbedUrl(videoId: string, options?: { trackCompletion?: boolean }): string {
+  if (!options?.trackCompletion) {
+    return `https://www.youtube-nocookie.com/embed/${videoId}`;
+  }
+  const url = new URL(`https://www.youtube-nocookie.com/embed/${videoId}`);
+  url.searchParams.set("enablejsapi", "1");
+  if (typeof window !== "undefined") {
+    url.searchParams.set("origin", window.location.origin);
+  }
+  return url.toString();
 }
 
 /** URL de miniatura do vídeo. */
