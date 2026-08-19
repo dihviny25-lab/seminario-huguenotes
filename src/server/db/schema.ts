@@ -267,3 +267,15 @@ export const charges = pgTable("charges", {
   reminderUpcomingSentAt: timestamp("reminder_upcoming_sent_at", { withTimezone: true }),
   reminderOverdueSentAt: timestamp("reminder_overdue_sent_at", { withTimezone: true }),
 });
+
+export const studentObservations = pgTable("student_observations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  studentId: uuid("student_id")
+    .notNull()
+    .references(() => students.id, { onDelete: "cascade" }),
+  teacherId: uuid("teacher_id").references(() => teachers.id, { onDelete: "set null" }),
+  // Snapshot do nome de quem escreveu — sobrevive mesmo se o professor for excluído depois.
+  authorName: text("author_name").notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});

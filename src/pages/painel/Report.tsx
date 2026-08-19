@@ -1,8 +1,19 @@
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { ChevronsUpDown, Download, Printer } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ChevronsUpDown, Download, Printer, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 
 import { PainelShell } from "@/components/painel/PainelShell";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Command,
   CommandEmpty,
@@ -12,6 +23,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -21,9 +33,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { listStudentsFn } from "@/functions/students";
 import { getStudentReportFn } from "@/functions/report";
+import {
+  createObservationFn,
+  deleteObservationFn,
+  listStudentObservationsFn,
+} from "@/functions/observations";
 
 /** Busca de aluno + relatório consolidado de notas/faltas, pronto pra imprimir. */
 export function Report() {
@@ -165,8 +183,132 @@ export function Report() {
               </Table>
             </div>
           )}
+
+          <div className="mt-6 print:hidden">
+            <ObservationsSection studentId={selectedId} />
+          </div>
         </div>
       )}
     </PainelShell>
+  );
+}
+
+function ObservationsSection({ studentId }: { studentId: string }) {
+  const queryClient = useQueryClient();
+  const [content, setContent] = useState("");
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  const observationsKey = ["student-observations", studentId] as const;
+  const { data: observations, isLoading } = useQuery({
+    queryKey: observationsKey,
+    queryFn: () => listStudentObservationsFn({ data: { studentId } }),
+  });
+
+  const createMutation = useMutation({
+    mutationFn: () => createObservationFn({ data: { studentId, content } }),
+    onSuccess: async () => {
+      setContent("");
+      await queryClient.invalidateQueries({ queryKey: observationsKey });
+    },
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Não foi possível salvar."),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteObservationFn({ data: { id } }),
+    onSuccess: async () => {
+      setDeleteId(null);
+      await queryClient.invalidateQueries({ queryKey: observationsKey });
+    },
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Não foi possível apagar."),
+  });
+
+  return (
+    <div className="rounded-md border border-t-2 border-border/70 border-t-accent bg-card/70 p-6 shadow-soft">
+      <h3 className="font-display text-lg font-semibold text-foreground">Observações</h3>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Anotações da equipe de professores sobre este aluno — visíveis para todos, editáveis só por
+        quem escreveu.
+      </p>
+
+      <form
+        className="mt-4 flex flex-col gap-3"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (content.trim().length === 0) return;
+          createMutation.mutate();
+        }}
+      >
+        <Textarea
+          placeholder="Escreva uma observação sobre o aluno…"
+          value={content}
+          onChange={(event) => setContent(event.target.value)}
+          rows={3}
+        />
+        <Button type="submit" disabled={createMutation.isPending} className="self-end">
+          Adicionar observação
+        </Button>
+      </form>
+
+      <div className="mt-6 space-y-3">
+        {isLoading ? (
+          <>
+            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-16 w-full" />
+          </>
+        ) : observations && observations.length > 0 ? (
+          observations.map((observation) => (
+            <div
+              key={observation.id}
+              className="rounded-md border border-border/70 bg-background/60 p-4"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium text-foreground">{observation.authorName}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {new Date(observation.createdAt).toLocaleString("pt-BR", {
+                      dateStyle: "short",
+                      timeStyle: "short",
+                    })}
+                  </p>
+                </div>
+                {observation.mine && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-8 shrink-0 text-muted-foreground hover:text-destructive"
+                    onClick={() => setDeleteId(observation.id)}
+                  >
+                    <Trash2 className="size-4" aria-hidden />
+                    <span className="sr-only">Apagar observação</span>
+                  </Button>
+                )}
+              </div>
+              <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">
+                {observation.content}
+              </p>
+            </div>
+          ))
+        ) : (
+          <p className="text-sm text-muted-foreground">Nenhuma observação registrada ainda.</p>
+        )}
+      </div>
+
+      <AlertDialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Apagar observação?</AlertDialogTitle>
+            <AlertDialogDescription>Essa ação não pode ser desfeita.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => deleteId && deleteMutation.mutate(deleteId)}>
+              Apagar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   );
 }
