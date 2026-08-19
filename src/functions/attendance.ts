@@ -115,6 +115,37 @@ export const setAttendanceFn = createServerFn({ method: "POST" })
       });
   });
 
+const setLessonAttendanceAllSchema = z.object({
+  disciplineId: z.string().uuid(),
+  lessonId: z.string().uuid(),
+  present: z.boolean(),
+});
+
+/** Marca presença/falta de todos os alunos ativos numa aula de uma vez ("marcar todos"/"desmarcar todos"). */
+export const setLessonAttendanceAllFn = createServerFn({ method: "POST" })
+  .validator(setLessonAttendanceAllSchema)
+  .handler(async ({ data }) => {
+    await requireOwnDiscipline(data.disciplineId);
+    const activeStudents = await db
+      .select({ id: students.id })
+      .from(students)
+      .where(eq(students.active, true));
+
+    // Cada aluno é uma linha independente (sem dependência de ordem entre elas),
+    // então roda em paralelo — sequencial aqui deixaria "marcar todos" visivelmente lento.
+    await Promise.all(
+      activeStudents.map((student) =>
+        db
+          .insert(attendance)
+          .values({ lessonId: data.lessonId, studentId: student.id, present: data.present })
+          .onConflictDoUpdate({
+            target: [attendance.lessonId, attendance.studentId],
+            set: { present: data.present, updatedAt: new Date() },
+          }),
+      ),
+    );
+  });
+
 const lessonCheckInSchema = z.object({
   disciplineId: z.string().uuid(),
   lessonId: z.string().uuid(),

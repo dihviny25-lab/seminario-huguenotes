@@ -24,6 +24,7 @@ import {
   getAttendanceBoardFn,
   openLessonCheckInFn,
   setAttendanceFn,
+  setLessonAttendanceAllFn,
   type AttendanceBoard,
 } from "@/functions/attendance";
 
@@ -90,6 +91,13 @@ export function AttendanceTab({ disciplineId }: { disciplineId: string }) {
     onError: () => toast.error("Não foi possível salvar a presença."),
   });
 
+  const attendanceAllMutation = useMutation({
+    mutationFn: (input: { lessonId: string; present: boolean }) =>
+      setLessonAttendanceAllFn({ data: { disciplineId, ...input } }),
+    onSuccess: () => invalidate(),
+    onError: () => toast.error("Não foi possível atualizar a presença de todos."),
+  });
+
   if (isLoading || !data) {
     return (
       <div className="overflow-hidden rounded-md border border-border/70 bg-card/70 shadow-soft">
@@ -148,31 +156,49 @@ export function AttendanceTab({ disciplineId }: { disciplineId: string }) {
           <TableHeader>
             <TableRow>
               <TableHead>Aluno</TableHead>
-              {data.lessons.map((lesson) => (
-                <TableHead key={lesson.id} className="text-center">
-                  <div className="flex items-center justify-center gap-1">
-                    <span>{formatLessonLabel(lesson)}</span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-6"
-                      title="Chamada por QR code"
-                      onClick={() => setCheckInDialogLessonId(lesson.id)}
-                    >
-                      <QrCode className="size-3.5" aria-hidden />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-6"
-                      title="Remover aula"
-                      onClick={() => deleteLessonMutation.mutate(lesson.id)}
-                    >
-                      <Trash2 className="size-3.5" aria-hidden />
-                    </Button>
-                  </div>
-                </TableHead>
-              ))}
+              {data.lessons.map((lesson) => {
+                const presentCount = data.students.filter(
+                  (student) => (presentByKey.get(`${lesson.id}:${student.id}`) ?? true) === true,
+                ).length;
+                const allPresent =
+                  data.students.length > 0 && presentCount === data.students.length;
+                const nonePresent = presentCount === 0;
+                return (
+                  <TableHead key={lesson.id} className="text-center">
+                    <div className="flex items-center justify-center gap-1">
+                      <Checkbox
+                        checked={allPresent ? true : nonePresent ? false : "indeterminate"}
+                        title={allPresent ? "Desmarcar todos" : "Marcar todos presentes"}
+                        onCheckedChange={() =>
+                          attendanceAllMutation.mutate({
+                            lessonId: lesson.id,
+                            present: !allPresent,
+                          })
+                        }
+                      />
+                      <span>{formatLessonLabel(lesson)}</span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-6"
+                        title="Chamada por QR code"
+                        onClick={() => setCheckInDialogLessonId(lesson.id)}
+                      >
+                        <QrCode className="size-3.5" aria-hidden />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-6"
+                        title="Remover aula"
+                        onClick={() => deleteLessonMutation.mutate(lesson.id)}
+                      >
+                        <Trash2 className="size-3.5" aria-hidden />
+                      </Button>
+                    </div>
+                  </TableHead>
+                );
+              })}
               <TableHead className="text-center">Faltas</TableHead>
             </TableRow>
           </TableHeader>
