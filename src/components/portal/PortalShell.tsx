@@ -1,7 +1,16 @@
 import { useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { ClipboardList, FileCheck2, LogOut, Video, Wallet } from "lucide-react";
+import {
+  BookOpen,
+  ClipboardList,
+  FileCheck2,
+  ListChecks,
+  LogOut,
+  MessageCircle,
+  Video,
+  Wallet,
+} from "lucide-react";
 
 import {
   Sidebar,
@@ -28,7 +37,10 @@ interface PortalShellProps {
 const portalNavItems = [
   { to: "/portal", label: "Minhas notas", icon: ClipboardList },
   { to: "/portal/provas", label: "Provas", icon: FileCheck2 },
+  { to: "/portal/tarefas", label: "Tarefas", icon: ListChecks },
   { to: "/portal/videos", label: "Vídeo-aulas", icon: Video },
+  { to: "/portal/apostilas", label: "Apostilas", icon: BookOpen },
+  { to: "/portal/forum", label: "Fórum", icon: MessageCircle },
   { to: "/portal/mensalidades", label: "Mensalidades", icon: Wallet },
 ] as const;
 

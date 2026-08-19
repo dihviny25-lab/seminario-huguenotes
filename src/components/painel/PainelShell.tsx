@@ -8,7 +8,9 @@ import {
   FileText,
   GraduationCap,
   LayoutGrid,
+  ListChecks,
   LogOut,
+  MessageCircle,
   Users,
   Wallet,
 } from "lucide-react";
@@ -34,6 +36,8 @@ const painelNavItems = [
   { to: "/painel/professores", label: "Contas de professores", icon: Users },
   { to: "/painel/alunos", label: "Alunos", icon: GraduationCap },
   { to: "/painel/provas", label: "Provas", icon: ClipboardList },
+  { to: "/painel/tarefas", label: "Tarefas", icon: ListChecks },
+  { to: "/painel/forum", label: "Fórum", icon: MessageCircle },
   { to: "/painel/relatorio", label: "Relatório", icon: FileText },
   { to: "/painel/pagamentos", label: "Pagamentos", icon: Wallet },
 ] as const;

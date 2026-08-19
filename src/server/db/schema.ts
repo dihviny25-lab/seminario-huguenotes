@@ -21,6 +21,7 @@ import {
 export const scheduleStatus = pgEnum("schedule_status", ["confirmed", "pending"]);
 export const teacherRole = pgEnum("teacher_role", ["admin", "teacher"]);
 export const chargeStatus = pgEnum("charge_status", ["pending", "paid", "canceled"]);
+export const authorRole = pgEnum("author_role", ["teacher", "student"]);
 
 export const teachers = pgTable("teachers", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -275,6 +276,88 @@ export const studentObservations = pgTable("student_observations", {
     .references(() => students.id, { onDelete: "cascade" }),
   teacherId: uuid("teacher_id").references(() => teachers.id, { onDelete: "set null" }),
   // Snapshot do nome de quem escreveu — sobrevive mesmo se o professor for excluído depois.
+  authorName: text("author_name").notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const readingMaterials = pgTable("reading_materials", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  disciplineId: uuid("discipline_id")
+    .notNull()
+    .references(() => disciplines.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  description: text("description"),
+  fileUrl: text("file_url").notNull(),
+  fileName: text("file_name").notNull(),
+  sequence: integer("sequence").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const assignments = pgTable("assignments", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  disciplineId: uuid("discipline_id")
+    .notNull()
+    .references(() => disciplines.id, { onDelete: "cascade" }),
+  assessmentId: uuid("assessment_id")
+    .notNull()
+    .unique()
+    .references(() => assessments.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  instructions: text("instructions"),
+  dueAt: timestamp("due_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const assignmentSubmissions = pgTable(
+  "assignment_submissions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    assignmentId: uuid("assignment_id")
+      .notNull()
+      .references(() => assignments.id, { onDelete: "cascade" }),
+    studentId: uuid("student_id")
+      .notNull()
+      .references(() => students.id, { onDelete: "cascade" }),
+    textContent: text("text_content"),
+    fileUrl: text("file_url"),
+    fileName: text("file_name"),
+    submittedAt: timestamp("submitted_at", { withTimezone: true }).notNull().defaultNow(),
+    feedback: text("feedback"),
+    gradedAt: timestamp("graded_at", { withTimezone: true }),
+  },
+  (table) => [unique().on(table.assignmentId, table.studentId)],
+);
+
+export const forumThreads = pgTable("forum_threads", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  disciplineId: uuid("discipline_id")
+    .notNull()
+    .references(() => disciplines.id, { onDelete: "cascade" }),
+  authorRole: authorRole("author_role").notNull(),
+  authorTeacherId: uuid("author_teacher_id").references(() => teachers.id, {
+    onDelete: "set null",
+  }),
+  authorStudentId: uuid("author_student_id").references(() => students.id, {
+    onDelete: "set null",
+  }),
+  authorName: text("author_name").notNull(),
+  title: text("title").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const forumPosts = pgTable("forum_posts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  threadId: uuid("thread_id")
+    .notNull()
+    .references(() => forumThreads.id, { onDelete: "cascade" }),
+  authorRole: authorRole("author_role").notNull(),
+  authorTeacherId: uuid("author_teacher_id").references(() => teachers.id, {
+    onDelete: "set null",
+  }),
+  authorStudentId: uuid("author_student_id").references(() => students.id, {
+    onDelete: "set null",
+  }),
   authorName: text("author_name").notNull(),
   content: text("content").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getMyDisciplineFn } from "@/functions/disciplines";
 import { AttendanceTab } from "@/pages/painel/AttendanceTab";
 import { GradesTab } from "@/pages/painel/GradesTab";
+import { ReadingMaterialsTab } from "@/pages/painel/ReadingMaterialsTab";
 import { VideoLessonsTab } from "@/pages/painel/VideoLessonsTab";
 
 export function DisciplineDetail({ disciplineId }: { disciplineId: string }) {
@@ -23,6 +24,7 @@ export function DisciplineDetail({ disciplineId }: { disciplineId: string }) {
           <TabsTrigger value="frequencia">Frequência</TabsTrigger>
           <TabsTrigger value="notas">Notas</TabsTrigger>
           <TabsTrigger value="videos">Vídeo-aulas</TabsTrigger>
+          <TabsTrigger value="apostila">Apostila</TabsTrigger>
         </TabsList>
         <TabsContent value="frequencia">
           <AttendanceTab disciplineId={disciplineId} />
@@ -32,6 +34,9 @@ export function DisciplineDetail({ disciplineId }: { disciplineId: string }) {
         </TabsContent>
         <TabsContent value="videos">
           <VideoLessonsTab disciplineId={disciplineId} />
+        </TabsContent>
+        <TabsContent value="apostila">
+          <ReadingMaterialsTab disciplineId={disciplineId} />
         </TabsContent>
       </Tabs>
     </PainelShell>

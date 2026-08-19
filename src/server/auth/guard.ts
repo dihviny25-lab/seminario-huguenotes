@@ -1,7 +1,8 @@
 import { eq } from "drizzle-orm";
 
+import { toDisplayName } from "@/lib/formatName";
 import { db } from "@/server/db/client";
-import { disciplines, teachers } from "@/server/db/schema";
+import { disciplines, students, teachers } from "@/server/db/schema";
 
 import { readAppSession } from "./session";
 import { readAppStudentSession } from "./studentSession";
@@ -75,6 +76,50 @@ export async function requireAnyLogin(): Promise<void> {
   if (!teacherSession.data.teacherId && !studentSession.data.studentId) {
     throw new Error("UNAUTHORIZED");
   }
+}
+
+export type AnyIdentity =
+  | { role: "teacher"; id: string; name: string }
+  | { role: "student"; id: string; name: string };
+
+/**
+ * Garante que existe uma sessão válida (professor OU aluno) e devolve quem
+ * é — usado por conteúdo que os dois públicos podem criar (ex.: fórum),
+ * onde a autoria precisa ser registrada.
+ */
+export async function requireAnyIdentity(): Promise<AnyIdentity> {
+  const [teacherSession, studentSession] = await Promise.all([
+    readAppSession(),
+    readAppStudentSession(),
+  ]);
+
+  if (teacherSession.data.teacherId) {
+    const [teacher] = await db
+      .select({ name: teachers.name })
+      .from(teachers)
+      .where(eq(teachers.id, teacherSession.data.teacherId))
+      .limit(1);
+    return {
+      role: "teacher",
+      id: teacherSession.data.teacherId,
+      name: teacher?.name ?? "Professor",
+    };
+  }
+
+  if (studentSession.data.studentId) {
+    const [student] = await db
+      .select({ name: students.name })
+      .from(students)
+      .where(eq(students.id, studentSession.data.studentId))
+      .limit(1);
+    return {
+      role: "student",
+      id: studentSession.data.studentId,
+      name: toDisplayName(student?.name ?? "Aluno"),
+    };
+  }
+
+  throw new Error("UNAUTHORIZED");
 }
 
 /**
