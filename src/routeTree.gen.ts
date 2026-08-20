@@ -52,6 +52,7 @@ import { Route as ApiMercadopagoWebhookRouteImport } from './routes/api/mercadop
 import { Route as ApiCronPaymentRemindersRouteImport } from './routes/api/cron/payment-reminders'
 import { Route as ApiCronFinalizeExpiredExamsRouteImport } from './routes/api/cron/finalize-expired-exams'
 import { Route as PainelRelatorioStudentIdPdfRouteImport } from './routes/painel/relatorio/$studentId/pdf'
+import { Route as PainelRelatorioTurmaDisciplineIdPdfRouteImport } from './routes/painel/relatorio/turma/$disciplineId/pdf'
 
 const RedefinirSenhaAlunoRoute = RedefinirSenhaAlunoRouteImport.update({
   id: '/redefinir-senha-aluno',
@@ -273,6 +274,12 @@ const PainelRelatorioStudentIdPdfRoute =
     path: '/$studentId/pdf',
     getParentRoute: () => PainelRelatorioRoute,
   } as any)
+const PainelRelatorioTurmaDisciplineIdPdfRoute =
+  PainelRelatorioTurmaDisciplineIdPdfRouteImport.update({
+    id: '/turma/$disciplineId/pdf',
+    path: '/turma/$disciplineId/pdf',
+    getParentRoute: () => PainelRelatorioRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -318,6 +325,7 @@ export interface FileRoutesByFullPath {
   '/portal/provas/': typeof PortalProvasIndexRoute
   '/portal/tarefas/': typeof PortalTarefasIndexRoute
   '/painel/relatorio/$studentId/pdf': typeof PainelRelatorioStudentIdPdfRoute
+  '/painel/relatorio/turma/$disciplineId/pdf': typeof PainelRelatorioTurmaDisciplineIdPdfRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -361,6 +369,7 @@ export interface FileRoutesByTo {
   '/portal/provas': typeof PortalProvasIndexRoute
   '/portal/tarefas': typeof PortalTarefasIndexRoute
   '/painel/relatorio/$studentId/pdf': typeof PainelRelatorioStudentIdPdfRoute
+  '/painel/relatorio/turma/$disciplineId/pdf': typeof PainelRelatorioTurmaDisciplineIdPdfRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -407,6 +416,7 @@ export interface FileRoutesById {
   '/portal/provas/': typeof PortalProvasIndexRoute
   '/portal/tarefas/': typeof PortalTarefasIndexRoute
   '/painel/relatorio/$studentId/pdf': typeof PainelRelatorioStudentIdPdfRoute
+  '/painel/relatorio/turma/$disciplineId/pdf': typeof PainelRelatorioTurmaDisciplineIdPdfRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -454,6 +464,7 @@ export interface FileRouteTypes {
     | '/portal/provas/'
     | '/portal/tarefas/'
     | '/painel/relatorio/$studentId/pdf'
+    | '/painel/relatorio/turma/$disciplineId/pdf'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -497,6 +508,7 @@ export interface FileRouteTypes {
     | '/portal/provas'
     | '/portal/tarefas'
     | '/painel/relatorio/$studentId/pdf'
+    | '/painel/relatorio/turma/$disciplineId/pdf'
   id:
     | '__root__'
     | '/'
@@ -542,6 +554,7 @@ export interface FileRouteTypes {
     | '/portal/provas/'
     | '/portal/tarefas/'
     | '/painel/relatorio/$studentId/pdf'
+    | '/painel/relatorio/turma/$disciplineId/pdf'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -864,15 +877,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PainelRelatorioStudentIdPdfRouteImport
       parentRoute: typeof PainelRelatorioRoute
     }
+    '/painel/relatorio/turma/$disciplineId/pdf': {
+      id: '/painel/relatorio/turma/$disciplineId/pdf'
+      path: '/turma/$disciplineId/pdf'
+      fullPath: '/painel/relatorio/turma/$disciplineId/pdf'
+      preLoaderRoute: typeof PainelRelatorioTurmaDisciplineIdPdfRouteImport
+      parentRoute: typeof PainelRelatorioRoute
+    }
   }
 }
 
 interface PainelRelatorioRouteChildren {
   PainelRelatorioStudentIdPdfRoute: typeof PainelRelatorioStudentIdPdfRoute
+  PainelRelatorioTurmaDisciplineIdPdfRoute: typeof PainelRelatorioTurmaDisciplineIdPdfRoute
 }
 
 const PainelRelatorioRouteChildren: PainelRelatorioRouteChildren = {
   PainelRelatorioStudentIdPdfRoute: PainelRelatorioStudentIdPdfRoute,
+  PainelRelatorioTurmaDisciplineIdPdfRoute:
+    PainelRelatorioTurmaDisciplineIdPdfRoute,
 }
 
 const PainelRelatorioRouteWithChildren = PainelRelatorioRoute._addFileChildren(

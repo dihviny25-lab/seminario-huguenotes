@@ -376,3 +376,108 @@ export const getFinancialSummaryFn = createServerFn({ method: "GET" }).handler(
     };
   },
 );
+
+const financialReportSchema = z.object({
+  from: z.string().min(1, "Informe a data inicial."),
+  to: z.string().min(1, "Informe a data final."),
+  modality: z.string().optional(),
+});
+
+export type FinancialReportRow = {
+  studentId: string;
+  studentName: string;
+  totalCharged: number;
+  totalPaid: number;
+  totalPending: number;
+  totalOverdue: number;
+};
+
+export type FinancialReport = {
+  from: string;
+  to: string;
+  modality: string | null;
+  rows: Array<FinancialReportRow>;
+  totals: {
+    totalCharged: number;
+    totalPaid: number;
+    totalPending: number;
+    totalOverdue: number;
+  };
+};
+
+/**
+ * Relatório financeiro por aluno num intervalo de vencimento — generaliza
+ * `getFinancialSummaryFn` (que só olha o mês atual/últimos 6 meses) com
+ * período e modalidade livres. Só admin, como o resto do financeiro.
+ */
+export const getFinancialReportFn = createServerFn({ method: "GET" })
+  .validator(financialReportSchema)
+  .handler(async ({ data }): Promise<FinancialReport> => {
+    await requireAdminId();
+
+    const rows = await db
+      .select({ charge: charges, studentName: students.name })
+      .from(charges)
+      .innerJoin(students, eq(charges.studentId, students.id));
+
+    const today = todayIso();
+    const inRange = rows.filter(
+      ({ charge }) =>
+        charge.dueDate >= data.from &&
+        charge.dueDate <= data.to &&
+        (!data.modality || charge.modality === data.modality),
+    );
+
+    const byStudent = new Map<string, FinancialReportRow>();
+    for (const { charge, studentName } of inRange) {
+      const entry = byStudent.get(charge.studentId) ?? {
+        studentId: charge.studentId,
+        studentName,
+        totalCharged: 0,
+        totalPaid: 0,
+        totalPending: 0,
+        totalOverdue: 0,
+      };
+
+      const fullAmount = Number(charge.fullAmount);
+      entry.totalCharged += fullAmount;
+
+      if (charge.status === "paid") {
+        entry.totalPaid += Number(charge.paidAmount ?? charge.fullAmount);
+      } else if (charge.status === "pending") {
+        const amount = computeCurrentAmount(
+          { fullAmount, discountPercent: Number(charge.discountPercent), dueDate: charge.dueDate },
+          today,
+        );
+        if (charge.dueDate < today) {
+          entry.totalOverdue += amount;
+        } else {
+          entry.totalPending += amount;
+        }
+      }
+
+      byStudent.set(charge.studentId, entry);
+    }
+
+    const reportRows = [...byStudent.values()].sort((a, b) =>
+      a.studentName.localeCompare(b.studentName, "pt-BR"),
+    );
+
+    const totals = reportRows.reduce(
+      (acc, row) => ({
+        totalCharged: acc.totalCharged + row.totalCharged,
+        totalPaid: acc.totalPaid + row.totalPaid,
+        totalPending: acc.totalPending + row.totalPending,
+        totalOverdue: acc.totalOverdue + row.totalOverdue,
+      }),
+      { totalCharged: 0, totalPaid: 0, totalPending: 0, totalOverdue: 0 },
+    );
+
+    return {
+      from: data.from,
+      to: data.to,
+      modality: data.modality ?? null,
+      rows: reportRows,
+      totals,
+    };
+  });

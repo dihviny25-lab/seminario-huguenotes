@@ -1,6 +1,10 @@
 import { Document, Page, StyleSheet, Text, View, renderToBuffer } from "@react-pdf/renderer";
 
-import type { StudentReportRow } from "@/functions/reportData";
+import type {
+  ClassReportAssessment,
+  ClassReportRow,
+  StudentReportRow,
+} from "@/functions/reportData";
 
 const styles = StyleSheet.create({
   page: { padding: 32, fontSize: 10, fontFamily: "Helvetica" },
@@ -81,4 +85,74 @@ export async function renderStudentReportPdf(
   rows: Array<StudentReportRow>,
 ): Promise<Buffer> {
   return renderToBuffer(<StudentReportDocument studentName={studentName} rows={rows} />);
+}
+
+const classStyles = StyleSheet.create({
+  colStudent: { width: "22%" },
+  colAverage: { width: "11%", textAlign: "center" },
+  colFaltas: { width: "11%", textAlign: "center" },
+});
+
+function ClassReportDocument({
+  disciplineName,
+  assessments,
+  rows,
+}: {
+  disciplineName: string;
+  assessments: Array<ClassReportAssessment>;
+  rows: Array<ClassReportRow>;
+}) {
+  const assessmentWidth = `${56 / Math.max(assessments.length, 1)}%`;
+
+  return (
+    <Document>
+      <Page size="A4" style={styles.page} orientation="landscape">
+        <Text style={styles.eyebrow}>Seminário Huguenotes</Text>
+        <Text style={styles.title}>{disciplineName}</Text>
+
+        <View style={styles.headerRow}>
+          <Text style={classStyles.colStudent}>Aluno</Text>
+          {assessments.map((assessment) => (
+            <Text key={assessment.id} style={{ width: assessmentWidth, textAlign: "center" }}>
+              {assessment.title}
+            </Text>
+          ))}
+          <Text style={classStyles.colAverage}>Média</Text>
+          <Text style={classStyles.colFaltas}>Faltas</Text>
+        </View>
+
+        {rows.map((row) => (
+          <View key={row.studentId} style={styles.row}>
+            <Text style={classStyles.colStudent}>{row.studentName}</Text>
+            {row.scores.map((score) => (
+              <Text
+                key={score.assessmentId}
+                style={{ width: assessmentWidth, textAlign: "center" }}
+              >
+                {score.score === null ? "—" : score.score.toFixed(1)}
+              </Text>
+            ))}
+            <Text style={classStyles.colAverage}>
+              {row.average === null ? "—" : row.average.toFixed(1)}
+            </Text>
+            <Text style={classStyles.colFaltas}>
+              {row.totalLessons === 0 ? "—" : row.totalFaltas}
+            </Text>
+          </View>
+        ))}
+
+        <Text style={styles.footer}>Emitido em {new Date().toLocaleDateString("pt-BR")}.</Text>
+      </Page>
+    </Document>
+  );
+}
+
+export async function renderClassReportPdf(
+  disciplineName: string,
+  assessments: Array<ClassReportAssessment>,
+  rows: Array<ClassReportRow>,
+): Promise<Buffer> {
+  return renderToBuffer(
+    <ClassReportDocument disciplineName={disciplineName} assessments={assessments} rows={rows} />,
+  );
 }

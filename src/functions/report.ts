@@ -1,8 +1,13 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-import { requireStudentId, requireTeacherId } from "@/server/auth/guard";
-import { getStudentReportData, type StudentReport } from "@/functions/reportData";
+import { requireOwnDiscipline, requireStudentId, requireTeacherId } from "@/server/auth/guard";
+import {
+  getClassReportData,
+  getStudentReportData,
+  type ClassReport,
+  type StudentReport,
+} from "@/functions/reportData";
 
 const reportSchema = z.object({ studentId: z.string().uuid() });
 
@@ -26,4 +31,15 @@ export const getMyStudentReportFn = createServerFn({ method: "GET" }).handler(
   },
 );
 
+const classReportSchema = z.object({ disciplineId: z.string().uuid() });
+
+/** Boletim da turma inteira de uma disciplina — só o professor dono dela. */
+export const getClassReportFn = createServerFn({ method: "GET" })
+  .validator(classReportSchema)
+  .handler(async ({ data }): Promise<ClassReport> => {
+    await requireOwnDiscipline(data.disciplineId);
+    return getClassReportData(data.disciplineId);
+  });
+
 export type { StudentReport, StudentReportRow } from "@/functions/reportData";
+export type { ClassReport, ClassReportRow, ClassReportAssessment } from "@/functions/reportData";

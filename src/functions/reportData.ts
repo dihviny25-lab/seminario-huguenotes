@@ -13,6 +13,136 @@ import {
   teachers,
 } from "@/server/db/schema";
 
+export type ClassReportAssessment = { id: string; title: string; maxScore: number };
+
+export type ClassReportRow = {
+  studentId: string;
+  studentName: string;
+  scores: Array<{ assessmentId: string; score: number | null }>;
+  average: number | null;
+  totalLessons: number;
+  totalFaltas: number;
+};
+
+export type ClassReport = {
+  discipline: { id: string; discipline: string; module: string; term: string };
+  assessments: Array<ClassReportAssessment>;
+  rows: Array<ClassReportRow>;
+};
+
+/**
+ * Notas e faltas de TODOS os alunos ativos numa disciplina — o "boletim da
+ * turma" que espelha a mesma disciplina/módulo/faltas usada em GradesTab e
+ * AttendanceTab, só que consolidado numa tabela só, pronto pra imprimir.
+ * Função pura de dados — mesma ressalva de `getStudentReportData` (só
+ * importar de handlers server-only).
+ */
+export async function getClassReportData(disciplineId: string): Promise<ClassReport> {
+  const [discipline] = await db
+    .select({
+      id: disciplines.id,
+      discipline: disciplines.discipline,
+      module: disciplines.module,
+      term: disciplines.term,
+    })
+    .from(disciplines)
+    .where(eq(disciplines.id, disciplineId))
+    .limit(1);
+  if (!discipline) throw new Error("Disciplina não encontrada.");
+
+  const [studentRows, assessmentRows, lessonRows] = await Promise.all([
+    db
+      .select({ id: students.id, name: students.name })
+      .from(students)
+      .where(eq(students.active, true))
+      .orderBy(asc(students.name)),
+    db
+      .select({
+        id: assessments.id,
+        title: assessments.title,
+        maxScore: assessments.maxScore,
+        weight: assessments.weight,
+      })
+      .from(assessments)
+      .where(eq(assessments.disciplineId, disciplineId))
+      .orderBy(asc(assessments.createdAt)),
+    db.select({ id: lessons.id }).from(lessons).where(eq(lessons.disciplineId, disciplineId)),
+  ]);
+
+  const assessmentIds = assessmentRows.map((a) => a.id);
+  const lessonIds = lessonRows.map((l) => l.id);
+  const studentIds = studentRows.map((s) => s.id);
+
+  const [gradeRows, attendanceRows] = await Promise.all([
+    assessmentIds.length === 0 || studentIds.length === 0
+      ? []
+      : db
+          .select({
+            assessmentId: grades.assessmentId,
+            studentId: grades.studentId,
+            score: grades.score,
+          })
+          .from(grades)
+          .where(
+            and(inArray(grades.assessmentId, assessmentIds), inArray(grades.studentId, studentIds)),
+          ),
+    lessonIds.length === 0 || studentIds.length === 0
+      ? []
+      : db
+          .select({
+            lessonId: attendance.lessonId,
+            studentId: attendance.studentId,
+            present: attendance.present,
+          })
+          .from(attendance)
+          .where(
+            and(inArray(attendance.lessonId, lessonIds), inArray(attendance.studentId, studentIds)),
+          ),
+  ]);
+
+  const assessmentWeightById = new Map(assessmentRows.map((a) => [a.id, Number(a.weight)]));
+
+  const rows: Array<ClassReportRow> = studentRows.map((student) => {
+    const scoreByAssessment = new Map(
+      gradeRows.filter((g) => g.studentId === student.id).map((g) => [g.assessmentId, g.score]),
+    );
+    const scores = assessmentRows.map((a) => {
+      const raw = scoreByAssessment.get(a.id);
+      return { assessmentId: a.id, score: raw === undefined ? null : Number(raw) };
+    });
+    const weighted = scores
+      .filter((s): s is { assessmentId: string; score: number } => s.score !== null)
+      .map((s) => ({ score: s.score, weight: assessmentWeightById.get(s.assessmentId) ?? 1 }));
+    const average = computeWeightedAverage(weighted);
+
+    const absentLessonIds = new Set(
+      attendanceRows
+        .filter((a) => a.studentId === student.id && a.present === false)
+        .map((a) => a.lessonId),
+    );
+    const totalFaltas = countFaltas(lessonIds, absentLessonIds);
+
+    return {
+      studentId: student.id,
+      studentName: student.name,
+      scores,
+      average,
+      totalLessons: lessonIds.length,
+      totalFaltas,
+    };
+  });
+
+  return {
+    discipline,
+    assessments: assessmentRows.map((a) => ({
+      id: a.id,
+      title: a.title,
+      maxScore: Number(a.maxScore),
+    })),
+    rows,
+  };
+}
+
 export type StudentAssessmentScore = {
   title: string;
   score: number | null;
