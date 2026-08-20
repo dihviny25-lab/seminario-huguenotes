@@ -92,6 +92,80 @@ export const listAvailableAssignmentsFn = createServerFn({ method: "GET" }).hand
   },
 );
 
+const disciplineIdSchema = z.object({ disciplineId: z.string().uuid() });
+
+/** Tarefas de UMA disciplina + status da entrega do próprio aluno — pra página do curso. */
+export const listDisciplineAssignmentsFn = createServerFn({ method: "GET" })
+  .validator(disciplineIdSchema)
+  .handler(async ({ data }): Promise<Array<AvailableAssignment>> => {
+    const studentId = await requireStudentId();
+
+    const rows = await db
+      .select({
+        id: assignments.id,
+        title: assignments.title,
+        instructions: assignments.instructions,
+        dueAt: assignments.dueAt,
+        assessmentId: assignments.assessmentId,
+        disciplineName: disciplines.discipline,
+        maxScore: assessments.maxScore,
+      })
+      .from(assignments)
+      .innerJoin(disciplines, eq(assignments.disciplineId, disciplines.id))
+      .innerJoin(assessments, eq(assignments.assessmentId, assessments.id))
+      .where(eq(assignments.disciplineId, data.disciplineId))
+      .orderBy(asc(assignments.createdAt));
+
+    const ids = rows.map((r) => r.id);
+    const [submissionRows, gradeRows] = await Promise.all([
+      ids.length === 0
+        ? []
+        : db
+            .select()
+            .from(assignmentSubmissions)
+            .where(
+              and(
+                inArray(assignmentSubmissions.assignmentId, ids),
+                eq(assignmentSubmissions.studentId, studentId),
+              ),
+            ),
+      rows.length === 0
+        ? []
+        : db
+            .select()
+            .from(grades)
+            .where(
+              and(
+                eq(grades.studentId, studentId),
+                inArray(
+                  grades.assessmentId,
+                  rows.map((r) => r.assessmentId),
+                ),
+              ),
+            ),
+    ]);
+
+    return rows.map((row) => {
+      const submission = submissionRows.find((s) => s.assignmentId === row.id);
+      const grade = gradeRows.find((g) => g.assessmentId === row.assessmentId);
+      const status: AvailableAssignment["status"] = grade
+        ? "graded"
+        : submission
+          ? "submitted"
+          : "pending";
+      return {
+        id: row.id,
+        disciplineName: row.disciplineName,
+        title: row.title,
+        instructions: row.instructions,
+        dueAt: row.dueAt ? row.dueAt.toISOString() : null,
+        status,
+        score: grade?.score ?? null,
+        maxScore: row.maxScore,
+      };
+    });
+  });
+
 export type MySubmission = {
   assignmentId: string;
   title: string;

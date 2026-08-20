@@ -127,6 +127,18 @@ export const listAllVideoLessonsFn = createServerFn({ method: "GET" }).handler(
   },
 );
 
+/** Vídeo-aulas de UMA disciplina — pra página do curso no portal (qualquer aluno/professor). */
+export const listDisciplineVideoLessonsFn = createServerFn({ method: "GET" })
+  .validator(disciplineIdSchema)
+  .handler(async ({ data }): Promise<Array<VideoLesson>> => {
+    await requireAnyLogin();
+    return db
+      .select()
+      .from(videoLessons)
+      .where(eq(videoLessons.disciplineId, data.disciplineId))
+      .orderBy(asc(videoLessons.sequence));
+  });
+
 /** IDs das vídeo-aulas que o próprio aluno já concluiu. */
 export const listMyWatchedVideosFn = createServerFn({ method: "GET" }).handler(
   async (): Promise<Array<string>> => {

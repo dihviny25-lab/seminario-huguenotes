@@ -84,6 +84,63 @@ export const listAvailableExamsFn = createServerFn({ method: "GET" }).handler(
   },
 );
 
+const disciplineIdSchema = z.object({ disciplineId: z.string().uuid() });
+
+/** Provas de UMA disciplina + status da tentativa do próprio aluno — pra página do curso. */
+export const listDisciplineExamsFn = createServerFn({ method: "GET" })
+  .validator(disciplineIdSchema)
+  .handler(async ({ data }): Promise<Array<AvailableExam>> => {
+    const studentId = await requireStudentId();
+
+    const examRows = await db
+      .select({
+        id: exams.id,
+        title: exams.title,
+        durationMinutes: exams.durationMinutes,
+        opensAt: exams.opensAt,
+        disciplineName: disciplines.discipline,
+        maxScore: assessments.maxScore,
+      })
+      .from(exams)
+      .innerJoin(disciplines, eq(exams.disciplineId, disciplines.id))
+      .innerJoin(assessments, eq(exams.assessmentId, assessments.id))
+      .where(and(eq(exams.disciplineId, data.disciplineId), isNotNull(exams.opensAt)))
+      .orderBy(asc(exams.opensAt));
+
+    const examIds = examRows.map((e) => e.id);
+    const attemptRows =
+      examIds.length === 0
+        ? []
+        : await db
+            .select()
+            .from(examAttempts)
+            .where(
+              and(inArray(examAttempts.examId, examIds), eq(examAttempts.studentId, studentId)),
+            );
+
+    const now = new Date();
+    return examRows.map((exam) => {
+      const attempt = attemptRows.find((a) => a.examId === exam.id);
+      const opensAt = exam.opensAt as Date;
+      let status: AvailableExam["status"];
+      if (attempt?.submittedAt) status = "submitted";
+      else if (attempt) status = "in_progress";
+      else if (opensAt > now) status = "upcoming";
+      else status = "available";
+
+      return {
+        id: exam.id,
+        title: exam.title,
+        durationMinutes: exam.durationMinutes,
+        opensAt: opensAt.toISOString(),
+        disciplineName: exam.disciplineName,
+        status,
+        score: attempt?.score ?? null,
+        maxScore: exam.maxScore,
+      };
+    });
+  });
+
 export type ExamAttemptState = {
   examId: string;
   title: string;

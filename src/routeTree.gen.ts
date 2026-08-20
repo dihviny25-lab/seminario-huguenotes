@@ -38,12 +38,14 @@ import { Route as ApiUploadRouteImport } from './routes/api/upload'
 import { Route as PortalTarefasIndexRouteImport } from './routes/portal/tarefas/index'
 import { Route as PortalProvasIndexRouteImport } from './routes/portal/provas/index'
 import { Route as PortalForumIndexRouteImport } from './routes/portal/forum/index'
+import { Route as PortalDisciplinasIndexRouteImport } from './routes/portal/disciplinas/index'
 import { Route as PainelTarefasIndexRouteImport } from './routes/painel/tarefas/index'
 import { Route as PainelProvasIndexRouteImport } from './routes/painel/provas/index'
 import { Route as PainelForumIndexRouteImport } from './routes/painel/forum/index'
 import { Route as PortalTarefasAssignmentIdRouteImport } from './routes/portal/tarefas/$assignmentId'
 import { Route as PortalProvasExamIdRouteImport } from './routes/portal/provas/$examId'
 import { Route as PortalForumThreadIdRouteImport } from './routes/portal/forum/$threadId'
+import { Route as PortalDisciplinasDisciplineIdRouteImport } from './routes/portal/disciplinas/$disciplineId'
 import { Route as PortalCheckinLessonIdRouteImport } from './routes/portal/checkin/$lessonId'
 import { Route as PainelTarefasAssignmentIdRouteImport } from './routes/painel/tarefas/$assignmentId'
 import { Route as PainelProvasExamIdRouteImport } from './routes/painel/provas/$examId'
@@ -200,6 +202,11 @@ const PortalForumIndexRoute = PortalForumIndexRouteImport.update({
   path: '/forum/',
   getParentRoute: () => PortalRouteRoute,
 } as any)
+const PortalDisciplinasIndexRoute = PortalDisciplinasIndexRouteImport.update({
+  id: '/disciplinas/',
+  path: '/disciplinas/',
+  getParentRoute: () => PortalRouteRoute,
+} as any)
 const PainelTarefasIndexRoute = PainelTarefasIndexRouteImport.update({
   id: '/tarefas/',
   path: '/tarefas/',
@@ -231,6 +238,12 @@ const PortalForumThreadIdRoute = PortalForumThreadIdRouteImport.update({
   path: '/forum/$threadId',
   getParentRoute: () => PortalRouteRoute,
 } as any)
+const PortalDisciplinasDisciplineIdRoute =
+  PortalDisciplinasDisciplineIdRouteImport.update({
+    id: '/disciplinas/$disciplineId',
+    path: '/disciplinas/$disciplineId',
+    getParentRoute: () => PortalRouteRoute,
+  } as any)
 const PortalCheckinLessonIdRoute = PortalCheckinLessonIdRouteImport.update({
   id: '/checkin/$lessonId',
   path: '/checkin/$lessonId',
@@ -322,12 +335,14 @@ export interface FileRoutesByFullPath {
   '/painel/provas/$examId': typeof PainelProvasExamIdRoute
   '/painel/tarefas/$assignmentId': typeof PainelTarefasAssignmentIdRoute
   '/portal/checkin/$lessonId': typeof PortalCheckinLessonIdRoute
+  '/portal/disciplinas/$disciplineId': typeof PortalDisciplinasDisciplineIdRoute
   '/portal/forum/$threadId': typeof PortalForumThreadIdRoute
   '/portal/provas/$examId': typeof PortalProvasExamIdRoute
   '/portal/tarefas/$assignmentId': typeof PortalTarefasAssignmentIdRoute
   '/painel/forum/': typeof PainelForumIndexRoute
   '/painel/provas/': typeof PainelProvasIndexRoute
   '/painel/tarefas/': typeof PainelTarefasIndexRoute
+  '/portal/disciplinas/': typeof PortalDisciplinasIndexRoute
   '/portal/forum/': typeof PortalForumIndexRoute
   '/portal/provas/': typeof PortalProvasIndexRoute
   '/portal/tarefas/': typeof PortalTarefasIndexRoute
@@ -367,12 +382,14 @@ export interface FileRoutesByTo {
   '/painel/provas/$examId': typeof PainelProvasExamIdRoute
   '/painel/tarefas/$assignmentId': typeof PainelTarefasAssignmentIdRoute
   '/portal/checkin/$lessonId': typeof PortalCheckinLessonIdRoute
+  '/portal/disciplinas/$disciplineId': typeof PortalDisciplinasDisciplineIdRoute
   '/portal/forum/$threadId': typeof PortalForumThreadIdRoute
   '/portal/provas/$examId': typeof PortalProvasExamIdRoute
   '/portal/tarefas/$assignmentId': typeof PortalTarefasAssignmentIdRoute
   '/painel/forum': typeof PainelForumIndexRoute
   '/painel/provas': typeof PainelProvasIndexRoute
   '/painel/tarefas': typeof PainelTarefasIndexRoute
+  '/portal/disciplinas': typeof PortalDisciplinasIndexRoute
   '/portal/forum': typeof PortalForumIndexRoute
   '/portal/provas': typeof PortalProvasIndexRoute
   '/portal/tarefas': typeof PortalTarefasIndexRoute
@@ -415,12 +432,14 @@ export interface FileRoutesById {
   '/painel/provas/$examId': typeof PainelProvasExamIdRoute
   '/painel/tarefas/$assignmentId': typeof PainelTarefasAssignmentIdRoute
   '/portal/checkin/$lessonId': typeof PortalCheckinLessonIdRoute
+  '/portal/disciplinas/$disciplineId': typeof PortalDisciplinasDisciplineIdRoute
   '/portal/forum/$threadId': typeof PortalForumThreadIdRoute
   '/portal/provas/$examId': typeof PortalProvasExamIdRoute
   '/portal/tarefas/$assignmentId': typeof PortalTarefasAssignmentIdRoute
   '/painel/forum/': typeof PainelForumIndexRoute
   '/painel/provas/': typeof PainelProvasIndexRoute
   '/painel/tarefas/': typeof PainelTarefasIndexRoute
+  '/portal/disciplinas/': typeof PortalDisciplinasIndexRoute
   '/portal/forum/': typeof PortalForumIndexRoute
   '/portal/provas/': typeof PortalProvasIndexRoute
   '/portal/tarefas/': typeof PortalTarefasIndexRoute
@@ -464,12 +483,14 @@ export interface FileRouteTypes {
     | '/painel/provas/$examId'
     | '/painel/tarefas/$assignmentId'
     | '/portal/checkin/$lessonId'
+    | '/portal/disciplinas/$disciplineId'
     | '/portal/forum/$threadId'
     | '/portal/provas/$examId'
     | '/portal/tarefas/$assignmentId'
     | '/painel/forum/'
     | '/painel/provas/'
     | '/painel/tarefas/'
+    | '/portal/disciplinas/'
     | '/portal/forum/'
     | '/portal/provas/'
     | '/portal/tarefas/'
@@ -509,12 +530,14 @@ export interface FileRouteTypes {
     | '/painel/provas/$examId'
     | '/painel/tarefas/$assignmentId'
     | '/portal/checkin/$lessonId'
+    | '/portal/disciplinas/$disciplineId'
     | '/portal/forum/$threadId'
     | '/portal/provas/$examId'
     | '/portal/tarefas/$assignmentId'
     | '/painel/forum'
     | '/painel/provas'
     | '/painel/tarefas'
+    | '/portal/disciplinas'
     | '/portal/forum'
     | '/portal/provas'
     | '/portal/tarefas'
@@ -556,12 +579,14 @@ export interface FileRouteTypes {
     | '/painel/provas/$examId'
     | '/painel/tarefas/$assignmentId'
     | '/portal/checkin/$lessonId'
+    | '/portal/disciplinas/$disciplineId'
     | '/portal/forum/$threadId'
     | '/portal/provas/$examId'
     | '/portal/tarefas/$assignmentId'
     | '/painel/forum/'
     | '/painel/provas/'
     | '/painel/tarefas/'
+    | '/portal/disciplinas/'
     | '/portal/forum/'
     | '/portal/provas/'
     | '/portal/tarefas/'
@@ -791,6 +816,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PortalForumIndexRouteImport
       parentRoute: typeof PortalRouteRoute
     }
+    '/portal/disciplinas/': {
+      id: '/portal/disciplinas/'
+      path: '/disciplinas'
+      fullPath: '/portal/disciplinas/'
+      preLoaderRoute: typeof PortalDisciplinasIndexRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
     '/painel/tarefas/': {
       id: '/painel/tarefas/'
       path: '/tarefas'
@@ -831,6 +863,13 @@ declare module '@tanstack/react-router' {
       path: '/forum/$threadId'
       fullPath: '/portal/forum/$threadId'
       preLoaderRoute: typeof PortalForumThreadIdRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
+    '/portal/disciplinas/$disciplineId': {
+      id: '/portal/disciplinas/$disciplineId'
+      path: '/disciplinas/$disciplineId'
+      fullPath: '/portal/disciplinas/$disciplineId'
+      preLoaderRoute: typeof PortalDisciplinasDisciplineIdRouteImport
       parentRoute: typeof PortalRouteRoute
     }
     '/portal/checkin/$lessonId': {
@@ -970,9 +1009,11 @@ interface PortalRouteRouteChildren {
   PortalVideosRoute: typeof PortalVideosRoute
   PortalIndexRoute: typeof PortalIndexRoute
   PortalCheckinLessonIdRoute: typeof PortalCheckinLessonIdRoute
+  PortalDisciplinasDisciplineIdRoute: typeof PortalDisciplinasDisciplineIdRoute
   PortalForumThreadIdRoute: typeof PortalForumThreadIdRoute
   PortalProvasExamIdRoute: typeof PortalProvasExamIdRoute
   PortalTarefasAssignmentIdRoute: typeof PortalTarefasAssignmentIdRoute
+  PortalDisciplinasIndexRoute: typeof PortalDisciplinasIndexRoute
   PortalForumIndexRoute: typeof PortalForumIndexRoute
   PortalProvasIndexRoute: typeof PortalProvasIndexRoute
   PortalTarefasIndexRoute: typeof PortalTarefasIndexRoute
@@ -987,9 +1028,11 @@ const PortalRouteRouteChildren: PortalRouteRouteChildren = {
   PortalVideosRoute: PortalVideosRoute,
   PortalIndexRoute: PortalIndexRoute,
   PortalCheckinLessonIdRoute: PortalCheckinLessonIdRoute,
+  PortalDisciplinasDisciplineIdRoute: PortalDisciplinasDisciplineIdRoute,
   PortalForumThreadIdRoute: PortalForumThreadIdRoute,
   PortalProvasExamIdRoute: PortalProvasExamIdRoute,
   PortalTarefasAssignmentIdRoute: PortalTarefasAssignmentIdRoute,
+  PortalDisciplinasIndexRoute: PortalDisciplinasIndexRoute,
   PortalForumIndexRoute: PortalForumIndexRoute,
   PortalProvasIndexRoute: PortalProvasIndexRoute,
   PortalTarefasIndexRoute: PortalTarefasIndexRoute,

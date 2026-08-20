@@ -79,3 +79,15 @@ export const listAllReadingMaterialsFn = createServerFn({ method: "GET" }).handl
     return db.select().from(readingMaterials).orderBy(asc(readingMaterials.sequence));
   },
 );
+
+/** Materiais de UMA disciplina — pra página do curso no portal (qualquer aluno/professor). */
+export const listDisciplineMaterialsFn = createServerFn({ method: "GET" })
+  .validator(disciplineIdSchema)
+  .handler(async ({ data }): Promise<Array<ReadingMaterial>> => {
+    await requireAnyLogin();
+    return db
+      .select()
+      .from(readingMaterials)
+      .where(eq(readingMaterials.disciplineId, data.disciplineId))
+      .orderBy(asc(readingMaterials.sequence));
+  });

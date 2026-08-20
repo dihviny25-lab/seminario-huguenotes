@@ -5,6 +5,7 @@ import {
   BookOpen,
   ClipboardList,
   FileCheck2,
+  GraduationCap,
   HeartHandshake,
   ListChecks,
   LogOut,
@@ -36,6 +37,7 @@ interface PortalShellProps {
 }
 
 const portalNavItems = [
+  { to: "/portal/disciplinas", label: "Minhas disciplinas", icon: GraduationCap },
   { to: "/portal", label: "Minhas notas", icon: ClipboardList },
   { to: "/portal/provas", label: "Provas", icon: FileCheck2 },
   { to: "/portal/tarefas", label: "Tarefas", icon: ListChecks },
@@ -79,16 +81,20 @@ export function PortalShell({ title, description, children }: PortalShellProps) 
         <SidebarContent>
           <SidebarGroup>
             <SidebarMenu>
-              {portalNavItems.map((item) => (
-                <SidebarMenuItem key={item.to}>
-                  <SidebarMenuButton asChild isActive={pathname === item.to}>
-                    <Link to={item.to}>
-                      <item.icon />
-                      <span>{item.label}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {portalNavItems.map((item) => {
+                const isActive =
+                  item.to === "/portal" ? pathname === item.to : pathname.startsWith(item.to);
+                return (
+                  <SidebarMenuItem key={item.to}>
+                    <SidebarMenuButton asChild isActive={isActive}>
+                      <Link to={item.to}>
+                        <item.icon />
+                        <span>{item.label}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroup>
         </SidebarContent>

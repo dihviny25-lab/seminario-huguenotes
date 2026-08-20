@@ -112,7 +112,7 @@ export function PortalForum() {
   );
 }
 
-function PortalForumThreadList({ disciplineId }: { disciplineId: string }) {
+export function PortalForumThreadList({ disciplineId }: { disciplineId: string }) {
   const { data: threads, isLoading } = useQuery({
     queryKey: threadsKey(disciplineId),
     queryFn: () => listDisciplineThreadsFn({ data: { disciplineId } }),
