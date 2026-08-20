@@ -5,6 +5,7 @@ import {
   BookOpen,
   ClipboardList,
   FileCheck2,
+  HeartHandshake,
   ListChecks,
   LogOut,
   MessageCircle,
@@ -41,6 +42,7 @@ const portalNavItems = [
   { to: "/portal/videos", label: "Vídeo-aulas", icon: Video },
   { to: "/portal/apostilas", label: "Apostilas", icon: BookOpen },
   { to: "/portal/forum", label: "Fórum", icon: MessageCircle },
+  { to: "/portal/discipulado", label: "Discipulado", icon: HeartHandshake },
   { to: "/portal/mensalidades", label: "Mensalidades", icon: Wallet },
 ] as const;
 

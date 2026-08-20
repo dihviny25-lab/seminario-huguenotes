@@ -46,6 +46,7 @@ import {
   deleteObservationFn,
   listStudentObservationsFn,
 } from "@/functions/observations";
+import { addReflectionCommentFn, listStudentReflectionsFn } from "@/functions/reflections";
 import { getStudentReportFn } from "@/functions/report";
 import { listStudentsFn } from "@/functions/students";
 
@@ -214,11 +215,104 @@ export function StudentReport() {
             </div>
           )}
 
-          <div className="mt-6 print:hidden">
+          <div className="mt-6 space-y-6 print:hidden">
+            <DiscipleshipSection studentId={selectedId} />
             <ObservationsSection studentId={selectedId} />
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function DiscipleshipSection({ studentId }: { studentId: string }) {
+  const queryClient = useQueryClient();
+  const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
+
+  const reflectionsKey = ["student-reflections", studentId] as const;
+  const { data: reflections, isLoading } = useQuery({
+    queryKey: reflectionsKey,
+    queryFn: () => listStudentReflectionsFn({ data: { studentId } }),
+  });
+
+  const commentMutation = useMutation({
+    mutationFn: ({ reflectionId, content }: { reflectionId: string; content: string }) =>
+      addReflectionCommentFn({ data: { reflectionId, content } }),
+    onSuccess: async (_data, variables) => {
+      setCommentDrafts((prev) => ({ ...prev, [variables.reflectionId]: "" }));
+      await queryClient.invalidateQueries({ queryKey: reflectionsKey });
+    },
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Não foi possível comentar."),
+  });
+
+  return (
+    <div className="rounded-md border border-t-2 border-border/70 border-t-accent bg-card/70 p-6 shadow-soft">
+      <h3 className="font-display text-lg font-semibold text-foreground">Discipulado</h3>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Reflexões espirituais que o próprio aluno registrou — qualquer professor pode responder.
+      </p>
+
+      <div className="mt-4 space-y-3">
+        {isLoading ? (
+          <>
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-20 w-full" />
+          </>
+        ) : reflections && reflections.length > 0 ? (
+          reflections.map((reflection) => (
+            <div
+              key={reflection.id}
+              className="rounded-md border border-border/70 bg-background/60 p-4"
+            >
+              <p className="text-sm font-medium text-accent">{reflection.prompt}</p>
+              <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">
+                {reflection.content}
+              </p>
+              <p className="mt-2 text-xs text-muted-foreground">
+                {new Date(reflection.createdAt).toLocaleDateString("pt-BR", { dateStyle: "long" })}
+              </p>
+
+              {reflection.comments.length > 0 ? (
+                <div className="mt-3 space-y-2 border-t border-border/70 pt-3">
+                  {reflection.comments.map((comment) => (
+                    <div key={comment.id} className="rounded-md bg-muted/40 p-3">
+                      <p className="text-xs font-medium text-foreground">{comment.authorName}</p>
+                      <p className="mt-1 whitespace-pre-wrap text-sm text-foreground">
+                        {comment.content}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+
+              <form
+                className="mt-3 flex gap-2"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  const content = (commentDrafts[reflection.id] ?? "").trim();
+                  if (content.length === 0) return;
+                  commentMutation.mutate({ reflectionId: reflection.id, content });
+                }}
+              >
+                <Textarea
+                  placeholder="Responder…"
+                  rows={1}
+                  value={commentDrafts[reflection.id] ?? ""}
+                  onChange={(event) =>
+                    setCommentDrafts((prev) => ({ ...prev, [reflection.id]: event.target.value }))
+                  }
+                />
+                <Button type="submit" size="sm" disabled={commentMutation.isPending}>
+                  Responder
+                </Button>
+              </form>
+            </div>
+          ))
+        ) : (
+          <p className="text-sm text-muted-foreground">Nenhuma reflexão registrada ainda.</p>
+        )}
+      </div>
     </div>
   );
 }

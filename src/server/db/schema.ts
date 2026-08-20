@@ -362,3 +362,25 @@ export const forumPosts = pgTable("forum_posts", {
   content: text("content").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+export const spiritualReflections = pgTable("spiritual_reflections", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  studentId: uuid("student_id")
+    .notNull()
+    .references(() => students.id, { onDelete: "cascade" }),
+  // Snapshot da pergunta feita — o banco de perguntas vive no código, não no banco.
+  prompt: text("prompt").notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const reflectionComments = pgTable("reflection_comments", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  reflectionId: uuid("reflection_id")
+    .notNull()
+    .references(() => spiritualReflections.id, { onDelete: "cascade" }),
+  teacherId: uuid("teacher_id").references(() => teachers.id, { onDelete: "set null" }),
+  authorName: text("author_name").notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
