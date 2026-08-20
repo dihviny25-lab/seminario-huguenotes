@@ -16,10 +16,6 @@ import { SemesterCard } from "@/components/SemesterCard";
 import { getScheduleStatistics, groupBySemester } from "@/lib/schedule-utils";
 import type { Discipline } from "@/types/schedule";
 
-/** Nota oficial da coordenação sobre a publicação das datas. */
-const scheduleNote =
-  "Somente o 1º Semestre (2026) possui datas de calendário confirmadas pela coordenação. Os demais permanecem como “A confirmar” até serem publicados.";
-
 const statItems = [
   { key: "semesters", label: "Semestres", icon: CalendarRange },
   { key: "modules", label: "Módulos", icon: Layers },
@@ -31,6 +27,10 @@ const statItems = [
 export function Dashboard({ disciplines }: { disciplines: Discipline[] }) {
   const semesters = useMemo(() => groupBySemester(disciplines), [disciplines]);
   const statistics = useMemo(() => getScheduleStatistics(disciplines), [disciplines]);
+  const pendingCount = useMemo(
+    () => disciplines.filter((d) => d.status === "pending").length,
+    [disciplines],
+  );
 
   return (
     <div className="min-h-screen">
@@ -164,10 +164,16 @@ export function Dashboard({ disciplines }: { disciplines: Discipline[] }) {
           </div>
         </section>
 
-        <div className="mt-10 rounded-lg border border-warning-border/70 bg-gradient-to-br from-warning-soft to-background px-4 py-4 text-sm leading-relaxed text-warning shadow-soft sm:px-5">
-          <p className="font-medium">Nota da coordenação</p>
-          <p className="mt-1">{scheduleNote}</p>
-        </div>
+        {pendingCount > 0 ? (
+          <div className="mt-10 rounded-lg border border-warning-border/70 bg-gradient-to-br from-warning-soft to-background px-4 py-4 text-sm leading-relaxed text-warning shadow-soft sm:px-5">
+            <p className="font-medium">Nota da coordenação</p>
+            <p className="mt-1">
+              As datas já publicadas estão confirmadas pela coordenação. {pendingCount}{" "}
+              {pendingCount === 1 ? "módulo ainda está" : "módulos ainda estão"} como “A confirmar”
+              até serem publicados.
+            </p>
+          </div>
+        ) : null}
 
         <section className="mt-16 grid gap-8 lg:grid-cols-2 lg:items-center lg:gap-14">
           <div className="order-2 lg:order-1">

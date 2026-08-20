@@ -66,11 +66,18 @@ export async function getClassReportData(disciplineId: string): Promise<ClassRep
       .from(assessments)
       .where(eq(assessments.disciplineId, disciplineId))
       .orderBy(asc(assessments.createdAt)),
-    db.select({ id: lessons.id }).from(lessons).where(eq(lessons.disciplineId, disciplineId)),
+    db
+      .select({ id: lessons.id, date: lessons.date })
+      .from(lessons)
+      .where(eq(lessons.disciplineId, disciplineId)),
   ]);
 
+  // Mesma regra do boletim individual: só conta aula que já aconteceu.
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const pastLessonRows = lessonRows.filter((l) => l.date !== null && l.date <= todayIso);
+
   const assessmentIds = assessmentRows.map((a) => a.id);
-  const lessonIds = lessonRows.map((l) => l.id);
+  const lessonIds = pastLessonRows.map((l) => l.id);
   const studentIds = studentRows.map((s) => s.id);
 
   const [gradeRows, attendanceRows] = await Promise.all([
@@ -214,13 +221,18 @@ export async function getStudentReportData(studentId: string): Promise<StudentRe
       .where(inArray(assessments.disciplineId, disciplineIds))
       .orderBy(asc(assessments.createdAt)),
     db
-      .select({ id: lessons.id, disciplineId: lessons.disciplineId })
+      .select({ id: lessons.id, disciplineId: lessons.disciplineId, date: lessons.date })
       .from(lessons)
       .where(inArray(lessons.disciplineId, disciplineIds)),
   ]);
 
+  // Só conta aula que já aconteceu — sem isso, disciplinas futuras (cujas datas já
+  // foram todas cadastradas de uma vez) apareciam com 100% de frequência antes mesmo de começar.
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const pastLessonRows = lessonRows.filter((l) => l.date !== null && l.date <= todayIso);
+
   const assessmentIds = assessmentRows.map((a) => a.id);
-  const lessonIds = lessonRows.map((l) => l.id);
+  const lessonIds = pastLessonRows.map((l) => l.id);
 
   const [studentGrades, studentAttendance] = await Promise.all([
     assessmentIds.length === 0
@@ -262,7 +274,7 @@ export async function getStudentReportData(studentId: string): Promise<StudentRe
       };
     });
 
-    const disciplineLessons = lessonRows.filter((l) => l.disciplineId === discipline.id);
+    const disciplineLessons = pastLessonRows.filter((l) => l.disciplineId === discipline.id);
     const totalFaltas = countFaltas(
       disciplineLessons.map((l) => l.id),
       absentLessonIds,
