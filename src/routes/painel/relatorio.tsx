@@ -1,10 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { Report } from "@/pages/painel/Report";
+import { StudentReport } from "@/pages/painel/reports/StudentReport";
 
 export const Route = createFileRoute("/painel/relatorio")({
   head: () => ({
-    meta: [{ title: "Relatório do aluno — Seminário Huguenotes" }],
+    meta: [{ title: "Boletim do aluno — Seminário Huguenotes" }],
   }),
-  component: Report,
+  component: StudentReport,
 });

@@ -1,8 +1,19 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronsUpDown, Download, Printer, Trash2 } from "lucide-react";
+import {
+  CalendarCheck,
+  ChevronsUpDown,
+  Download,
+  GraduationCap,
+  Printer,
+  ShieldCheck,
+  Target,
+  Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
 
+import { PainelShell } from "@/components/painel/PainelShell";
+import { StatisticCard } from "@/components/StatisticCard";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -49,6 +60,8 @@ import {
 import { addReflectionCommentFn, listStudentReflectionsFn } from "@/functions/reflections";
 import { getStudentReportFn } from "@/functions/report";
 import { listStudentsFn } from "@/functions/students";
+import { MINIMUM_ATTENDANCE_RATIO } from "@/lib/attendance";
+import { PASSING_AVERAGE } from "@/lib/grades";
 
 /** Busca de aluno + relatório consolidado de notas/faltas, com filtro por semestre. */
 export function StudentReport() {
@@ -80,8 +93,29 @@ export function StudentReport() {
     return report.rows.filter((row) => row.semester === Number(semesterFilter));
   }, [report, semesterFilter]);
 
+  const summary = useMemo(() => {
+    const graded = filteredRows.filter((r) => r.average !== null);
+    const averages = graded.map((r) => r.average!);
+    const generalAverage =
+      averages.length === 0 ? null : averages.reduce((sum, a) => sum + a, 0) / averages.length;
+
+    const withAttendance = filteredRows.filter((r) => r.attendanceRatio !== null);
+    const ratios = withAttendance.map((r) => r.attendanceRatio!);
+    const generalAttendance =
+      ratios.length === 0 ? null : ratios.reduce((sum, r) => sum + r, 0) / ratios.length;
+
+    const situationOk =
+      (generalAverage === null || generalAverage >= PASSING_AVERAGE) &&
+      (generalAttendance === null || generalAttendance >= MINIMUM_ATTENDANCE_RATIO);
+
+    return { generalAverage, generalAttendance, gradedCount: graded.length, situationOk };
+  }, [filteredRows]);
+
   return (
-    <div>
+    <PainelShell
+      title="Boletim do aluno"
+      description="Busque um aluno para ver e imprimir o boletim consolidado de notas e faltas."
+    >
       <div className="flex flex-wrap items-center gap-3 print:hidden">
         <Popover open={comboOpen} onOpenChange={setComboOpen}>
           <PopoverTrigger asChild>
@@ -149,70 +183,100 @@ export function StudentReport() {
           {isLoading || !report ? (
             <p className="text-muted-foreground">Carregando relatório…</p>
           ) : (
-            <div className="rounded-md border border-border/70 bg-card/70 p-6 shadow-soft print:border-none print:bg-transparent print:p-0 print:shadow-none">
-              <div className="mb-6 flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-accent">
-                    Seminário Huguenotes
-                  </p>
-                  <h2 className="font-display text-2xl font-semibold text-foreground">
-                    {report.student.name}
-                  </h2>
-                </div>
-                <div className="flex gap-2 print:hidden">
-                  <Button variant="outline" asChild>
-                    <a href={`/painel/relatorio/${report.student.id}/pdf`}>
-                      <Download className="size-4" aria-hidden />
-                      Baixar PDF
-                    </a>
-                  </Button>
-                  <Button onClick={() => window.print()}>
-                    <Printer className="size-4" aria-hidden />
-                    Imprimir
-                  </Button>
-                </div>
+            <>
+              <div className="mb-6 grid grid-cols-2 gap-4 print:hidden lg:grid-cols-4">
+                <StatisticCard
+                  label="Média geral"
+                  value={summary.generalAverage === null ? "—" : summary.generalAverage.toFixed(1)}
+                  icon={Target}
+                  hint={`${summary.gradedCount} disciplina(s) com nota`}
+                />
+                <StatisticCard
+                  label="Frequência geral"
+                  value={
+                    summary.generalAttendance === null
+                      ? "—"
+                      : `${Math.round(summary.generalAttendance * 100)}%`
+                  }
+                  icon={CalendarCheck}
+                />
+                <StatisticCard
+                  label="Disciplinas"
+                  value={filteredRows.length}
+                  icon={GraduationCap}
+                />
+                <StatisticCard
+                  label="Situação"
+                  value={summary.situationOk ? "Em dia" : "Atenção"}
+                  icon={ShieldCheck}
+                />
               </div>
 
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Semestre</TableHead>
-                    <TableHead>Módulo</TableHead>
-                    <TableHead>Disciplina</TableHead>
-                    <TableHead>Professor</TableHead>
-                    <TableHead className="text-center">Média</TableHead>
-                    <TableHead className="text-center">Faltas</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredRows.map((row) => (
-                    <TableRow key={row.disciplineId}>
-                      <TableCell>{row.semester}º</TableCell>
-                      <TableCell>{row.module}</TableCell>
-                      <TableCell className="font-medium text-foreground">
-                        {row.discipline}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {row.teacherName ?? "—"}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {row.average === null ? "—" : row.average.toFixed(1)}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {row.totalLessons === 0 ? "—" : row.totalFaltas}
+              <div className="rounded-md border border-border/70 bg-card/70 p-6 shadow-soft print:border-none print:bg-transparent print:p-0 print:shadow-none">
+                <div className="mb-6 flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-accent">
+                      Seminário Huguenotes
+                    </p>
+                    <h2 className="font-display text-2xl font-semibold text-foreground">
+                      {report.student.name}
+                    </h2>
+                  </div>
+                  <div className="flex gap-2 print:hidden">
+                    <Button variant="outline" asChild>
+                      <a href={`/painel/relatorio/${report.student.id}/pdf`}>
+                        <Download className="size-4" aria-hidden />
+                        Baixar PDF
+                      </a>
+                    </Button>
+                    <Button onClick={() => window.print()}>
+                      <Printer className="size-4" aria-hidden />
+                      Imprimir
+                    </Button>
+                  </div>
+                </div>
+
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Semestre</TableHead>
+                      <TableHead>Módulo</TableHead>
+                      <TableHead>Disciplina</TableHead>
+                      <TableHead>Professor</TableHead>
+                      <TableHead className="text-center">Média</TableHead>
+                      <TableHead className="text-center">Faltas</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredRows.map((row) => (
+                      <TableRow key={row.disciplineId}>
+                        <TableCell>{row.semester}º</TableCell>
+                        <TableCell>{row.module}</TableCell>
+                        <TableCell className="font-medium text-foreground">
+                          {row.discipline}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {row.teacherName ?? "—"}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {row.average === null ? "—" : row.average.toFixed(1)}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {row.totalLessons === 0 ? "—" : row.totalFaltas}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                  <TableFooter>
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-xs text-muted-foreground">
+                        Emitido em {new Date().toLocaleDateString("pt-BR")}.
                       </TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
-                <TableFooter>
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-xs text-muted-foreground">
-                      Emitido em {new Date().toLocaleDateString("pt-BR")}.
-                    </TableCell>
-                  </TableRow>
-                </TableFooter>
-              </Table>
-            </div>
+                  </TableFooter>
+                </Table>
+              </div>
+            </>
           )}
 
           <div className="mt-6 space-y-6 print:hidden">
@@ -221,7 +285,7 @@ export function StudentReport() {
           </div>
         </div>
       )}
-    </div>
+    </PainelShell>
   );
 }
 

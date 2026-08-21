@@ -28,6 +28,7 @@ import { Route as PortalMensalidadesRouteImport } from './routes/portal/mensalid
 import { Route as PortalDiscipuladoRouteImport } from './routes/portal/discipulado'
 import { Route as PortalApostilasRouteImport } from './routes/portal/apostilas'
 import { Route as PainelTrocarSenhaRouteImport } from './routes/painel/trocar-senha'
+import { Route as PainelRelatorioModuloRouteImport } from './routes/painel/relatorio-modulo'
 import { Route as PainelRelatorioRouteImport } from './routes/painel/relatorio'
 import { Route as PainelProfessoresRouteImport } from './routes/painel/professores'
 import { Route as PainelPagamentosRouteImport } from './routes/painel/pagamentos'
@@ -150,6 +151,11 @@ const PortalApostilasRoute = PortalApostilasRouteImport.update({
 const PainelTrocarSenhaRoute = PainelTrocarSenhaRouteImport.update({
   id: '/trocar-senha',
   path: '/trocar-senha',
+  getParentRoute: () => PainelRouteRoute,
+} as any)
+const PainelRelatorioModuloRoute = PainelRelatorioModuloRouteImport.update({
+  id: '/relatorio-modulo',
+  path: '/relatorio-modulo',
   getParentRoute: () => PainelRouteRoute,
 } as any)
 const PainelRelatorioRoute = PainelRelatorioRouteImport.update({
@@ -317,6 +323,7 @@ export interface FileRoutesByFullPath {
   '/painel/pagamentos': typeof PainelPagamentosRoute
   '/painel/professores': typeof PainelProfessoresRoute
   '/painel/relatorio': typeof PainelRelatorioRouteWithChildren
+  '/painel/relatorio-modulo': typeof PainelRelatorioModuloRoute
   '/painel/trocar-senha': typeof PainelTrocarSenhaRoute
   '/portal/apostilas': typeof PortalApostilasRoute
   '/portal/discipulado': typeof PortalDiscipuladoRoute
@@ -364,6 +371,7 @@ export interface FileRoutesByTo {
   '/painel/pagamentos': typeof PainelPagamentosRoute
   '/painel/professores': typeof PainelProfessoresRoute
   '/painel/relatorio': typeof PainelRelatorioRouteWithChildren
+  '/painel/relatorio-modulo': typeof PainelRelatorioModuloRoute
   '/painel/trocar-senha': typeof PainelTrocarSenhaRoute
   '/portal/apostilas': typeof PortalApostilasRoute
   '/portal/discipulado': typeof PortalDiscipuladoRoute
@@ -414,6 +422,7 @@ export interface FileRoutesById {
   '/painel/pagamentos': typeof PainelPagamentosRoute
   '/painel/professores': typeof PainelProfessoresRoute
   '/painel/relatorio': typeof PainelRelatorioRouteWithChildren
+  '/painel/relatorio-modulo': typeof PainelRelatorioModuloRoute
   '/painel/trocar-senha': typeof PainelTrocarSenhaRoute
   '/portal/apostilas': typeof PortalApostilasRoute
   '/portal/discipulado': typeof PortalDiscipuladoRoute
@@ -465,6 +474,7 @@ export interface FileRouteTypes {
     | '/painel/pagamentos'
     | '/painel/professores'
     | '/painel/relatorio'
+    | '/painel/relatorio-modulo'
     | '/painel/trocar-senha'
     | '/portal/apostilas'
     | '/portal/discipulado'
@@ -512,6 +522,7 @@ export interface FileRouteTypes {
     | '/painel/pagamentos'
     | '/painel/professores'
     | '/painel/relatorio'
+    | '/painel/relatorio-modulo'
     | '/painel/trocar-senha'
     | '/portal/apostilas'
     | '/portal/discipulado'
@@ -561,6 +572,7 @@ export interface FileRouteTypes {
     | '/painel/pagamentos'
     | '/painel/professores'
     | '/painel/relatorio'
+    | '/painel/relatorio-modulo'
     | '/painel/trocar-senha'
     | '/portal/apostilas'
     | '/portal/discipulado'
@@ -744,6 +756,13 @@ declare module '@tanstack/react-router' {
       path: '/trocar-senha'
       fullPath: '/painel/trocar-senha'
       preLoaderRoute: typeof PainelTrocarSenhaRouteImport
+      parentRoute: typeof PainelRouteRoute
+    }
+    '/painel/relatorio-modulo': {
+      id: '/painel/relatorio-modulo'
+      path: '/relatorio-modulo'
+      fullPath: '/painel/relatorio-modulo'
+      preLoaderRoute: typeof PainelRelatorioModuloRouteImport
       parentRoute: typeof PainelRouteRoute
     }
     '/painel/relatorio': {
@@ -967,6 +986,7 @@ interface PainelRouteRouteChildren {
   PainelPagamentosRoute: typeof PainelPagamentosRoute
   PainelProfessoresRoute: typeof PainelProfessoresRoute
   PainelRelatorioRoute: typeof PainelRelatorioRouteWithChildren
+  PainelRelatorioModuloRoute: typeof PainelRelatorioModuloRoute
   PainelTrocarSenhaRoute: typeof PainelTrocarSenhaRoute
   PainelIndexRoute: typeof PainelIndexRoute
   PainelDisciplinasDisciplineIdRoute: typeof PainelDisciplinasDisciplineIdRoute
@@ -985,6 +1005,7 @@ const PainelRouteRouteChildren: PainelRouteRouteChildren = {
   PainelPagamentosRoute: PainelPagamentosRoute,
   PainelProfessoresRoute: PainelProfessoresRoute,
   PainelRelatorioRoute: PainelRelatorioRouteWithChildren,
+  PainelRelatorioModuloRoute: PainelRelatorioModuloRoute,
   PainelTrocarSenhaRoute: PainelTrocarSenhaRoute,
   PainelIndexRoute: PainelIndexRoute,
   PainelDisciplinasDisciplineIdRoute: PainelDisciplinasDisciplineIdRoute,

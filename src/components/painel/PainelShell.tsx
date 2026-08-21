@@ -7,6 +7,7 @@ import {
   ClipboardList,
   FileText,
   GraduationCap,
+  Layers,
   LayoutGrid,
   ListChecks,
   LogOut,
@@ -38,7 +39,8 @@ const painelNavItems = [
   { to: "/painel/provas", label: "Provas", icon: ClipboardList },
   { to: "/painel/tarefas", label: "Tarefas", icon: ListChecks },
   { to: "/painel/forum", label: "Fórum", icon: MessageCircle },
-  { to: "/painel/relatorio", label: "Relatório", icon: FileText },
+  { to: "/painel/relatorio", label: "Boletim do aluno", icon: FileText },
+  { to: "/painel/relatorio-modulo", label: "Relatório por módulo", icon: Layers },
   { to: "/painel/pagamentos", label: "Pagamentos", icon: Wallet },
 ] as const;
 
@@ -86,7 +88,9 @@ export function PainelShell({ title, description, children }: PainelShellProps) 
             <SidebarMenu>
               {navItems.map((item) => {
                 const isActive =
-                  item.to === "/painel" ? pathname === item.to : pathname.startsWith(item.to);
+                  item.to === "/painel"
+                    ? pathname === item.to
+                    : pathname === item.to || pathname.startsWith(`${item.to}/`);
                 return (
                   <SidebarMenuItem key={item.to}>
                     <SidebarMenuButton asChild isActive={isActive}>
