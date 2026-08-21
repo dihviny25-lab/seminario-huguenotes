@@ -7,6 +7,7 @@ import {
   FileCheck2,
   GraduationCap,
   HeartHandshake,
+  Library,
   ListChecks,
   LogOut,
   MessageCircle,
@@ -43,6 +44,7 @@ const portalNavItems = [
   { to: "/portal/tarefas", label: "Tarefas", icon: ListChecks },
   { to: "/portal/videos", label: "Vídeo-aulas", icon: Video },
   { to: "/portal/apostilas", label: "Apostilas", icon: BookOpen },
+  { to: "/portal/biblioteca", label: "Biblioteca", icon: Library },
   { to: "/portal/forum", label: "Fórum", icon: MessageCircle },
   { to: "/portal/discipulado", label: "Discipulado", icon: HeartHandshake },
   { to: "/portal/mensalidades", label: "Mensalidades", icon: Wallet },
@@ -83,7 +85,9 @@ export function PortalShell({ title, description, children }: PortalShellProps) 
             <SidebarMenu>
               {portalNavItems.map((item) => {
                 const isActive =
-                  item.to === "/portal" ? pathname === item.to : pathname.startsWith(item.to);
+                  item.to === "/portal"
+                    ? pathname === item.to
+                    : pathname === item.to || pathname.startsWith(`${item.to}/`);
                 return (
                   <SidebarMenuItem key={item.to}>
                     <SidebarMenuButton asChild isActive={isActive}>

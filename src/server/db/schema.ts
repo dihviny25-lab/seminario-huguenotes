@@ -384,3 +384,15 @@ export const reflectionComments = pgTable("reflection_comments", {
   content: text("content").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+export const libraryBooks = pgTable("library_books", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  title: text("title").notNull(),
+  author: text("author"),
+  description: text("description"),
+  fileUrl: text("file_url").notNull(),
+  fileName: text("file_name").notNull(),
+  uploadedById: uuid("uploaded_by_id").references(() => teachers.id, { onDelete: "set null" }),
+  uploadedByName: text("uploaded_by_name").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
