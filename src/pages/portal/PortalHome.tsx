@@ -1,195 +1,191 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDown, Download, Printer } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { BookOpen, Download } from "lucide-react";
 
 import { PortalShell } from "@/components/portal/PortalShell";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableFooter,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { getPublicDisciplinesFn } from "@/functions/schedule";
 import { getMyStudentReportFn } from "@/functions/report";
 import type { StudentReportRow } from "@/functions/reportData";
 import { MINIMUM_ATTENDANCE_RATIO } from "@/lib/attendance";
-import { toDisplayName } from "@/lib/formatName";
 import { PASSING_AVERAGE } from "@/lib/grades";
+import { groupBySemester, semesterLabel } from "@/lib/schedule-utils";
 import { cn } from "@/lib/utils";
 
-/** Portal do aluno: só as próprias notas e faltas, em todas as disciplinas. */
+const ALL_SEMESTERS = "all";
+
+/** Portal do aluno: notas e faltas por disciplina, em cards agrupados por semestre. */
 export function PortalHome() {
-  const { data: report, isLoading } = useQuery({
+  const { data: disciplines, isLoading: loadingDisciplines } = useQuery({
+    queryKey: ["public-disciplines"],
+    queryFn: () => getPublicDisciplinesFn(),
+  });
+  const { data: report, isLoading: loadingReport } = useQuery({
     queryKey: ["my-student-report"],
     queryFn: () => getMyStudentReportFn(),
   });
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [pdfSemester, setPdfSemester] = useState(ALL_SEMESTERS);
 
-  function toggleExpanded(disciplineId: string) {
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(disciplineId)) next.delete(disciplineId);
-      else next.add(disciplineId);
-      return next;
-    });
-  }
+  const rowByDiscipline = useMemo(
+    () => new Map((report?.rows ?? []).map((row) => [row.disciplineId, row])),
+    [report],
+  );
+  const semesters = groupBySemester(disciplines ?? []);
+  const availableSemesters = [...new Set((disciplines ?? []).map((d) => d.semester))].sort(
+    (a, b) => a - b,
+  );
+
+  const isLoading = loadingDisciplines || loadingReport;
 
   return (
     <PortalShell
-      title={report ? toDisplayName(report.student.name) : "Minhas notas e faltas"}
-      description="Consulte suas notas e faltas em todas as disciplinas do curso."
+      title="Minhas notas"
+      description="Notas e frequência de cada disciplina — clique numa disciplina pra ver o detalhe."
     >
-      {isLoading || !report ? (
-        <div className="overflow-hidden rounded-md border border-border/70 bg-card/70 p-6 shadow-soft">
-          <div className="mb-6 flex items-center justify-between">
-            <Skeleton className="h-3 w-32" />
-            <Skeleton className="h-9 w-28" />
-          </div>
-          <div className="space-y-3">
-            <Skeleton className="h-4 w-full" />
-            {Array.from({ length: 5 }).map((_, index) => (
-              <Skeleton key={index} className="h-10 w-full" />
-            ))}
-          </div>
+      {isLoading ? (
+        <div className="space-y-10">
+          {Array.from({ length: 2 }).map((_, sectionIndex) => (
+            <div key={sectionIndex}>
+              <Skeleton className="h-5 w-32" />
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {Array.from({ length: 3 }).map((_, cardIndex) => (
+                  <Skeleton key={cardIndex} className="h-20 w-full" />
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       ) : (
-        <div className="rounded-md border border-border/70 bg-card/70 p-6 shadow-soft print:border-none print:bg-transparent print:p-0 print:shadow-none">
-          <div className="mb-6 flex flex-col gap-3 print:hidden sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-accent">
-              Seminário Huguenotes
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <Button variant="outline" asChild>
-                <a href="/portal/pdf">
-                  <Download className="size-4" aria-hidden />
-                  Baixar PDF
-                </a>
-              </Button>
-              <Button onClick={() => window.print()}>
-                <Printer className="size-4" aria-hidden />
-                Imprimir
-              </Button>
-            </div>
-          </div>
-
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Semestre</TableHead>
-                <TableHead>Módulo</TableHead>
-                <TableHead>Disciplina</TableHead>
-                <TableHead>Professor</TableHead>
-                <TableHead className="text-center">Média</TableHead>
-                <TableHead className="text-center">Frequência</TableHead>
-                <TableHead className="w-10 print:hidden" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {report.rows.map((row) => (
-                <ReportRow
-                  key={row.disciplineId}
-                  row={row}
-                  expanded={expanded.has(row.disciplineId)}
-                  onToggle={() => toggleExpanded(row.disciplineId)}
-                />
-              ))}
-            </TableBody>
-            <TableFooter>
-              <TableRow>
-                <TableCell colSpan={7} className="text-xs text-muted-foreground">
-                  Emitido em {new Date().toLocaleDateString("pt-BR")}. Aprovação exige média mínima{" "}
-                  {PASSING_AVERAGE.toFixed(1)} e frequência mínima de{" "}
-                  {Math.round(MINIMUM_ATTENDANCE_RATIO * 100)}%.
-                </TableCell>
-              </TableRow>
-            </TableFooter>
-          </Table>
+        <div className="space-y-10">
+          {semesters.map((semester) => (
+            <section key={semester.semester}>
+              <h2 className="font-display text-lg font-semibold text-foreground">
+                {semesterLabel(semester.semester)}
+              </h2>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {semester.modules.flatMap((module) =>
+                  module.disciplines.map((discipline) => (
+                    <DisciplineCard
+                      key={discipline.id}
+                      disciplineId={discipline.id}
+                      name={discipline.discipline}
+                      teacher={discipline.teacher}
+                      row={rowByDiscipline.get(discipline.id)}
+                    />
+                  )),
+                )}
+              </div>
+            </section>
+          ))}
         </div>
       )}
+
+      <div className="mt-12 rounded-md border border-t-2 border-border/70 border-t-accent bg-card/70 p-5 shadow-soft">
+        <h2 className="font-display text-lg font-semibold text-foreground">Gerar boletim</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Baixe o boletim em PDF de um semestre específico ou do curso completo.
+        </p>
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <Select value={pdfSemester} onValueChange={setPdfSemester}>
+            <SelectTrigger className="w-56">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL_SEMESTERS}>Curso completo</SelectItem>
+              {availableSemesters.map((semester) => (
+                <SelectItem key={semester} value={String(semester)}>
+                  {semester}º Semestre
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button asChild>
+            <a
+              href={
+                pdfSemester === ALL_SEMESTERS
+                  ? "/portal/pdf"
+                  : `/portal/pdf?semester=${pdfSemester}`
+              }
+            >
+              <Download className="size-4" aria-hidden />
+              Baixar PDF
+            </a>
+          </Button>
+        </div>
+      </div>
     </PortalShell>
   );
 }
 
-function ReportRow({
+function DisciplineCard({
+  disciplineId,
+  name,
+  teacher,
   row,
-  expanded,
-  onToggle,
 }: {
-  row: StudentReportRow;
-  expanded: boolean;
-  onToggle: () => void;
+  disciplineId: string;
+  name: string;
+  teacher?: string;
+  row: StudentReportRow | undefined;
 }) {
-  const averagePassed = row.average === null ? null : row.average >= PASSING_AVERAGE;
+  const averagePassed = row && row.average !== null ? row.average >= PASSING_AVERAGE : null;
   const attendancePassed =
-    row.attendanceRatio === null ? null : row.attendanceRatio >= MINIMUM_ATTENDANCE_RATIO;
-  const hasAssessments = row.assessments.length > 0;
+    row && row.attendanceRatio !== null ? row.attendanceRatio >= MINIMUM_ATTENDANCE_RATIO : null;
 
   return (
-    <>
-      <TableRow
-        className={cn(hasAssessments && "cursor-pointer")}
-        onClick={hasAssessments ? onToggle : undefined}
-      >
-        <TableCell>{row.semester}º</TableCell>
-        <TableCell>{row.module}</TableCell>
-        <TableCell className="font-medium text-foreground">{row.discipline}</TableCell>
-        <TableCell className="text-muted-foreground">{row.teacherName ?? "—"}</TableCell>
-        <TableCell className="text-center">
-          {row.average === null ? (
-            <span className="text-muted-foreground">—</span>
-          ) : (
-            <span
-              className={cn("font-semibold", averagePassed ? "text-success" : "text-destructive")}
-            >
-              {row.average.toFixed(1)}
-            </span>
-          )}
-        </TableCell>
-        <TableCell className="text-center">
-          {row.attendanceRatio === null ? (
-            <span className="text-muted-foreground">—</span>
-          ) : (
+    <Link
+      to="/portal/disciplinas/$disciplineId"
+      params={{ disciplineId }}
+      className="flex items-start gap-3 rounded-md border border-t-2 border-border/70 border-t-accent bg-card/70 p-4 shadow-soft transition-colors hover:border-primary/50"
+    >
+      <BookOpen className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden />
+      <span className="min-w-0 flex-1">
+        <span className="block truncate font-medium text-foreground">{name}</span>
+        {teacher ? <span className="block text-xs text-muted-foreground">{teacher}</span> : null}
+        <span className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+          <span className="text-muted-foreground">
+            Média:{" "}
             <span
               className={cn(
                 "font-semibold",
-                attendancePassed ? "text-success" : "text-destructive",
+                averagePassed === null
+                  ? "text-muted-foreground"
+                  : averagePassed
+                    ? "text-success"
+                    : "text-destructive",
               )}
             >
-              {Math.round(row.attendanceRatio * 100)}%
+              {!row || row.average === null ? "—" : row.average.toFixed(1)}
             </span>
-          )}
-        </TableCell>
-        <TableCell className="print:hidden">
-          {hasAssessments ? (
-            <ChevronDown
+          </span>
+          <span className="text-muted-foreground">
+            Frequência:{" "}
+            <span
               className={cn(
-                "size-4 text-muted-foreground transition-transform",
-                expanded && "rotate-180",
+                "font-semibold",
+                attendancePassed === null
+                  ? "text-muted-foreground"
+                  : attendancePassed
+                    ? "text-success"
+                    : "text-destructive",
               )}
-              aria-hidden
-            />
-          ) : null}
-        </TableCell>
-      </TableRow>
-      {expanded && hasAssessments ? (
-        <TableRow className="print:hidden">
-          <TableCell colSpan={7} className="bg-muted/30">
-            <div className="flex flex-wrap gap-2 py-1">
-              {row.assessments.map((assessment, index) => (
-                <Badge key={index} variant="outline" className="font-normal">
-                  {assessment.title}:{" "}
-                  {assessment.score === null ? "—" : `${assessment.score}/${assessment.maxScore}`}
-                </Badge>
-              ))}
-            </div>
-          </TableCell>
-        </TableRow>
-      ) : null}
-    </>
+            >
+              {!row || row.attendanceRatio === null
+                ? "—"
+                : `${Math.round(row.attendanceRatio * 100)}%`}
+            </span>
+          </span>
+        </span>
+      </span>
+    </Link>
   );
 }
