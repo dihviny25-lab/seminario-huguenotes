@@ -11,7 +11,9 @@ export type VideoLesson = {
   id: string;
   disciplineId: string;
   title: string;
-  youtubeUrl: string;
+  source: "youtube" | "upload";
+  youtubeUrl: string | null;
+  fileUrl: string | null;
   sequence: number;
 };
 
@@ -75,14 +77,21 @@ export const getMyDisciplineVideoBoardFn = createServerFn({ method: "GET" })
     };
   });
 
-const createSchema = z.object({
-  disciplineId: z.string().uuid(),
-  title: z.string().trim().min(1, "Informe um título."),
-  youtubeUrl: z
-    .string()
-    .trim()
-    .refine((url) => extractYouTubeId(url) !== null, "Link do YouTube inválido."),
-});
+const createSchema = z
+  .object({
+    disciplineId: z.string().uuid(),
+    title: z.string().trim().min(1, "Informe um título."),
+    source: z.enum(["youtube", "upload"]),
+    youtubeUrl: z.string().trim().optional(),
+    fileUrl: z.string().trim().url().optional(),
+  })
+  .refine(
+    (data) =>
+      data.source === "youtube"
+        ? data.youtubeUrl !== undefined && extractYouTubeId(data.youtubeUrl) !== null
+        : data.fileUrl !== undefined,
+    { message: "Informe um link do YouTube válido ou envie um arquivo de vídeo." },
+  );
 
 export const createVideoLessonFn = createServerFn({ method: "POST" })
   .validator(createSchema)
@@ -100,7 +109,9 @@ export const createVideoLessonFn = createServerFn({ method: "POST" })
       .values({
         disciplineId: data.disciplineId,
         title: data.title,
-        youtubeUrl: data.youtubeUrl,
+        source: data.source,
+        youtubeUrl: data.source === "youtube" ? data.youtubeUrl : null,
+        fileUrl: data.source === "upload" ? data.fileUrl : null,
         sequence: nextSequence,
       })
       .returning({ id: videoLessons.id });

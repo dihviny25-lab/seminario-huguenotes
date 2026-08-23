@@ -132,16 +132,43 @@ function VideoCard({
   onWatched: () => void;
 }) {
   const iframeRef = useYouTubeCompletion(onWatched);
-  const youtubeId = extractYouTubeId(video.youtubeUrl);
+
+  const containerClass = cn(
+    "overflow-hidden rounded-md border shadow-soft transition-colors",
+    watched ? "border-success/50 bg-success-soft/40" : "border-border/70 bg-card/70",
+  );
+  const footer = (
+    <div className="flex items-center justify-between gap-2 p-3">
+      <p className="min-w-0 truncate text-sm font-medium text-foreground">{video.title}</p>
+      {watched ? (
+        <span className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-success">
+          <CheckCircle2 className="size-3.5 shrink-0" aria-hidden />
+          Assistido
+        </span>
+      ) : null}
+    </div>
+  );
+
+  if (video.source === "upload") {
+    if (!video.fileUrl) return null;
+    return (
+      <div className={containerClass}>
+        <video
+          src={video.fileUrl}
+          controls
+          className="aspect-video w-full bg-black"
+          onEnded={onWatched}
+        />
+        {footer}
+      </div>
+    );
+  }
+
+  const youtubeId = video.youtubeUrl ? extractYouTubeId(video.youtubeUrl) : null;
   if (!youtubeId) return null;
 
   return (
-    <div
-      className={cn(
-        "overflow-hidden rounded-md border shadow-soft transition-colors",
-        watched ? "border-success/50 bg-success-soft/40" : "border-border/70 bg-card/70",
-      )}
-    >
+    <div className={containerClass}>
       <div className="aspect-video w-full">
         <iframe
           ref={iframeRef}
@@ -153,15 +180,7 @@ function VideoCard({
           loading="lazy"
         />
       </div>
-      <div className="flex items-center justify-between gap-2 p-3">
-        <p className="min-w-0 truncate text-sm font-medium text-foreground">{video.title}</p>
-        {watched ? (
-          <span className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-success">
-            <CheckCircle2 className="size-3.5 shrink-0" aria-hidden />
-            Assistido
-          </span>
-        ) : null}
-      </div>
+      {footer}
     </div>
   );
 }

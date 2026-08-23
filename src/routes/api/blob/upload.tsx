@@ -32,9 +32,13 @@ export const Route = createFileRoute("/api/blob/upload")({
                   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                   "image/png",
                   "image/jpeg",
+                  "video/mp4",
+                  "video/webm",
+                  "video/quicktime",
                 ],
                 addRandomSuffix: true,
-                maximumSizeInBytes: 200 * 1024 * 1024,
+                // Vídeo-aula pode passar bem de 200MB — limite generoso pra não travar upload de aula gravada.
+                maximumSizeInBytes: 2 * 1024 * 1024 * 1024,
               };
             },
             onUploadCompleted: async () => {},

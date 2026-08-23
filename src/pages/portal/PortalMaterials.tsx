@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { BookOpen, Download } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { BookOpen } from "lucide-react";
 
 import { PortalShell } from "@/components/portal/PortalShell";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -74,11 +75,10 @@ export function PortalMaterials() {
                         ) : null}
                         <div className="mt-3 grid gap-3 sm:grid-cols-2">
                           {disciplineMaterials.map((material) => (
-                            <a
+                            <Link
                               key={material.id}
-                              href={material.fileUrl}
-                              target="_blank"
-                              rel="noreferrer"
+                              to="/portal/apostilas/$materialId"
+                              params={{ materialId: material.id }}
                               className="flex items-start gap-3 rounded-md border border-border/70 bg-card/70 p-4 shadow-soft transition-colors hover:border-primary/50"
                             >
                               <BookOpen
@@ -94,12 +94,11 @@ export function PortalMaterials() {
                                     {material.description}
                                   </span>
                                 ) : null}
-                                <span className="mt-1 inline-flex items-center gap-1 text-xs text-primary">
-                                  <Download className="size-3.5 shrink-0" aria-hidden />
-                                  {material.fileName}
+                                <span className="mt-2 inline-block text-xs font-medium text-accent">
+                                  Ler online
                                 </span>
                               </span>
-                            </a>
+                            </Link>
                           ))}
                         </div>
                       </div>

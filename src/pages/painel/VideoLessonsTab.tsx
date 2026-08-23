@@ -1,10 +1,7 @@
-import { useState } from "react";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
 import { CheckCircle2, Plus, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
-import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -14,22 +11,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   createVideoLessonFn,
   deleteVideoLessonFn,
   getMyDisciplineVideoBoardFn,
 } from "@/functions/videoLessons";
+import { uploadFile } from "@/lib/blobUpload";
 import { cn } from "@/lib/utils";
 import { extractYouTubeId, youtubeThumbnailUrl } from "@/lib/youtube";
 
@@ -92,14 +85,19 @@ export function VideoLessonsTab({ disciplineId }: { disciplineId: string }) {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {board.videos.map((video) => {
-            const youtubeId = extractYouTubeId(video.youtubeUrl);
+            const youtubeId =
+              video.source === "youtube" && video.youtubeUrl
+                ? extractYouTubeId(video.youtubeUrl)
+                : null;
             return (
               <div
                 key={video.id}
                 className="overflow-hidden rounded-md border border-border/70 bg-card/70 shadow-soft"
               >
-                {youtubeId ? (
-                  <a href={video.youtubeUrl} target="_blank" rel="noreferrer" className="block">
+                {video.source === "upload" && video.fileUrl ? (
+                  <video src={video.fileUrl} controls className="aspect-video w-full bg-black" />
+                ) : youtubeId ? (
+                  <a href={video.youtubeUrl!} target="_blank" rel="noreferrer" className="block">
                     <img
                       src={youtubeThumbnailUrl(youtubeId)}
                       alt=""
@@ -169,14 +167,6 @@ export function VideoLessonsTab({ disciplineId }: { disciplineId: string }) {
   );
 }
 
-const videoSchema = z.object({
-  title: z.string().trim().min(1, "Informe um título."),
-  youtubeUrl: z
-    .string()
-    .trim()
-    .refine((url) => extractYouTubeId(url) !== null, "Cole um link válido do YouTube."),
-});
-
 function CreateVideoDialog({
   disciplineId,
   open,
@@ -188,17 +178,39 @@ function CreateVideoDialog({
   onOpenChange: (open: boolean) => void;
   onCreated: () => Promise<unknown>;
 }) {
-  const form = useForm<z.infer<typeof videoSchema>>({
-    resolver: zodResolver(videoSchema),
-    defaultValues: { title: "", youtubeUrl: "" },
-  });
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [title, setTitle] = useState("");
+  const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+
+  function reset() {
+    setTitle("");
+    setYoutubeUrl("");
+    setFile(null);
+    setUploadProgress(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
 
   const mutation = useMutation({
-    mutationFn: (values: z.infer<typeof videoSchema>) =>
-      createVideoLessonFn({ data: { disciplineId, ...values } }),
+    mutationFn: async (source: "youtube" | "upload") => {
+      if (source === "youtube") {
+        return createVideoLessonFn({ data: { disciplineId, title, source, youtubeUrl } });
+      }
+      if (!file) throw new Error("Escolha um arquivo de vídeo.");
+      setUploadProgress(0);
+      try {
+        const uploaded = await uploadFile(file, setUploadProgress);
+        return createVideoLessonFn({
+          data: { disciplineId, title, source, fileUrl: uploaded.url },
+        });
+      } finally {
+        setUploadProgress(null);
+      }
+    },
     onSuccess: async () => {
       toast.success("Vídeo-aula adicionada.");
-      form.reset();
+      reset();
       onOpenChange(false);
       await onCreated();
     },
@@ -212,44 +224,79 @@ function CreateVideoDialog({
         <DialogHeader>
           <DialogTitle>Nova vídeo-aula</DialogTitle>
         </DialogHeader>
-        <Form {...form}>
-          <form
-            className="space-y-4"
-            onSubmit={form.handleSubmit((values) => mutation.mutate(values))}
-          >
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Título</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Aula 1 — Introdução" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="youtubeUrl"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Link do YouTube</FormLabel>
-                  <FormControl>
-                    <Input placeholder="https://www.youtube.com/watch?v=..." {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+
+        <div className="space-y-2">
+          <Label htmlFor="video-title">Título</Label>
+          <Input
+            id="video-title"
+            placeholder="Aula 1 — Introdução"
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+          />
+        </div>
+
+        <Tabs defaultValue="youtube" className="mt-2">
+          <TabsList>
+            <TabsTrigger value="youtube">Link do YouTube</TabsTrigger>
+            <TabsTrigger value="upload">Enviar arquivo</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="youtube" className="mt-4 space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="video-youtube-url">Link do YouTube</Label>
+              <Input
+                id="video-youtube-url"
+                placeholder="https://www.youtube.com/watch?v=..."
+                value={youtubeUrl}
+                onChange={(event) => setYoutubeUrl(event.target.value)}
+              />
+            </div>
             <DialogFooter>
-              <Button type="submit" disabled={mutation.isPending}>
+              <Button
+                onClick={() => mutation.mutate("youtube")}
+                disabled={
+                  mutation.isPending ||
+                  title.trim().length === 0 ||
+                  extractYouTubeId(youtubeUrl) === null
+                }
+              >
                 Adicionar
               </Button>
             </DialogFooter>
-          </form>
-        </Form>
+          </TabsContent>
+
+          <TabsContent value="upload" className="mt-4 space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="video-file">Arquivo de vídeo (MP4, WebM ou MOV)</Label>
+              <Input
+                id="video-file"
+                type="file"
+                ref={fileInputRef}
+                accept="video/mp4,video/webm,video/quicktime"
+                onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Vídeos podem ser grandes — o envio pode demorar dependendo da sua internet.
+              </p>
+            </div>
+            {uploadProgress !== null ? (
+              <div className="space-y-1">
+                <Progress value={uploadProgress} />
+                <p className="text-xs text-muted-foreground">
+                  Enviando… {Math.round(uploadProgress)}%
+                </p>
+              </div>
+            ) : null}
+            <DialogFooter>
+              <Button
+                onClick={() => mutation.mutate("upload")}
+                disabled={mutation.isPending || title.trim().length === 0 || !file}
+              >
+                {mutation.isPending ? "Enviando…" : "Adicionar"}
+              </Button>
+            </DialogFooter>
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );

@@ -22,6 +22,7 @@ export const scheduleStatus = pgEnum("schedule_status", ["confirmed", "pending"]
 export const teacherRole = pgEnum("teacher_role", ["admin", "teacher"]);
 export const chargeStatus = pgEnum("charge_status", ["pending", "paid", "canceled"]);
 export const authorRole = pgEnum("author_role", ["teacher", "student"]);
+export const videoSource = pgEnum("video_source", ["youtube", "upload"]);
 
 export const teachers = pgTable("teachers", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -136,7 +137,10 @@ export const videoLessons = pgTable("video_lessons", {
     .notNull()
     .references(() => disciplines.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
-  youtubeUrl: text("youtube_url").notNull(),
+  // "youtube" usa youtubeUrl; "upload" usa fileUrl (vídeo hospedado no Vercel Blob).
+  source: videoSource("source").notNull().default("youtube"),
+  youtubeUrl: text("youtube_url"),
+  fileUrl: text("file_url"),
   sequence: integer("sequence").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
