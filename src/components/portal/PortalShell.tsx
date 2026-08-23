@@ -30,11 +30,14 @@ import {
 } from "@/components/ui/sidebar";
 import { getCurrentStudentFn, studentLogoutFn } from "@/functions/studentAuth";
 import { toDisplayFirstName } from "@/lib/formatName";
+import { cn } from "@/lib/utils";
 
 interface PortalShellProps {
   title: string;
   description?: string;
   children: ReactNode;
+  /** Usa a largura toda da tela — pra conteúdo que precisa de mais espaço, como o leitor de livros. */
+  fullWidth?: boolean;
 }
 
 const portalNavItems = [
@@ -51,7 +54,7 @@ const portalNavItems = [
 ] as const;
 
 /** Cabeçalho do portal do aluno — login protegido: sidebar + conteúdo. */
-export function PortalShell({ title, description, children }: PortalShellProps) {
+export function PortalShell({ title, description, children, fullWidth }: PortalShellProps) {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [signingOut, setSigningOut] = useState(false);
@@ -122,7 +125,12 @@ export function PortalShell({ title, description, children }: PortalShellProps) 
           </span>
         </header>
 
-        <main className="mx-auto w-full max-w-4xl px-4 pb-24 pt-10 sm:px-6 sm:pt-10 print:p-0">
+        <main
+          className={cn(
+            "mx-auto w-full px-4 pb-24 pt-10 sm:px-6 sm:pt-10 print:p-0",
+            fullWidth ? "max-w-7xl" : "max-w-4xl",
+          )}
+        >
           <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground print:hidden">
             {title}
           </h1>

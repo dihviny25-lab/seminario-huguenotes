@@ -36,7 +36,6 @@ import { Route as PainelFinanceiroRouteImport } from './routes/painel/financeiro
 import { Route as PainelBibliotecaRouteImport } from './routes/painel/biblioteca'
 import { Route as PainelAlunosRouteImport } from './routes/painel/alunos'
 import { Route as PainelAgendaRouteImport } from './routes/painel/agenda'
-import { Route as ApiUploadRouteImport } from './routes/api/upload'
 import { Route as PortalTarefasIndexRouteImport } from './routes/portal/tarefas/index'
 import { Route as PortalProvasIndexRouteImport } from './routes/portal/provas/index'
 import { Route as PortalForumIndexRouteImport } from './routes/portal/forum/index'
@@ -58,6 +57,7 @@ import { Route as PainelDisciplinasDisciplineIdRouteImport } from './routes/pain
 import { Route as ApiMercadopagoWebhookRouteImport } from './routes/api/mercadopago/webhook'
 import { Route as ApiCronPaymentRemindersRouteImport } from './routes/api/cron/payment-reminders'
 import { Route as ApiCronFinalizeExpiredExamsRouteImport } from './routes/api/cron/finalize-expired-exams'
+import { Route as ApiBlobUploadRouteImport } from './routes/api/blob/upload'
 import { Route as PainelRelatorioStudentIdPdfRouteImport } from './routes/painel/relatorio/$studentId/pdf'
 import { Route as PainelRelatorioTurmaDisciplineIdPdfRouteImport } from './routes/painel/relatorio/turma/$disciplineId/pdf'
 
@@ -196,11 +196,6 @@ const PainelAgendaRoute = PainelAgendaRouteImport.update({
   path: '/agenda',
   getParentRoute: () => PainelRouteRoute,
 } as any)
-const ApiUploadRoute = ApiUploadRouteImport.update({
-  id: '/api/upload',
-  path: '/api/upload',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const PortalTarefasIndexRoute = PortalTarefasIndexRouteImport.update({
   id: '/tarefas/',
   path: '/tarefas/',
@@ -311,6 +306,11 @@ const ApiCronFinalizeExpiredExamsRoute =
     path: '/api/cron/finalize-expired-exams',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiBlobUploadRoute = ApiBlobUploadRouteImport.update({
+  id: '/api/blob/upload',
+  path: '/api/blob/upload',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PainelRelatorioStudentIdPdfRoute =
   PainelRelatorioStudentIdPdfRouteImport.update({
     id: '/$studentId/pdf',
@@ -334,7 +334,6 @@ export interface FileRoutesByFullPath {
   '/login-aluno': typeof LoginAlunoRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/redefinir-senha-aluno': typeof RedefinirSenhaAlunoRoute
-  '/api/upload': typeof ApiUploadRoute
   '/painel/agenda': typeof PainelAgendaRoute
   '/painel/alunos': typeof PainelAlunosRoute
   '/painel/biblioteca': typeof PainelBibliotecaRoute
@@ -353,6 +352,7 @@ export interface FileRoutesByFullPath {
   '/semestre/$semester': typeof SemestreSemesterRoute
   '/painel/': typeof PainelIndexRoute
   '/portal/': typeof PortalIndexRoute
+  '/api/blob/upload': typeof ApiBlobUploadRoute
   '/api/cron/finalize-expired-exams': typeof ApiCronFinalizeExpiredExamsRoute
   '/api/cron/payment-reminders': typeof ApiCronPaymentRemindersRoute
   '/api/mercadopago/webhook': typeof ApiMercadopagoWebhookRoute
@@ -385,7 +385,6 @@ export interface FileRoutesByTo {
   '/login-aluno': typeof LoginAlunoRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/redefinir-senha-aluno': typeof RedefinirSenhaAlunoRoute
-  '/api/upload': typeof ApiUploadRoute
   '/painel/agenda': typeof PainelAgendaRoute
   '/painel/alunos': typeof PainelAlunosRoute
   '/painel/biblioteca': typeof PainelBibliotecaRoute
@@ -404,6 +403,7 @@ export interface FileRoutesByTo {
   '/semestre/$semester': typeof SemestreSemesterRoute
   '/painel': typeof PainelIndexRoute
   '/portal': typeof PortalIndexRoute
+  '/api/blob/upload': typeof ApiBlobUploadRoute
   '/api/cron/finalize-expired-exams': typeof ApiCronFinalizeExpiredExamsRoute
   '/api/cron/payment-reminders': typeof ApiCronPaymentRemindersRoute
   '/api/mercadopago/webhook': typeof ApiMercadopagoWebhookRoute
@@ -439,7 +439,6 @@ export interface FileRoutesById {
   '/login-aluno': typeof LoginAlunoRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/redefinir-senha-aluno': typeof RedefinirSenhaAlunoRoute
-  '/api/upload': typeof ApiUploadRoute
   '/painel/agenda': typeof PainelAgendaRoute
   '/painel/alunos': typeof PainelAlunosRoute
   '/painel/biblioteca': typeof PainelBibliotecaRoute
@@ -458,6 +457,7 @@ export interface FileRoutesById {
   '/semestre/$semester': typeof SemestreSemesterRoute
   '/painel/': typeof PainelIndexRoute
   '/portal/': typeof PortalIndexRoute
+  '/api/blob/upload': typeof ApiBlobUploadRoute
   '/api/cron/finalize-expired-exams': typeof ApiCronFinalizeExpiredExamsRoute
   '/api/cron/payment-reminders': typeof ApiCronPaymentRemindersRoute
   '/api/mercadopago/webhook': typeof ApiMercadopagoWebhookRoute
@@ -494,7 +494,6 @@ export interface FileRouteTypes {
     | '/login-aluno'
     | '/redefinir-senha'
     | '/redefinir-senha-aluno'
-    | '/api/upload'
     | '/painel/agenda'
     | '/painel/alunos'
     | '/painel/biblioteca'
@@ -513,6 +512,7 @@ export interface FileRouteTypes {
     | '/semestre/$semester'
     | '/painel/'
     | '/portal/'
+    | '/api/blob/upload'
     | '/api/cron/finalize-expired-exams'
     | '/api/cron/payment-reminders'
     | '/api/mercadopago/webhook'
@@ -545,7 +545,6 @@ export interface FileRouteTypes {
     | '/login-aluno'
     | '/redefinir-senha'
     | '/redefinir-senha-aluno'
-    | '/api/upload'
     | '/painel/agenda'
     | '/painel/alunos'
     | '/painel/biblioteca'
@@ -564,6 +563,7 @@ export interface FileRouteTypes {
     | '/semestre/$semester'
     | '/painel'
     | '/portal'
+    | '/api/blob/upload'
     | '/api/cron/finalize-expired-exams'
     | '/api/cron/payment-reminders'
     | '/api/mercadopago/webhook'
@@ -598,7 +598,6 @@ export interface FileRouteTypes {
     | '/login-aluno'
     | '/redefinir-senha'
     | '/redefinir-senha-aluno'
-    | '/api/upload'
     | '/painel/agenda'
     | '/painel/alunos'
     | '/painel/biblioteca'
@@ -617,6 +616,7 @@ export interface FileRouteTypes {
     | '/semestre/$semester'
     | '/painel/'
     | '/portal/'
+    | '/api/blob/upload'
     | '/api/cron/finalize-expired-exams'
     | '/api/cron/payment-reminders'
     | '/api/mercadopago/webhook'
@@ -652,8 +652,8 @@ export interface RootRouteChildren {
   LoginAlunoRoute: typeof LoginAlunoRoute
   RedefinirSenhaRoute: typeof RedefinirSenhaRoute
   RedefinirSenhaAlunoRoute: typeof RedefinirSenhaAlunoRoute
-  ApiUploadRoute: typeof ApiUploadRoute
   SemestreSemesterRoute: typeof SemestreSemesterRoute
+  ApiBlobUploadRoute: typeof ApiBlobUploadRoute
   ApiCronFinalizeExpiredExamsRoute: typeof ApiCronFinalizeExpiredExamsRoute
   ApiCronPaymentRemindersRoute: typeof ApiCronPaymentRemindersRoute
   ApiMercadopagoWebhookRoute: typeof ApiMercadopagoWebhookRoute
@@ -850,13 +850,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PainelAgendaRouteImport
       parentRoute: typeof PainelRouteRoute
     }
-    '/api/upload': {
-      id: '/api/upload'
-      path: '/api/upload'
-      fullPath: '/api/upload'
-      preLoaderRoute: typeof ApiUploadRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/portal/tarefas/': {
       id: '/portal/tarefas/'
       path: '/tarefas'
@@ -1004,6 +997,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCronFinalizeExpiredExamsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/blob/upload': {
+      id: '/api/blob/upload'
+      path: '/api/blob/upload'
+      fullPath: '/api/blob/upload'
+      preLoaderRoute: typeof ApiBlobUploadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/painel/relatorio/$studentId/pdf': {
       id: '/painel/relatorio/$studentId/pdf'
       path: '/$studentId/pdf'
@@ -1136,8 +1136,8 @@ const rootRouteChildren: RootRouteChildren = {
   LoginAlunoRoute: LoginAlunoRoute,
   RedefinirSenhaRoute: RedefinirSenhaRoute,
   RedefinirSenhaAlunoRoute: RedefinirSenhaAlunoRoute,
-  ApiUploadRoute: ApiUploadRoute,
   SemestreSemesterRoute: SemestreSemesterRoute,
+  ApiBlobUploadRoute: ApiBlobUploadRoute,
   ApiCronFinalizeExpiredExamsRoute: ApiCronFinalizeExpiredExamsRoute,
   ApiCronPaymentRemindersRoute: ApiCronPaymentRemindersRoute,
   ApiMercadopagoWebhookRoute: ApiMercadopagoWebhookRoute,
