@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { asc, eq } from "drizzle-orm";
 import { z } from "zod";
 
+import { logAudit } from "@/server/audit";
 import { requireAdminOrSelf, requireAnyLogin, requireTeacherId } from "@/server/auth/guard";
 import { db } from "@/server/db/client";
 import { libraryBooks, teachers } from "@/server/db/schema";
@@ -65,6 +66,7 @@ export const createLibraryBookFn = createServerFn({ method: "POST" })
         uploadedByName: teacher?.name ?? "Professor",
       })
       .returning({ id: libraryBooks.id });
+    await logAudit("biblioteca.criar", `Adicionou o livro "${data.title}" à biblioteca.`);
     return row;
   });
 
@@ -95,6 +97,7 @@ export const updateLibraryBookFn = createServerFn({ method: "POST" })
         description: data.description || null,
       })
       .where(eq(libraryBooks.id, data.bookId));
+    await logAudit("biblioteca.editar", `Editou o livro "${data.title}" da biblioteca.`);
   });
 
 const deleteSchema = z.object({ bookId: z.string().uuid() });
@@ -112,4 +115,5 @@ export const deleteLibraryBookFn = createServerFn({ method: "POST" })
 
     await requireAdminOrSelf(book.uploadedById ?? "");
     await db.delete(libraryBooks).where(eq(libraryBooks.id, data.bookId));
+    await logAudit("biblioteca.apagar", `Apagou o livro "${book.title}" da biblioteca.`);
   });

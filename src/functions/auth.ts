@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
+import { logAudit } from "@/server/audit";
 import { requireAdminId, requireTeacherId } from "@/server/auth/guard";
 import { hashPassword, verifyPassword } from "@/server/auth/password";
 import { readAppSession, useAppSession } from "@/server/auth/session";
@@ -33,10 +34,12 @@ export const loginFn = createServerFn({ method: "POST" })
 
     const session = await useAppSession();
     await session.update({ teacherId: teacher.id });
+    await logAudit("login", `${teacher.name} entrou no painel do professor.`);
     return { id: teacher.id, name: teacher.name, email: teacher.email };
   });
 
 export const logoutFn = createServerFn({ method: "POST" }).handler(async () => {
+  await logAudit("logout", "Saiu do painel do professor.");
   const session = await useAppSession();
   await session.clear();
 });

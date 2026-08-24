@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { asc, eq } from "drizzle-orm";
 import { z } from "zod";
 
+import { logAudit } from "@/server/audit";
 import { requireAdminId, requireTeacherId } from "@/server/auth/guard";
 import { hashPassword } from "@/server/auth/password";
 import { db } from "@/server/db/client";
@@ -55,6 +56,7 @@ export const createStudentFn = createServerFn({ method: "POST" })
       .insert(students)
       .values({ name: data.name, email: data.email || null })
       .returning({ id: students.id });
+    await logAudit("aluno.criar", `Cadastrou o aluno ${data.name}.`);
     return row;
   });
 
@@ -91,6 +93,15 @@ export const setStudentActiveFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     await requireAdminId();
     await db.update(students).set({ active: data.active }).where(eq(students.id, data.id));
+    const [student] = await db
+      .select({ name: students.name })
+      .from(students)
+      .where(eq(students.id, data.id))
+      .limit(1);
+    await logAudit(
+      data.active ? "aluno.reativar" : "aluno.desativar",
+      `${data.active ? "Reativou" : "Desativou"} o aluno ${student?.name ?? data.id}.`,
+    );
   });
 
 const setPasswordSchema = z.object({
@@ -117,6 +128,7 @@ export const setStudentPasswordFn = createServerFn({ method: "POST" })
       .update(students)
       .set({ passwordHash, mustChangePassword: true })
       .where(eq(students.id, data.id));
+    await logAudit("aluno.senha_redefinida", `Redefiniu a senha de ${student.email}.`);
   });
 
 const revokeStudentLoginSchema = z.object({ id: z.string().uuid() });
@@ -127,6 +139,12 @@ export const revokeStudentLoginFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     await requireAdminId();
     await db.update(students).set({ passwordHash: null }).where(eq(students.id, data.id));
+    const [student] = await db
+      .select({ name: students.name })
+      .from(students)
+      .where(eq(students.id, data.id))
+      .limit(1);
+    await logAudit("aluno.login_revogado", `Revogou o login de ${student?.name ?? data.id}.`);
   });
 
 const deleteSchema = z.object({ id: z.string().uuid() });
@@ -135,7 +153,13 @@ export const deleteStudentFn = createServerFn({ method: "POST" })
   .validator(deleteSchema)
   .handler(async ({ data }) => {
     await requireAdminId();
+    const [student] = await db
+      .select({ name: students.name })
+      .from(students)
+      .where(eq(students.id, data.id))
+      .limit(1);
     await db.delete(students).where(eq(students.id, data.id));
+    await logAudit("aluno.apagar", `Apagou o cadastro do aluno ${student?.name ?? data.id}.`);
   });
 
 const bulkCreateSchema = z.object({
@@ -180,5 +204,9 @@ export const bulkCreateStudentsFn = createServerFn({ method: "POST" })
       await db.insert(students).values(toInsert);
     }
 
+    await logAudit(
+      "aluno.importar",
+      `Importou ${toInsert.length} aluno(s) por planilha${skipped.length > 0 ? ` (${skipped.length} já existiam)` : ""}.`,
+    );
     return { created: toInsert.length, skipped };
   });

@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { asc, desc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
+import { logAudit } from "@/server/audit";
 import { requireAnyIdentity, requireOwnDiscipline } from "@/server/auth/guard";
 import { db } from "@/server/db/client";
 import { forumPosts, forumThreads } from "@/server/db/schema";
@@ -81,6 +82,7 @@ export const createThreadFn = createServerFn({ method: "POST" })
       content: data.content,
     });
 
+    await logAudit("forum.criar_topico", `Criou o tópico "${data.title}" no fórum.`);
     return { threadId: thread.id };
   });
 
@@ -155,6 +157,15 @@ export const replyToThreadFn = createServerFn({ method: "POST" })
       authorName: identity.name,
       content: data.content,
     });
+    const [thread] = await db
+      .select({ title: forumThreads.title })
+      .from(forumThreads)
+      .where(eq(forumThreads.id, data.threadId))
+      .limit(1);
+    await logAudit(
+      "forum.responder",
+      `Respondeu no tópico "${thread?.title ?? data.threadId}" do fórum.`,
+    );
   });
 
 const deleteThreadSchema = z.object({
@@ -167,7 +178,16 @@ export const deleteThreadFn = createServerFn({ method: "POST" })
   .validator(deleteThreadSchema)
   .handler(async ({ data }) => {
     await requireOwnDiscipline(data.disciplineId);
+    const [thread] = await db
+      .select({ title: forumThreads.title })
+      .from(forumThreads)
+      .where(eq(forumThreads.id, data.threadId))
+      .limit(1);
     await db.delete(forumThreads).where(eq(forumThreads.id, data.threadId));
+    await logAudit(
+      "forum.apagar_topico",
+      `Apagou o tópico "${thread?.title ?? data.threadId}" do fórum.`,
+    );
   });
 
 const deletePostSchema = z.object({ postId: z.string().uuid() });

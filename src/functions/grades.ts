@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { asc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
+import { logAudit } from "@/server/audit";
 import { requireOwnDiscipline } from "@/server/auth/guard";
 import { db } from "@/server/db/client";
 import { assessments, grades, students } from "@/server/db/schema";
@@ -64,7 +65,7 @@ const createAssessmentSchema = z.object({
 export const createAssessmentFn = createServerFn({ method: "POST" })
   .validator(createAssessmentSchema)
   .handler(async ({ data }) => {
-    await requireOwnDiscipline(data.disciplineId);
+    const discipline = await requireOwnDiscipline(data.disciplineId);
     const [row] = await db
       .insert(assessments)
       .values({
@@ -74,6 +75,10 @@ export const createAssessmentFn = createServerFn({ method: "POST" })
         weight: String(data.weight),
       })
       .returning({ id: assessments.id });
+    await logAudit(
+      "avaliacao.criar",
+      `Criou a avaliação "${data.title}" em ${discipline.discipline}.`,
+    );
     return row;
   });
 
@@ -85,8 +90,17 @@ const deleteAssessmentSchema = z.object({
 export const deleteAssessmentFn = createServerFn({ method: "POST" })
   .validator(deleteAssessmentSchema)
   .handler(async ({ data }) => {
-    await requireOwnDiscipline(data.disciplineId);
+    const discipline = await requireOwnDiscipline(data.disciplineId);
+    const [assessment] = await db
+      .select({ title: assessments.title })
+      .from(assessments)
+      .where(eq(assessments.id, data.assessmentId))
+      .limit(1);
     await db.delete(assessments).where(eq(assessments.id, data.assessmentId));
+    await logAudit(
+      "avaliacao.apagar",
+      `Apagou a avaliação "${assessment?.title ?? data.assessmentId}" em ${discipline.discipline}.`,
+    );
   });
 
 const setGradeSchema = z.object({
@@ -111,4 +125,14 @@ export const setGradeFn = createServerFn({ method: "POST" })
         target: [grades.assessmentId, grades.studentId],
         set: { score: String(data.score), updatedAt: new Date() },
       });
+    const [row] = await db
+      .select({ assessmentTitle: assessments.title, studentName: students.name })
+      .from(assessments)
+      .innerJoin(students, eq(students.id, data.studentId))
+      .where(eq(assessments.id, data.assessmentId))
+      .limit(1);
+    await logAudit(
+      "nota.lancar",
+      `Lançou nota ${data.score} de ${row?.studentName ?? "aluno"} em "${row?.assessmentTitle ?? "avaliação"}".`,
+    );
   });

@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
+import { logAudit } from "@/server/audit";
 import { requireStudentId } from "@/server/auth/guard";
 import { hashPassword, verifyPassword } from "@/server/auth/password";
 import { readAppStudentSession, useAppStudentSession } from "@/server/auth/studentSession";
@@ -33,10 +34,12 @@ export const studentLoginFn = createServerFn({ method: "POST" })
 
     const session = await useAppStudentSession();
     await session.update({ studentId: student.id });
+    await logAudit("login", `${student.name} entrou no portal do aluno.`);
     return { id: student.id, name: student.name, email: student.email };
   });
 
 export const studentLogoutFn = createServerFn({ method: "POST" }).handler(async () => {
+  await logAudit("logout", "Saiu do portal do aluno.");
   const session = await useAppStudentSession();
   await session.clear();
 });

@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { computeCurrentAmount, computeMonthlySeries, formatPeriodLabel } from "@/lib/payments";
 import { getPaymentModality, PUNCTUALITY_DISCOUNT_PERCENT } from "@/lib/paymentModalities";
+import { logAudit } from "@/server/audit";
 import { requireAdminId, requireStudentId, requireTeacherId } from "@/server/auth/guard";
 import { db } from "@/server/db/client";
 import { charges, students } from "@/server/db/schema";
@@ -165,6 +166,15 @@ export const createChargeFn = createServerFn({ method: "POST" })
         createdById: teacherId,
       })
       .returning({ id: charges.id });
+    const [student] = await db
+      .select({ name: students.name })
+      .from(students)
+      .where(eq(students.id, data.studentId))
+      .limit(1);
+    await logAudit(
+      "financeiro.cobranca_criar",
+      `Criou uma cobrança de R$ ${data.amount.toFixed(2)} (${data.description}) para ${student?.name ?? data.studentId}.`,
+    );
     return row;
   });
 
@@ -222,6 +232,15 @@ export const generateMonthlyChargesFn = createServerFn({ method: "POST" })
       await db.insert(charges).values(toInsert);
     }
 
+    const [student] = await db
+      .select({ name: students.name })
+      .from(students)
+      .where(eq(students.id, data.studentId))
+      .limit(1);
+    await logAudit(
+      "financeiro.mensalidades_gerar",
+      `Gerou ${toInsert.length} mensalidade(s) de ${modality.name} para ${student?.name ?? data.studentId}.`,
+    );
     return { created: toInsert.length, skippedPeriods };
   });
 
@@ -246,6 +265,16 @@ export const markChargePaidManuallyFn = createServerFn({ method: "POST" })
         note: data.note || null,
       })
       .where(eq(charges.id, data.chargeId));
+    const [row] = await db
+      .select({ description: charges.description, studentName: students.name })
+      .from(charges)
+      .innerJoin(students, eq(charges.studentId, students.id))
+      .where(eq(charges.id, data.chargeId))
+      .limit(1);
+    await logAudit(
+      "financeiro.marcar_pago",
+      `Marcou como pago manualmente: ${row?.description ?? data.chargeId} de ${row?.studentName ?? "aluno"} (R$ ${data.paidAmount.toFixed(2)}).`,
+    );
   });
 
 const cancelChargeSchema = z.object({ chargeId: z.string().uuid() });
@@ -254,7 +283,17 @@ export const cancelChargeFn = createServerFn({ method: "POST" })
   .validator(cancelChargeSchema)
   .handler(async ({ data }) => {
     await requireAdminId();
+    const [row] = await db
+      .select({ description: charges.description, studentName: students.name })
+      .from(charges)
+      .innerJoin(students, eq(charges.studentId, students.id))
+      .where(eq(charges.id, data.chargeId))
+      .limit(1);
     await db.update(charges).set({ status: "canceled" }).where(eq(charges.id, data.chargeId));
+    await logAudit(
+      "financeiro.cancelar",
+      `Cancelou a cobrança ${row?.description ?? data.chargeId} de ${row?.studentName ?? "aluno"}.`,
+    );
   });
 
 export type OverdueCharge = {

@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { asc, eq } from "drizzle-orm";
 import { z } from "zod";
 
+import { logAudit } from "@/server/audit";
 import { requireAdminId, requireAdminOrSelf, requireTeacherId } from "@/server/auth/guard";
 import { hashPassword } from "@/server/auth/password";
 import { db } from "@/server/db/client";
@@ -57,6 +58,7 @@ export const createTeacherAccountFn = createServerFn({ method: "POST" })
         .insert(teachers)
         .values({ name: data.name, email: data.email, passwordHash, mustChangePassword: true })
         .returning({ id: teachers.id });
+      await logAudit("professor.criar", `Criou a conta do professor ${data.name} (${data.email}).`);
       return row;
     } catch (error) {
       if (isUniqueViolation(error)) {
@@ -105,6 +107,15 @@ export const setTeacherPasswordFn = createServerFn({ method: "POST" })
       .update(teachers)
       .set({ passwordHash, mustChangePassword: true })
       .where(eq(teachers.id, data.id));
+    const [teacher] = await db
+      .select({ name: teachers.name })
+      .from(teachers)
+      .where(eq(teachers.id, data.id))
+      .limit(1);
+    await logAudit(
+      "professor.senha_redefinida",
+      `Redefiniu a senha de ${teacher?.name ?? data.id}.`,
+    );
   });
 
 const revokeSchema = z.object({ id: z.string().uuid() });
@@ -115,6 +126,12 @@ export const revokeTeacherLoginFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     await requireAdminId();
     await db.update(teachers).set({ passwordHash: null }).where(eq(teachers.id, data.id));
+    const [teacher] = await db
+      .select({ name: teachers.name })
+      .from(teachers)
+      .where(eq(teachers.id, data.id))
+      .limit(1);
+    await logAudit("professor.login_revogado", `Revogou o login de ${teacher?.name ?? data.id}.`);
   });
 
 const deleteSchema = z.object({ id: z.string().uuid() });
@@ -126,5 +143,11 @@ export const deleteTeacherAccountFn = createServerFn({ method: "POST" })
     if (adminId === data.id) {
       throw new Error("Você não pode excluir a própria conta.");
     }
+    const [teacher] = await db
+      .select({ name: teachers.name })
+      .from(teachers)
+      .where(eq(teachers.id, data.id))
+      .limit(1);
     await db.delete(teachers).where(eq(teachers.id, data.id));
+    await logAudit("professor.apagar", `Apagou a conta do professor ${teacher?.name ?? data.id}.`);
   });

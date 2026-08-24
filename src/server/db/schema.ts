@@ -24,6 +24,7 @@ export const chargeStatus = pgEnum("charge_status", ["pending", "paid", "cancele
 export const authorRole = pgEnum("author_role", ["teacher", "student"]);
 export const videoSource = pgEnum("video_source", ["youtube", "upload"]);
 export const noteKind = pgEnum("note_kind", ["note", "question"]);
+export const auditActorType = pgEnum("audit_actor_type", ["teacher", "student"]);
 
 export const teachers = pgTable("teachers", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -420,4 +421,20 @@ export const studentNotes = pgTable("student_notes", {
   }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * Log de auditoria — cada linha é um evento (login, logout ou uma ação
+ * dentro do sistema). "Tempo de permanência" é calculado no relatório
+ * casando cada "login" com o próximo "logout" do mesmo ator (ou, se não
+ * houve logout explícito, com a última ação registrada depois do login).
+ */
+export const auditLogs = pgTable("audit_logs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  actorType: auditActorType("actor_type").notNull(),
+  actorId: uuid("actor_id"),
+  actorName: text("actor_name").notNull(),
+  action: text("action").notNull(),
+  description: text("description").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

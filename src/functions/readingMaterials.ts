@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { asc, eq } from "drizzle-orm";
 import { z } from "zod";
 
+import { logAudit } from "@/server/audit";
 import { requireAnyLogin, requireOwnDiscipline } from "@/server/auth/guard";
 import { db } from "@/server/db/client";
 import { readingMaterials } from "@/server/db/schema";
@@ -41,7 +42,7 @@ const createSchema = z.object({
 export const createMaterialFn = createServerFn({ method: "POST" })
   .validator(createSchema)
   .handler(async ({ data }) => {
-    await requireOwnDiscipline(data.disciplineId);
+    const discipline = await requireOwnDiscipline(data.disciplineId);
 
     const existing = await db
       .select({ sequence: readingMaterials.sequence })
@@ -60,6 +61,10 @@ export const createMaterialFn = createServerFn({ method: "POST" })
         sequence: nextSequence,
       })
       .returning({ id: readingMaterials.id });
+    await logAudit(
+      "apostila.criar",
+      `Adicionou o material "${data.title}" em ${discipline.discipline}.`,
+    );
     return row;
   });
 
@@ -73,11 +78,15 @@ const updateSchema = z.object({
 export const updateMaterialFn = createServerFn({ method: "POST" })
   .validator(updateSchema)
   .handler(async ({ data }) => {
-    await requireOwnDiscipline(data.disciplineId);
+    const discipline = await requireOwnDiscipline(data.disciplineId);
     await db
       .update(readingMaterials)
       .set({ title: data.title, description: data.description || null })
       .where(eq(readingMaterials.id, data.materialId));
+    await logAudit(
+      "apostila.editar",
+      `Editou o material "${data.title}" em ${discipline.discipline}.`,
+    );
   });
 
 const deleteSchema = z.object({ disciplineId: z.string().uuid(), materialId: z.string().uuid() });
@@ -85,8 +94,17 @@ const deleteSchema = z.object({ disciplineId: z.string().uuid(), materialId: z.s
 export const deleteMaterialFn = createServerFn({ method: "POST" })
   .validator(deleteSchema)
   .handler(async ({ data }) => {
-    await requireOwnDiscipline(data.disciplineId);
+    const discipline = await requireOwnDiscipline(data.disciplineId);
+    const [material] = await db
+      .select({ title: readingMaterials.title })
+      .from(readingMaterials)
+      .where(eq(readingMaterials.id, data.materialId))
+      .limit(1);
     await db.delete(readingMaterials).where(eq(readingMaterials.id, data.materialId));
+    await logAudit(
+      "apostila.apagar",
+      `Apagou o material "${material?.title ?? data.materialId}" em ${discipline.discipline}.`,
+    );
   });
 
 /** Todos os materiais do currículo, pra biblioteca do portal do aluno. */

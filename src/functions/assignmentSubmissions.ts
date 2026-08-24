@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
+import { logAudit } from "@/server/audit";
 import { requireStudentId } from "@/server/auth/guard";
 import { db } from "@/server/db/client";
 import {
@@ -253,7 +254,7 @@ export const submitAssignmentFn = createServerFn({ method: "POST" })
     const studentId = await requireStudentId();
 
     const [assignment] = await db
-      .select({ assessmentId: assignments.assessmentId })
+      .select({ assessmentId: assignments.assessmentId, title: assignments.title })
       .from(assignments)
       .where(eq(assignments.id, data.assignmentId))
       .limit(1);
@@ -286,4 +287,5 @@ export const submitAssignmentFn = createServerFn({ method: "POST" })
           submittedAt: new Date(),
         },
       });
+    await logAudit("tarefa.entregar", `Entregou a tarefa "${assignment.title}".`);
   });

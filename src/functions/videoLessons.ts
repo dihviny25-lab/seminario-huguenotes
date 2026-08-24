@@ -3,6 +3,7 @@ import { asc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
 import { extractYouTubeId } from "@/lib/youtube";
+import { logAudit } from "@/server/audit";
 import { requireAnyLogin, requireOwnDiscipline, requireStudentId } from "@/server/auth/guard";
 import { db } from "@/server/db/client";
 import { students, videoLessons, videoWatches } from "@/server/db/schema";
@@ -96,7 +97,7 @@ const createSchema = z
 export const createVideoLessonFn = createServerFn({ method: "POST" })
   .validator(createSchema)
   .handler(async ({ data }) => {
-    await requireOwnDiscipline(data.disciplineId);
+    const discipline = await requireOwnDiscipline(data.disciplineId);
 
     const existing = await db
       .select({ sequence: videoLessons.sequence })
@@ -115,6 +116,10 @@ export const createVideoLessonFn = createServerFn({ method: "POST" })
         sequence: nextSequence,
       })
       .returning({ id: videoLessons.id });
+    await logAudit(
+      "video.criar",
+      `Adicionou a vídeo-aula "${data.title}" em ${discipline.discipline}.`,
+    );
     return row;
   });
 
@@ -123,8 +128,17 @@ const deleteSchema = z.object({ disciplineId: z.string().uuid(), videoId: z.stri
 export const deleteVideoLessonFn = createServerFn({ method: "POST" })
   .validator(deleteSchema)
   .handler(async ({ data }) => {
-    await requireOwnDiscipline(data.disciplineId);
+    const discipline = await requireOwnDiscipline(data.disciplineId);
+    const [video] = await db
+      .select({ title: videoLessons.title })
+      .from(videoLessons)
+      .where(eq(videoLessons.id, data.videoId))
+      .limit(1);
     await db.delete(videoLessons).where(eq(videoLessons.id, data.videoId));
+    await logAudit(
+      "video.apagar",
+      `Apagou a vídeo-aula "${video?.title ?? data.videoId}" em ${discipline.discipline}.`,
+    );
   });
 
 /**

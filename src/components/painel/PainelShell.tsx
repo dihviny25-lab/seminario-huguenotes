@@ -13,6 +13,7 @@ import {
   ListChecks,
   LogOut,
   MessageCircle,
+  ShieldCheck,
   Users,
   Wallet,
 } from "lucide-react";
@@ -48,6 +49,7 @@ const painelNavItems = [
 
 const adminOnlyNavItems = [
   { to: "/painel/financeiro", label: "Financeiro", icon: BarChart3 },
+  { to: "/painel/auditoria", label: "Auditoria", icon: ShieldCheck },
 ] as const;
 
 interface PainelShellProps {

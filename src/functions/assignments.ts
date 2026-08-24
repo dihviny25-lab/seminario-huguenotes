@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { asc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
+import { logAudit } from "@/server/audit";
 import { requireOwnDiscipline } from "@/server/auth/guard";
 import { db } from "@/server/db/client";
 import {
@@ -86,7 +87,7 @@ const createSchema = z.object({
 export const createAssignmentFn = createServerFn({ method: "POST" })
   .validator(createSchema)
   .handler(async ({ data }) => {
-    await requireOwnDiscipline(data.disciplineId);
+    const discipline = await requireOwnDiscipline(data.disciplineId);
 
     const [assessment] = await db
       .insert(assessments)
@@ -109,6 +110,7 @@ export const createAssignmentFn = createServerFn({ method: "POST" })
       })
       .returning({ id: assignments.id });
 
+    await logAudit("tarefa.criar", `Criou a tarefa "${data.title}" em ${discipline.discipline}.`);
     return { assignmentId: assignment.id, assessmentId: assessment.id };
   });
 
@@ -126,7 +128,7 @@ const updateAssignmentSchema = z.object({
 export const updateAssignmentFn = createServerFn({ method: "POST" })
   .validator(updateAssignmentSchema)
   .handler(async ({ data }) => {
-    await requireOwnDiscipline(data.disciplineId);
+    const discipline = await requireOwnDiscipline(data.disciplineId);
     const assignment = await requireAssignmentInDiscipline(data.assignmentId, data.disciplineId);
 
     await db
@@ -141,15 +143,20 @@ export const updateAssignmentFn = createServerFn({ method: "POST" })
       .update(assessments)
       .set({ title: data.title, weight: String(data.weight), maxScore: String(data.maxScore) })
       .where(eq(assessments.id, assignment.assessmentId));
+    await logAudit("tarefa.editar", `Editou a tarefa "${data.title}" em ${discipline.discipline}.`);
   });
 
 /** Apaga a avaliação vinculada — cascateia tarefa, entregas e notas lançadas. */
 export const deleteAssignmentFn = createServerFn({ method: "POST" })
   .validator(assignmentIdSchema)
   .handler(async ({ data }) => {
-    await requireOwnDiscipline(data.disciplineId);
+    const discipline = await requireOwnDiscipline(data.disciplineId);
     const assignment = await requireAssignmentInDiscipline(data.assignmentId, data.disciplineId);
     await db.delete(assessments).where(eq(assessments.id, assignment.assessmentId));
+    await logAudit(
+      "tarefa.apagar",
+      `Apagou a tarefa "${assignment.title}" em ${discipline.discipline}.`,
+    );
   });
 
 export type AssignmentDetail = {
@@ -292,4 +299,14 @@ export const gradeSubmissionFn = createServerFn({ method: "POST" })
         target: [grades.assessmentId, grades.studentId],
         set: { score: String(data.score), updatedAt: new Date() },
       });
+
+    const [student] = await db
+      .select({ name: students.name })
+      .from(students)
+      .where(eq(students.id, submission.studentId))
+      .limit(1);
+    await logAudit(
+      "tarefa.corrigir",
+      `Corrigiu a entrega de ${student?.name ?? "aluno"} em "${assignment.title}" (nota ${data.score}).`,
+    );
   });

@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { asc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
+import { logAudit } from "@/server/audit";
 import { requireOwnDiscipline, requireStudentId } from "@/server/auth/guard";
 import { attendance, disciplines, lessons, students } from "@/server/db/schema";
 import { db } from "@/server/db/client";
@@ -91,8 +92,9 @@ const deleteLessonSchema = z.object({
 export const deleteLessonFn = createServerFn({ method: "POST" })
   .validator(deleteLessonSchema)
   .handler(async ({ data }) => {
-    await requireOwnDiscipline(data.disciplineId);
+    const discipline = await requireOwnDiscipline(data.disciplineId);
     await db.delete(lessons).where(eq(lessons.id, data.lessonId));
+    await logAudit("aula.apagar", `Apagou uma aula de ${discipline.discipline}.`);
   });
 
 const setAttendanceSchema = z.object({
@@ -125,7 +127,7 @@ const setLessonAttendanceAllSchema = z.object({
 export const setLessonAttendanceAllFn = createServerFn({ method: "POST" })
   .validator(setLessonAttendanceAllSchema)
   .handler(async ({ data }) => {
-    await requireOwnDiscipline(data.disciplineId);
+    const discipline = await requireOwnDiscipline(data.disciplineId);
     const activeStudents = await db
       .select({ id: students.id })
       .from(students)
@@ -143,6 +145,10 @@ export const setLessonAttendanceAllFn = createServerFn({ method: "POST" })
             set: { present: data.present, updatedAt: new Date() },
           }),
       ),
+    );
+    await logAudit(
+      "frequencia.marcar_todos",
+      `Marcou todos os alunos como ${data.present ? "presentes" : "ausentes"} numa aula de ${discipline.discipline}.`,
     );
   });
 
@@ -211,5 +217,9 @@ export const checkInFn = createServerFn({ method: "POST" })
         set: { present: true, updatedAt: new Date() },
       });
 
+    await logAudit(
+      "frequencia.checkin",
+      `Confirmou presença via QR code em ${row.disciplineName} (Aula ${row.sequence}).`,
+    );
     return { disciplineName: row.disciplineName, lessonLabel: `Aula ${row.sequence}` };
   });

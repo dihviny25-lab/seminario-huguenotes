@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { asc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
+import { logAudit } from "@/server/audit";
 import { requireOwnDiscipline } from "@/server/auth/guard";
 import { db } from "@/server/db/client";
 import {
@@ -104,7 +105,7 @@ const createExamSchema = z.object({
 export const createExamFn = createServerFn({ method: "POST" })
   .validator(createExamSchema)
   .handler(async ({ data }) => {
-    await requireOwnDiscipline(data.disciplineId);
+    const discipline = await requireOwnDiscipline(data.disciplineId);
 
     const [assessment] = await db
       .insert(assessments)
@@ -127,6 +128,7 @@ export const createExamFn = createServerFn({ method: "POST" })
       })
       .returning({ id: exams.id });
 
+    await logAudit("prova.criar", `Criou a prova "${data.title}" em ${discipline.discipline}.`);
     return { examId: exam.id, assessmentId: assessment.id };
   });
 
@@ -146,7 +148,7 @@ const updateExamSchema = z.object({
 export const updateExamFn = createServerFn({ method: "POST" })
   .validator(updateExamSchema)
   .handler(async ({ data }) => {
-    await requireOwnDiscipline(data.disciplineId);
+    const discipline = await requireOwnDiscipline(data.disciplineId);
     const exam = await requireExamInDiscipline(data.examId, data.disciplineId);
 
     await db
@@ -157,6 +159,7 @@ export const updateExamFn = createServerFn({ method: "POST" })
       .update(assessments)
       .set({ title: data.title, weight: String(data.weight) })
       .where(eq(assessments.id, exam.assessmentId));
+    await logAudit("prova.editar", `Editou a prova "${data.title}" em ${discipline.discipline}.`);
   });
 
 const deleteExamSchema = examIdSchema;
@@ -165,9 +168,10 @@ const deleteExamSchema = examIdSchema;
 export const deleteExamFn = createServerFn({ method: "POST" })
   .validator(deleteExamSchema)
   .handler(async ({ data }) => {
-    await requireOwnDiscipline(data.disciplineId);
+    const discipline = await requireOwnDiscipline(data.disciplineId);
     const exam = await requireExamInDiscipline(data.examId, data.disciplineId);
     await db.delete(assessments).where(eq(assessments.id, exam.assessmentId));
+    await logAudit("prova.apagar", `Apagou a prova "${exam.title}" em ${discipline.discipline}.`);
   });
 
 export type ExamQuestionDetail = {
@@ -365,7 +369,7 @@ const scheduleExamSchema = z.object({
 export const scheduleExamFn = createServerFn({ method: "POST" })
   .validator(scheduleExamSchema)
   .handler(async ({ data }) => {
-    await requireOwnDiscipline(data.disciplineId);
+    const discipline = await requireOwnDiscipline(data.disciplineId);
     const exam = await requireExamInDiscipline(data.examId, data.disciplineId);
 
     const questionRows = await db
@@ -380,6 +384,10 @@ export const scheduleExamFn = createServerFn({ method: "POST" })
       .update(exams)
       .set({ opensAt: new Date(data.opensAt) })
       .where(eq(exams.id, exam.id));
+    await logAudit(
+      "prova.agendar",
+      `Agendou a prova "${exam.title}" em ${discipline.discipline} para ${data.opensAt}.`,
+    );
   });
 
 export type ExamResultRow = {

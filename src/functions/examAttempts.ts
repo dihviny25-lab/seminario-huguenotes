@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { and, asc, eq, inArray, isNotNull } from "drizzle-orm";
 import { z } from "zod";
 
+import { logAudit } from "@/server/audit";
 import { requireStudentId } from "@/server/auth/guard";
 import { db } from "@/server/db/client";
 import {
@@ -254,6 +255,7 @@ export const startExamAttemptFn = createServerFn({ method: "POST" })
     }
     if (!existing) {
       await db.insert(examAttempts).values({ examId: data.examId, studentId });
+      await logAudit("prova.iniciar", `Iniciou a prova "${exam.title}".`);
     }
 
     return buildAttemptState(data.examId, studentId);
@@ -316,5 +318,14 @@ export const submitExamAttemptFn = createServerFn({ method: "POST" })
     if (!attempt) throw new Error("Você ainda não iniciou esta prova.");
 
     await finalizeExamAttempt(attempt.id, { autoSubmitted: data.autoSubmitted ?? false });
+    const [exam] = await db
+      .select({ title: exams.title })
+      .from(exams)
+      .where(eq(exams.id, data.examId))
+      .limit(1);
+    await logAudit(
+      "prova.entregar",
+      `${data.autoSubmitted ? "Prova entregue automaticamente (tempo esgotado)" : "Entregou a prova"}: "${exam?.title ?? data.examId}".`,
+    );
     return buildAttemptState(data.examId, studentId);
   });
