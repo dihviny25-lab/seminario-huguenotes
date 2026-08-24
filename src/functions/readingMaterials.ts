@@ -63,6 +63,23 @@ export const createMaterialFn = createServerFn({ method: "POST" })
     return row;
   });
 
+const updateSchema = z.object({
+  disciplineId: z.string().uuid(),
+  materialId: z.string().uuid(),
+  title: z.string().trim().min(1, "Informe um título."),
+  description: z.string().trim().optional(),
+});
+
+export const updateMaterialFn = createServerFn({ method: "POST" })
+  .validator(updateSchema)
+  .handler(async ({ data }) => {
+    await requireOwnDiscipline(data.disciplineId);
+    await db
+      .update(readingMaterials)
+      .set({ title: data.title, description: data.description || null })
+      .where(eq(readingMaterials.id, data.materialId));
+  });
+
 const deleteSchema = z.object({ disciplineId: z.string().uuid(), materialId: z.string().uuid() });
 
 export const deleteMaterialFn = createServerFn({ method: "POST" })

@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BookOpen, Download, Plus, Trash2 } from "lucide-react";
+import { BookOpen, Download, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,8 @@ import {
   createMaterialFn,
   deleteMaterialFn,
   listMyDisciplineMaterialsFn,
+  updateMaterialFn,
+  type ReadingMaterial,
 } from "@/functions/readingMaterials";
 import { uploadFile } from "@/lib/blobUpload";
 
@@ -33,6 +35,7 @@ export function ReadingMaterialsTab({ disciplineId }: { disciplineId: string }) 
     queryFn: () => listMyDisciplineMaterialsFn({ data: { disciplineId } }),
   });
   const [createOpen, setCreateOpen] = useState(false);
+  const [editMaterial, setEditMaterial] = useState<ReadingMaterial | null>(null);
 
   function invalidate() {
     return queryClient.invalidateQueries({ queryKey: materialsKey(disciplineId) });
@@ -101,15 +104,24 @@ export function ReadingMaterialsTab({ disciplineId }: { disciplineId: string }) 
                   {material.fileName}
                 </a>
               </span>
-              <Button
-                variant="ghost"
-                size="icon"
-                title="Excluir"
-                className="shrink-0"
-                onClick={() => deleteMutation.mutate(material.id)}
-              >
-                <Trash2 className="size-4" aria-hidden />
-              </Button>
+              <div className="flex shrink-0 flex-col gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  title="Editar"
+                  onClick={() => setEditMaterial(material)}
+                >
+                  <Pencil className="size-4" aria-hidden />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  title="Excluir"
+                  onClick={() => deleteMutation.mutate(material.id)}
+                >
+                  <Trash2 className="size-4" aria-hidden />
+                </Button>
+              </div>
             </div>
           ))}
         </div>
@@ -121,7 +133,97 @@ export function ReadingMaterialsTab({ disciplineId }: { disciplineId: string }) 
         onOpenChange={setCreateOpen}
         onCreated={invalidate}
       />
+      <EditMaterialDialog
+        disciplineId={disciplineId}
+        material={editMaterial}
+        onOpenChange={(open) => !open && setEditMaterial(null)}
+        onUpdated={invalidate}
+      />
     </div>
+  );
+}
+
+function EditMaterialDialog({
+  disciplineId,
+  material,
+  onOpenChange,
+  onUpdated,
+}: {
+  disciplineId: string;
+  material: ReadingMaterial | null;
+  onOpenChange: (open: boolean) => void;
+  onUpdated: () => Promise<unknown>;
+}) {
+  const [title, setTitle] = useState(material?.title ?? "");
+  const [description, setDescription] = useState(material?.description ?? "");
+
+  const mutation = useMutation({
+    mutationFn: () =>
+      updateMaterialFn({
+        data: {
+          disciplineId,
+          materialId: material!.id,
+          title,
+          description: description || undefined,
+        },
+      }),
+    onSuccess: async () => {
+      toast.success("Material atualizado.");
+      onOpenChange(false);
+      await onUpdated();
+    },
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Não foi possível atualizar."),
+  });
+
+  return (
+    <Dialog
+      open={material !== null}
+      onOpenChange={(open) => {
+        onOpenChange(open);
+        if (open && material) {
+          setTitle(material.title);
+          setDescription(material.description ?? "");
+        }
+      }}
+    >
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Editar material</DialogTitle>
+        </DialogHeader>
+        <form
+          className="space-y-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (title.trim().length === 0) return;
+            mutation.mutate();
+          }}
+        >
+          <div className="space-y-2">
+            <Label htmlFor="material-edit-title">Título</Label>
+            <Input
+              id="material-edit-title"
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="material-edit-description">Descrição (opcional)</Label>
+            <Textarea
+              id="material-edit-description"
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button type="submit" disabled={mutation.isPending}>
+              Salvar
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 

@@ -1,12 +1,19 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft, Download } from "lucide-react";
+import { ArrowLeft, Download, Pencil } from "lucide-react";
 import { toast } from "sonner";
 
 import { PainelShell } from "@/components/painel/PainelShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,6 +22,8 @@ import {
   getAssignmentByIdFn,
   getAssignmentSubmissionsFn,
   gradeSubmissionFn,
+  updateAssignmentFn,
+  type AssignmentDetail,
 } from "@/functions/assignments";
 
 function assignmentKey(assignmentId: string) {
@@ -26,6 +35,8 @@ function submissionsKey(assignmentId: string) {
 }
 
 export function AssignmentEditor({ assignmentId }: { assignmentId: string }) {
+  const queryClient = useQueryClient();
+  const [editOpen, setEditOpen] = useState(false);
   const { data: assignment, isLoading } = useQuery({
     queryKey: assignmentKey(assignmentId),
     queryFn: () => getAssignmentByIdFn({ data: { assignmentId } }),
@@ -49,14 +60,20 @@ export function AssignmentEditor({ assignmentId }: { assignmentId: string }) {
 
   return (
     <PainelShell title={assignment.title} description={assignment.instructions ?? undefined}>
-      <Link
-        to="/painel/disciplinas/$disciplineId"
-        params={{ disciplineId: assignment.disciplineId }}
-        className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-accent"
-      >
-        <ArrowLeft className="size-4 shrink-0" aria-hidden />
-        Voltar para a disciplina
-      </Link>
+      <div className="mb-6 flex items-center justify-between">
+        <Link
+          to="/painel/disciplinas/$disciplineId"
+          params={{ disciplineId: assignment.disciplineId }}
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-accent"
+        >
+          <ArrowLeft className="size-4 shrink-0" aria-hidden />
+          Voltar para a disciplina
+        </Link>
+        <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+          <Pencil className="size-4" aria-hidden />
+          Editar tarefa (peso {assignment.weight})
+        </Button>
+      </div>
 
       <h2 className="font-display text-lg font-semibold text-foreground">Entregas</h2>
 
@@ -77,7 +94,127 @@ export function AssignmentEditor({ assignmentId }: { assignmentId: string }) {
           ))}
         </div>
       )}
+
+      <EditAssignmentDialog
+        assignment={assignment}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        onUpdated={() => queryClient.invalidateQueries({ queryKey: assignmentKey(assignmentId) })}
+      />
     </PainelShell>
+  );
+}
+
+function EditAssignmentDialog({
+  assignment,
+  open,
+  onOpenChange,
+  onUpdated,
+}: {
+  assignment: AssignmentDetail;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onUpdated: () => Promise<unknown>;
+}) {
+  const [title, setTitle] = useState(assignment.title);
+  const [instructions, setInstructions] = useState(assignment.instructions ?? "");
+  const [maxScore, setMaxScore] = useState(String(assignment.maxScore));
+  const [weight, setWeight] = useState(String(assignment.weight));
+  const [dueAt, setDueAt] = useState(assignment.dueAt ? assignment.dueAt.slice(0, 16) : "");
+
+  const mutation = useMutation({
+    mutationFn: () =>
+      updateAssignmentFn({
+        data: {
+          disciplineId: assignment.disciplineId,
+          assignmentId: assignment.id,
+          title,
+          instructions: instructions || undefined,
+          maxScore: Number(maxScore),
+          weight: Number(weight),
+          dueAt: dueAt ? new Date(dueAt).toISOString() : undefined,
+        },
+      }),
+    onSuccess: async () => {
+      toast.success("Tarefa atualizada.");
+      onOpenChange(false);
+      await onUpdated();
+    },
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Não foi possível atualizar."),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Editar tarefa</DialogTitle>
+        </DialogHeader>
+        <form
+          className="space-y-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            mutation.mutate();
+          }}
+        >
+          <div className="space-y-2">
+            <Label htmlFor="assignment-edit-title">Título</Label>
+            <Input
+              id="assignment-edit-title"
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="assignment-edit-instructions">Instruções (opcional)</Label>
+            <Textarea
+              id="assignment-edit-instructions"
+              value={instructions}
+              onChange={(event) => setInstructions(event.target.value)}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="assignment-edit-maxscore">Nota máxima</Label>
+              <Input
+                id="assignment-edit-maxscore"
+                type="number"
+                step="0.1"
+                value={maxScore}
+                onChange={(event) => setMaxScore(event.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="assignment-edit-weight">Peso na média final</Label>
+              <Input
+                id="assignment-edit-weight"
+                type="number"
+                step="0.1"
+                value={weight}
+                onChange={(event) => setWeight(event.target.value)}
+                required
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="assignment-edit-due">Prazo (opcional)</Label>
+            <Input
+              id="assignment-edit-due"
+              type="datetime-local"
+              value={dueAt}
+              onChange={(event) => setDueAt(event.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button type="submit" disabled={mutation.isPending}>
+              Salvar
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 

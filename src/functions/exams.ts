@@ -130,6 +130,35 @@ export const createExamFn = createServerFn({ method: "POST" })
     return { examId: exam.id, assessmentId: assessment.id };
   });
 
+const updateExamSchema = z.object({
+  disciplineId: z.string().uuid(),
+  examId: z.string().uuid(),
+  title: z.string().trim().min(1, "Informe um título."),
+  instructions: z.string().trim().optional(),
+  weight: z.number().positive("Deve ser maior que zero."),
+});
+
+/**
+ * Edita título, instruções e peso na média final — funciona mesmo com a
+ * prova já em andamento/travada, já que isso não muda o conteúdo pra quem
+ * já começou a fazer.
+ */
+export const updateExamFn = createServerFn({ method: "POST" })
+  .validator(updateExamSchema)
+  .handler(async ({ data }) => {
+    await requireOwnDiscipline(data.disciplineId);
+    const exam = await requireExamInDiscipline(data.examId, data.disciplineId);
+
+    await db
+      .update(exams)
+      .set({ title: data.title, instructions: data.instructions || null })
+      .where(eq(exams.id, exam.id));
+    await db
+      .update(assessments)
+      .set({ title: data.title, weight: String(data.weight) })
+      .where(eq(assessments.id, exam.assessmentId));
+  });
+
 const deleteExamSchema = examIdSchema;
 
 /** Apaga a avaliação vinculada — cascateia prova, perguntas, tentativas e notas lançadas. */
@@ -157,17 +186,23 @@ export type ExamDetail = {
   durationMinutes: number;
   opensAt: string | null;
   locked: boolean;
+  weight: number;
   questions: Array<ExamQuestionDetail>;
 };
 
 async function buildExamDetail(exam: typeof exams.$inferSelect): Promise<ExamDetail> {
-  const [questionRows, hasAttempts] = await Promise.all([
+  const [questionRows, hasAttempts, assessmentRow] = await Promise.all([
     db
       .select()
       .from(examQuestions)
       .where(eq(examQuestions.examId, exam.id))
       .orderBy(asc(examQuestions.sequence)),
     db.select({ id: examAttempts.id }).from(examAttempts).where(eq(examAttempts.examId, exam.id)),
+    db
+      .select({ weight: assessments.weight })
+      .from(assessments)
+      .where(eq(assessments.id, exam.assessmentId))
+      .limit(1),
   ]);
 
   const questionIds = questionRows.map((q) => q.id);
@@ -188,6 +223,7 @@ async function buildExamDetail(exam: typeof exams.$inferSelect): Promise<ExamDet
     durationMinutes: exam.durationMinutes,
     opensAt: exam.opensAt ? exam.opensAt.toISOString() : null,
     locked: hasAttempts.length > 0,
+    weight: Number(assessmentRow[0]?.weight ?? 1),
     questions: questionRows.map((q) => ({
       id: q.id,
       text: q.text,

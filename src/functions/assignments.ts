@@ -112,6 +112,37 @@ export const createAssignmentFn = createServerFn({ method: "POST" })
     return { assignmentId: assignment.id, assessmentId: assessment.id };
   });
 
+const updateAssignmentSchema = z.object({
+  disciplineId: z.string().uuid(),
+  assignmentId: z.string().uuid(),
+  title: z.string().trim().min(1, "Informe um título."),
+  instructions: z.string().trim().optional(),
+  weight: z.number().positive("Deve ser maior que zero."),
+  maxScore: z.number().positive("Deve ser maior que zero."),
+  dueAt: z.string().optional(),
+});
+
+/** Edita título, instruções, nota máxima, peso na média final e prazo. */
+export const updateAssignmentFn = createServerFn({ method: "POST" })
+  .validator(updateAssignmentSchema)
+  .handler(async ({ data }) => {
+    await requireOwnDiscipline(data.disciplineId);
+    const assignment = await requireAssignmentInDiscipline(data.assignmentId, data.disciplineId);
+
+    await db
+      .update(assignments)
+      .set({
+        title: data.title,
+        instructions: data.instructions || null,
+        dueAt: data.dueAt ? new Date(data.dueAt) : null,
+      })
+      .where(eq(assignments.id, assignment.id));
+    await db
+      .update(assessments)
+      .set({ title: data.title, weight: String(data.weight), maxScore: String(data.maxScore) })
+      .where(eq(assessments.id, assignment.assessmentId));
+  });
+
 /** Apaga a avaliação vinculada — cascateia tarefa, entregas e notas lançadas. */
 export const deleteAssignmentFn = createServerFn({ method: "POST" })
   .validator(assignmentIdSchema)
@@ -127,6 +158,8 @@ export type AssignmentDetail = {
   title: string;
   instructions: string | null;
   dueAt: string | null;
+  weight: number;
+  maxScore: number;
 };
 
 /** Detalhe da tarefa, resolvendo a disciplina sozinho a partir do assignmentId (rota do editor). */
@@ -140,12 +173,21 @@ export const getAssignmentByIdFn = createServerFn({ method: "GET" })
       .limit(1);
     if (!assignment) throw new Error("Tarefa não encontrada.");
     await requireOwnDiscipline(assignment.disciplineId);
+
+    const [assessment] = await db
+      .select({ weight: assessments.weight, maxScore: assessments.maxScore })
+      .from(assessments)
+      .where(eq(assessments.id, assignment.assessmentId))
+      .limit(1);
+
     return {
       id: assignment.id,
       disciplineId: assignment.disciplineId,
       title: assignment.title,
       instructions: assignment.instructions,
       dueAt: assignment.dueAt ? assignment.dueAt.toISOString() : null,
+      weight: Number(assessment?.weight ?? 1),
+      maxScore: Number(assessment?.maxScore ?? 10),
     };
   });
 

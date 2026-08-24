@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BookOpen, Plus, Trash2 } from "lucide-react";
+import { BookOpen, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { PainelShell } from "@/components/painel/PainelShell";
@@ -16,7 +16,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
-import { createLibraryBookFn, deleteLibraryBookFn, listLibraryBooksFn } from "@/functions/library";
+import {
+  createLibraryBookFn,
+  deleteLibraryBookFn,
+  listLibraryBooksFn,
+  updateLibraryBookFn,
+  type LibraryBook,
+} from "@/functions/library";
 import { uploadFile } from "@/lib/blobUpload";
 
 const LIBRARY_KEY = ["library-books"] as const;
@@ -29,6 +35,7 @@ export function Library() {
     queryFn: () => listLibraryBooksFn(),
   });
   const [createOpen, setCreateOpen] = useState(false);
+  const [editBook, setEditBook] = useState<LibraryBook | null>(null);
 
   const deleteMutation = useMutation({
     mutationFn: (bookId: string) => deleteLibraryBookFn({ data: { bookId } }),
@@ -84,22 +91,123 @@ export function Library() {
                   Enviado por {book.uploadedByName}
                 </span>
               </span>
-              <Button
-                variant="ghost"
-                size="icon"
-                title="Excluir"
-                className="shrink-0"
-                onClick={() => deleteMutation.mutate(book.id)}
-              >
-                <Trash2 className="size-4" aria-hidden />
-              </Button>
+              <div className="flex shrink-0 flex-col gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  title="Editar"
+                  onClick={() => setEditBook(book)}
+                >
+                  <Pencil className="size-4" aria-hidden />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  title="Excluir"
+                  onClick={() => deleteMutation.mutate(book.id)}
+                >
+                  <Trash2 className="size-4" aria-hidden />
+                </Button>
+              </div>
             </div>
           ))}
         </div>
       )}
 
       <CreateBookDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <EditBookDialog book={editBook} onOpenChange={(open) => !open && setEditBook(null)} />
     </PainelShell>
+  );
+}
+
+function EditBookDialog({
+  book,
+  onOpenChange,
+}: {
+  book: LibraryBook | null;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const queryClient = useQueryClient();
+  const [title, setTitle] = useState(book?.title ?? "");
+  const [author, setAuthor] = useState(book?.author ?? "");
+  const [description, setDescription] = useState(book?.description ?? "");
+
+  const mutation = useMutation({
+    mutationFn: () =>
+      updateLibraryBookFn({
+        data: {
+          bookId: book!.id,
+          title,
+          author: author || undefined,
+          description: description || undefined,
+        },
+      }),
+    onSuccess: async () => {
+      toast.success("Livro atualizado.");
+      onOpenChange(false);
+      await queryClient.invalidateQueries({ queryKey: LIBRARY_KEY });
+    },
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Não foi possível atualizar."),
+  });
+
+  return (
+    <Dialog
+      open={book !== null}
+      onOpenChange={(open) => {
+        onOpenChange(open);
+        if (open && book) {
+          setTitle(book.title);
+          setAuthor(book.author ?? "");
+          setDescription(book.description ?? "");
+        }
+      }}
+    >
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Editar livro</DialogTitle>
+        </DialogHeader>
+        <form
+          className="space-y-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (title.trim().length === 0) return;
+            mutation.mutate();
+          }}
+        >
+          <div className="space-y-2">
+            <Label htmlFor="book-edit-title">Título</Label>
+            <Input
+              id="book-edit-title"
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="book-edit-author">Autor (opcional)</Label>
+            <Input
+              id="book-edit-author"
+              value={author}
+              onChange={(event) => setAuthor(event.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="book-edit-description">Descrição (opcional)</Label>
+            <Textarea
+              id="book-edit-description"
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button type="submit" disabled={mutation.isPending}>
+              Salvar
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 

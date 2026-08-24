@@ -68,6 +68,35 @@ export const createLibraryBookFn = createServerFn({ method: "POST" })
     return row;
   });
 
+const updateSchema = z.object({
+  bookId: z.string().uuid(),
+  title: z.string().trim().min(1, "Informe o título."),
+  author: z.string().trim().optional(),
+  description: z.string().trim().optional(),
+});
+
+/** Só quem subiu o livro (ou admin) pode editar título/autor/descrição. */
+export const updateLibraryBookFn = createServerFn({ method: "POST" })
+  .validator(updateSchema)
+  .handler(async ({ data }) => {
+    const [book] = await db
+      .select()
+      .from(libraryBooks)
+      .where(eq(libraryBooks.id, data.bookId))
+      .limit(1);
+    if (!book) throw new Error("Livro não encontrado.");
+
+    await requireAdminOrSelf(book.uploadedById ?? "");
+    await db
+      .update(libraryBooks)
+      .set({
+        title: data.title,
+        author: data.author || null,
+        description: data.description || null,
+      })
+      .where(eq(libraryBooks.id, data.bookId));
+  });
+
 const deleteSchema = z.object({ bookId: z.string().uuid() });
 
 /** Só quem subiu o livro (ou admin) pode apagar. */

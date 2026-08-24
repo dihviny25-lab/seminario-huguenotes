@@ -3,7 +3,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useFieldArray, useForm } from "react-hook-form";
-import { ArrowLeft, CheckCircle2, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -43,6 +43,7 @@ import {
   getExamByIdFn,
   getExamResultsFn,
   scheduleExamFn,
+  updateExamFn,
   type ExamDetail,
 } from "@/functions/exams";
 
@@ -63,6 +64,7 @@ export function ExamEditor({ examId }: { examId: string }) {
     queryFn: () => getExamByIdFn({ data: { examId } }),
   });
   const [addQuestionOpen, setAddQuestionOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
 
   function invalidate() {
     return queryClient.invalidateQueries({ queryKey: examKey(examId) });
@@ -100,14 +102,20 @@ export function ExamEditor({ examId }: { examId: string }) {
         `${exam.durationMinutes} minutos de duração, a partir do início de cada aluno.`
       }
     >
-      <Link
-        to="/painel/disciplinas/$disciplineId"
-        params={{ disciplineId: exam.disciplineId }}
-        className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-accent"
-      >
-        <ArrowLeft className="size-4 shrink-0" aria-hidden />
-        Voltar para a disciplina
-      </Link>
+      <div className="mb-6 flex items-center justify-between">
+        <Link
+          to="/painel/disciplinas/$disciplineId"
+          params={{ disciplineId: exam.disciplineId }}
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-accent"
+        >
+          <ArrowLeft className="size-4 shrink-0" aria-hidden />
+          Voltar para a disciplina
+        </Link>
+        <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+          <Pencil className="size-4" aria-hidden />
+          Editar prova ({exam.weight === 1 ? "peso 1" : `peso ${exam.weight}`})
+        </Button>
+      </div>
 
       <div className="flex items-center justify-between">
         <h2 className="font-display text-lg font-semibold text-foreground">Perguntas</h2>
@@ -192,7 +200,119 @@ export function ExamEditor({ examId }: { examId: string }) {
         onOpenChange={setAddQuestionOpen}
         onAdded={invalidate}
       />
+      <EditExamDialog
+        disciplineId={exam.disciplineId}
+        examId={examId}
+        exam={exam}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        onUpdated={invalidate}
+      />
     </PainelShell>
+  );
+}
+
+const editExamSchema = z.object({
+  title: z.string().trim().min(1, "Informe um título."),
+  instructions: z.string().trim().optional(),
+  weight: z.coerce.number().positive("Deve ser maior que zero."),
+});
+
+function EditExamDialog({
+  disciplineId,
+  examId,
+  exam,
+  open,
+  onOpenChange,
+  onUpdated,
+}: {
+  disciplineId: string;
+  examId: string;
+  exam: ExamDetail;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onUpdated: () => Promise<unknown>;
+}) {
+  const form = useForm<z.infer<typeof editExamSchema>>({
+    resolver: zodResolver(editExamSchema),
+    values: {
+      title: exam.title,
+      instructions: exam.instructions ?? "",
+      weight: exam.weight,
+    },
+  });
+
+  const mutation = useMutation({
+    mutationFn: (values: z.infer<typeof editExamSchema>) =>
+      updateExamFn({ data: { disciplineId, examId, ...values } }),
+    onSuccess: async () => {
+      toast.success("Prova atualizada.");
+      onOpenChange(false);
+      await onUpdated();
+    },
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Não foi possível atualizar."),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Editar prova</DialogTitle>
+        </DialogHeader>
+        <Form {...form}>
+          <form
+            className="space-y-4"
+            onSubmit={form.handleSubmit((values) => mutation.mutate(values))}
+          >
+            <FormField
+              control={form.control}
+              name="title"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Título</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="instructions"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Instruções (opcional)</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="weight"
+              render={({ field }) => (
+                <FormItem className="max-w-32">
+                  <FormLabel>Peso na média final</FormLabel>
+                  <FormControl>
+                    <Input type="number" step="0.1" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <DialogFooter>
+              <Button type="submit" disabled={mutation.isPending}>
+                Salvar
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
