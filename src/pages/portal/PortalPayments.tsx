@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
 
 import { PortalShell } from "@/components/portal/PortalShell";
 import { Badge } from "@/components/ui/badge";
@@ -13,11 +12,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { listMyChargesFn, payMyChargeFn, type Charge } from "@/functions/payments";
-
-function errorMessage(error: unknown, fallback: string): string {
-  return error instanceof Error ? error.message : fallback;
-}
+import { listMyChargesFn, type Charge } from "@/functions/payments";
+import { PaymentMethodsDialog } from "@/pages/portal/PaymentMethodsDialog";
 
 function formatAmount(amount: string): string {
   return Number(amount).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -34,42 +30,19 @@ const statusLabel: Record<Charge["status"], string> = {
   canceled: "Cancelado",
 };
 
-/** Mensalidades e cobranças avulsas do próprio aluno, com link de pagamento pelo Mercado Pago. */
+/** Mensalidades e cobranças avulsas do próprio aluno, com as formas de pagamento disponíveis. */
 export function PortalPayments() {
   const { data: charges, isLoading } = useQuery({
     queryKey: ["my-charges"],
     queryFn: () => listMyChargesFn(),
   });
-  const [payingId, setPayingId] = useState<string | null>(null);
-  const [returnedFromCheckout] = useState(
-    () =>
-      typeof window !== "undefined" &&
-      new URLSearchParams(window.location.search).has("payment_id"),
-  );
-
-  const payMutation = useMutation({
-    mutationFn: (chargeId: string) => payMyChargeFn({ data: { chargeId } }),
-    onMutate: (chargeId) => setPayingId(chargeId),
-    onSuccess: (result) => {
-      window.location.href = result.initPoint;
-    },
-    onError: (error) => {
-      toast.error(errorMessage(error, "Não foi possível iniciar o pagamento."));
-      setPayingId(null);
-    },
-  });
+  const [selectedCharge, setSelectedCharge] = useState<Charge | null>(null);
 
   return (
     <PortalShell
       title="Mensalidades"
       description="Acompanhe e pague suas mensalidades e taxas do seminário."
     >
-      {returnedFromCheckout ? (
-        <p className="mb-4 rounded-md border border-warning-border bg-warning-soft px-4 py-3 text-sm text-warning">
-          Estamos confirmando seu pagamento — pode levar alguns instantes até o status atualizar
-          aqui embaixo.
-        </p>
-      ) : null}
       <div className="overflow-hidden rounded-md border border-border/70 bg-card/70 shadow-soft">
         <Table>
           <TableHeader>
@@ -133,12 +106,8 @@ export function PortalPayments() {
                   </TableCell>
                   <TableCell>
                     {charge.status === "pending" ? (
-                      <Button
-                        size="sm"
-                        onClick={() => payMutation.mutate(charge.id)}
-                        disabled={payingId === charge.id}
-                      >
-                        {payingId === charge.id ? "Abrindo…" : "Pagar"}
+                      <Button size="sm" onClick={() => setSelectedCharge(charge)}>
+                        Pagar
                       </Button>
                     ) : null}
                   </TableCell>
@@ -154,6 +123,11 @@ export function PortalPayments() {
           </TableBody>
         </Table>
       </div>
+
+      <PaymentMethodsDialog
+        charge={selectedCharge}
+        onOpenChange={(open) => !open && setSelectedCharge(null)}
+      />
     </PortalShell>
   );
 }
