@@ -11,6 +11,7 @@ import {
   ListChecks,
   LogOut,
   MessageCircle,
+  Settings,
   Video,
   Wallet,
 } from "lucide-react";
@@ -51,6 +52,7 @@ const portalNavItems = [
   { to: "/portal/forum", label: "Fórum", icon: MessageCircle },
   { to: "/portal/discipulado", label: "Discipulado", icon: HeartHandshake },
   { to: "/portal/mensalidades", label: "Mensalidades", icon: Wallet },
+  { to: "/portal/conta", label: "Minha conta", icon: Settings },
 ] as const;
 
 /** Cabeçalho do portal do aluno — login protegido: sidebar + conteúdo. */

@@ -26,6 +26,7 @@ import { Route as PortalTrocarSenhaRouteImport } from './routes/portal/trocar-se
 import { Route as PortalPdfRouteImport } from './routes/portal/pdf'
 import { Route as PortalMensalidadesRouteImport } from './routes/portal/mensalidades'
 import { Route as PortalDiscipuladoRouteImport } from './routes/portal/discipulado'
+import { Route as PortalContaRouteImport } from './routes/portal/conta'
 import { Route as PainelTrocarSenhaRouteImport } from './routes/painel/trocar-senha'
 import { Route as PainelRelatorioModuloRouteImport } from './routes/painel/relatorio-modulo'
 import { Route as PainelRelatorioRouteImport } from './routes/painel/relatorio'
@@ -146,6 +147,11 @@ const PortalMensalidadesRoute = PortalMensalidadesRouteImport.update({
 const PortalDiscipuladoRoute = PortalDiscipuladoRouteImport.update({
   id: '/discipulado',
   path: '/discipulado',
+  getParentRoute: () => PortalRouteRoute,
+} as any)
+const PortalContaRoute = PortalContaRouteImport.update({
+  id: '/conta',
+  path: '/conta',
   getParentRoute: () => PortalRouteRoute,
 } as any)
 const PainelTrocarSenhaRoute = PainelTrocarSenhaRouteImport.update({
@@ -357,6 +363,7 @@ export interface FileRoutesByFullPath {
   '/painel/relatorio': typeof PainelRelatorioRouteWithChildren
   '/painel/relatorio-modulo': typeof PainelRelatorioModuloRoute
   '/painel/trocar-senha': typeof PainelTrocarSenhaRoute
+  '/portal/conta': typeof PortalContaRoute
   '/portal/discipulado': typeof PortalDiscipuladoRoute
   '/portal/mensalidades': typeof PortalMensalidadesRoute
   '/portal/pdf': typeof PortalPdfRoute
@@ -410,6 +417,7 @@ export interface FileRoutesByTo {
   '/painel/relatorio': typeof PainelRelatorioRouteWithChildren
   '/painel/relatorio-modulo': typeof PainelRelatorioModuloRoute
   '/painel/trocar-senha': typeof PainelTrocarSenhaRoute
+  '/portal/conta': typeof PortalContaRoute
   '/portal/discipulado': typeof PortalDiscipuladoRoute
   '/portal/mensalidades': typeof PortalMensalidadesRoute
   '/portal/pdf': typeof PortalPdfRoute
@@ -466,6 +474,7 @@ export interface FileRoutesById {
   '/painel/relatorio': typeof PainelRelatorioRouteWithChildren
   '/painel/relatorio-modulo': typeof PainelRelatorioModuloRoute
   '/painel/trocar-senha': typeof PainelTrocarSenhaRoute
+  '/portal/conta': typeof PortalContaRoute
   '/portal/discipulado': typeof PortalDiscipuladoRoute
   '/portal/mensalidades': typeof PortalMensalidadesRoute
   '/portal/pdf': typeof PortalPdfRoute
@@ -523,6 +532,7 @@ export interface FileRouteTypes {
     | '/painel/relatorio'
     | '/painel/relatorio-modulo'
     | '/painel/trocar-senha'
+    | '/portal/conta'
     | '/portal/discipulado'
     | '/portal/mensalidades'
     | '/portal/pdf'
@@ -576,6 +586,7 @@ export interface FileRouteTypes {
     | '/painel/relatorio'
     | '/painel/relatorio-modulo'
     | '/painel/trocar-senha'
+    | '/portal/conta'
     | '/portal/discipulado'
     | '/portal/mensalidades'
     | '/portal/pdf'
@@ -631,6 +642,7 @@ export interface FileRouteTypes {
     | '/painel/relatorio'
     | '/painel/relatorio-modulo'
     | '/painel/trocar-senha'
+    | '/portal/conta'
     | '/portal/discipulado'
     | '/portal/mensalidades'
     | '/portal/pdf'
@@ -803,6 +815,13 @@ declare module '@tanstack/react-router' {
       path: '/discipulado'
       fullPath: '/portal/discipulado'
       preLoaderRoute: typeof PortalDiscipuladoRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
+    '/portal/conta': {
+      id: '/portal/conta'
+      path: '/conta'
+      fullPath: '/portal/conta'
+      preLoaderRoute: typeof PortalContaRouteImport
       parentRoute: typeof PortalRouteRoute
     }
     '/painel/trocar-senha': {
@@ -1122,6 +1141,7 @@ const PainelRouteRouteWithChildren = PainelRouteRoute._addFileChildren(
 )
 
 interface PortalRouteRouteChildren {
+  PortalContaRoute: typeof PortalContaRoute
   PortalDiscipuladoRoute: typeof PortalDiscipuladoRoute
   PortalMensalidadesRoute: typeof PortalMensalidadesRoute
   PortalPdfRoute: typeof PortalPdfRoute
@@ -1144,6 +1164,7 @@ interface PortalRouteRouteChildren {
 }
 
 const PortalRouteRouteChildren: PortalRouteRouteChildren = {
+  PortalContaRoute: PortalContaRoute,
   PortalDiscipuladoRoute: PortalDiscipuladoRoute,
   PortalMensalidadesRoute: PortalMensalidadesRoute,
   PortalPdfRoute: PortalPdfRoute,
