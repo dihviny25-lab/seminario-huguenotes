@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BookOpen, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -132,6 +132,17 @@ function EditBookDialog({
   const [author, setAuthor] = useState(book?.author ?? "");
   const [description, setDescription] = useState(book?.description ?? "");
 
+  // O diálogo fica montado o tempo todo — sem isso, o useState acima só pega o
+  // valor de `book` na primeira vez que abriu, e editar um livro diferente
+  // depois mostraria os dados do livro anterior.
+  useEffect(() => {
+    if (book) {
+      setTitle(book.title);
+      setAuthor(book.author ?? "");
+      setDescription(book.description ?? "");
+    }
+  }, [book]);
+
   const mutation = useMutation({
     mutationFn: () =>
       updateLibraryBookFn({
@@ -152,17 +163,7 @@ function EditBookDialog({
   });
 
   return (
-    <Dialog
-      open={book !== null}
-      onOpenChange={(open) => {
-        onOpenChange(open);
-        if (open && book) {
-          setTitle(book.title);
-          setAuthor(book.author ?? "");
-          setDescription(book.description ?? "");
-        }
-      }}
-    >
+    <Dialog open={book !== null} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Editar livro</DialogTitle>

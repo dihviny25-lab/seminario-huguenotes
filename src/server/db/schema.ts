@@ -23,6 +23,7 @@ export const teacherRole = pgEnum("teacher_role", ["admin", "teacher"]);
 export const chargeStatus = pgEnum("charge_status", ["pending", "paid", "canceled"]);
 export const authorRole = pgEnum("author_role", ["teacher", "student"]);
 export const videoSource = pgEnum("video_source", ["youtube", "upload"]);
+export const noteKind = pgEnum("note_kind", ["note", "question"]);
 
 export const teachers = pgTable("teachers", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -399,4 +400,24 @@ export const libraryBooks = pgTable("library_books", {
   uploadedById: uuid("uploaded_by_id").references(() => teachers.id, { onDelete: "set null" }),
   uploadedByName: text("uploaded_by_name").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Anotações pessoais do aluno numa disciplina — só ele vê e edita, nem professor tem acesso.
+// kind "question" pode ser transformada num tópico do fórum (forumThreadId marca a conversão).
+export const studentNotes = pgTable("student_notes", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  studentId: uuid("student_id")
+    .notNull()
+    .references(() => students.id, { onDelete: "cascade" }),
+  disciplineId: uuid("discipline_id")
+    .notNull()
+    .references(() => disciplines.id, { onDelete: "cascade" }),
+  kind: noteKind("kind").notNull().default("note"),
+  title: text("title"),
+  content: text("content").notNull(),
+  forumThreadId: uuid("forum_thread_id").references(() => forumThreads.id, {
+    onDelete: "set null",
+  }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

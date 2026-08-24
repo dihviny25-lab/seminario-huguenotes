@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BookOpen, Download, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -157,6 +157,16 @@ function EditMaterialDialog({
   const [title, setTitle] = useState(material?.title ?? "");
   const [description, setDescription] = useState(material?.description ?? "");
 
+  // O diálogo fica montado o tempo todo — sem isso, o useState acima só pega o
+  // valor de `material` na primeira vez que abriu, e editar um material
+  // diferente depois mostraria os dados do material anterior.
+  useEffect(() => {
+    if (material) {
+      setTitle(material.title);
+      setDescription(material.description ?? "");
+    }
+  }, [material]);
+
   const mutation = useMutation({
     mutationFn: () =>
       updateMaterialFn({
@@ -177,16 +187,7 @@ function EditMaterialDialog({
   });
 
   return (
-    <Dialog
-      open={material !== null}
-      onOpenChange={(open) => {
-        onOpenChange(open);
-        if (open && material) {
-          setTitle(material.title);
-          setDescription(material.description ?? "");
-        }
-      }}
-    >
+    <Dialog open={material !== null} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Editar material</DialogTitle>

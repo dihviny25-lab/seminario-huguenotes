@@ -7,6 +7,7 @@ import { DisciplineAssignmentsTab } from "@/pages/portal/discipline/DisciplineAs
 import { DisciplineExamsTab } from "@/pages/portal/discipline/DisciplineExamsTab";
 import { DisciplineGradesTab } from "@/pages/portal/discipline/DisciplineGradesTab";
 import { DisciplineMaterialsTab } from "@/pages/portal/discipline/DisciplineMaterialsTab";
+import { DisciplineNotesTab } from "@/pages/portal/discipline/DisciplineNotesTab";
 import { DisciplineVideosTab } from "@/pages/portal/discipline/DisciplineVideosTab";
 import { PortalForumThreadList } from "@/pages/portal/PortalForum";
 
@@ -35,6 +36,7 @@ export function PortalDisciplineDetail({ disciplineId }: { disciplineId: string 
           <TabsTrigger value="tarefas">Tarefas</TabsTrigger>
           <TabsTrigger value="provas">Provas</TabsTrigger>
           <TabsTrigger value="notas">Notas</TabsTrigger>
+          <TabsTrigger value="anotacoes">Anotações</TabsTrigger>
           <TabsTrigger value="forum">Fórum</TabsTrigger>
         </TabsList>
         <TabsContent value="aulas">
@@ -51,6 +53,9 @@ export function PortalDisciplineDetail({ disciplineId }: { disciplineId: string 
         </TabsContent>
         <TabsContent value="notas">
           <DisciplineGradesTab disciplineId={disciplineId} />
+        </TabsContent>
+        <TabsContent value="anotacoes">
+          <DisciplineNotesTab disciplineId={disciplineId} />
         </TabsContent>
         <TabsContent value="forum">
           <PortalForumThreadList disciplineId={disciplineId} />

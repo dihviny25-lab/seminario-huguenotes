@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft, Download, Pencil } from "lucide-react";
@@ -121,6 +121,14 @@ function EditAssignmentDialog({
   const [maxScore, setMaxScore] = useState(String(assignment.maxScore));
   const [weight, setWeight] = useState(String(assignment.weight));
   const [dueAt, setDueAt] = useState(assignment.dueAt ? assignment.dueAt.slice(0, 16) : "");
+
+  useEffect(() => {
+    setTitle(assignment.title);
+    setInstructions(assignment.instructions ?? "");
+    setMaxScore(String(assignment.maxScore));
+    setWeight(String(assignment.weight));
+    setDueAt(assignment.dueAt ? assignment.dueAt.slice(0, 16) : "");
+  }, [assignment]);
 
   const mutation = useMutation({
     mutationFn: () =>
