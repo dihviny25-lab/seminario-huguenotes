@@ -4,7 +4,40 @@ import { Calendar, Check, Copy } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getMyCalendarLinkFn, regenerateMyCalendarLinkFn } from "@/functions/calendarFeed";
+
+const PROVIDER_STEPS = [
+  {
+    id: "google",
+    label: "Google Calendar",
+    steps: [
+      "Abra o Google Calendar no computador (calendar.google.com).",
+      'No menu à esquerda, clique no "+" ao lado de "Outras agendas".',
+      'Escolha "Da URL".',
+      'Cole o link copiado acima e clique em "Adicionar agenda".',
+    ],
+    note: "No celular o Google Calendar não deixa adicionar por URL — faça pelo computador uma vez, que ela aparece sincronizada no app depois.",
+  },
+  {
+    id: "outlook",
+    label: "Outlook",
+    steps: [
+      "Abra o Outlook Calendar (outlook.com/calendar) ou o app do Outlook.",
+      'Clique em "Adicionar calendário" → "Assinar da web".',
+      'Cole o link, dê um nome (ex.: "Seminário Huguenotes") e confirme.',
+    ],
+  },
+  {
+    id: "apple",
+    label: "Apple Calendar",
+    steps: [
+      'No Mac: abra o app Calendário → menu "Arquivo" → "Nova Assinatura de Calendário".',
+      'No iPhone/iPad: Ajustes → Calendário → Contas → Adicionar Conta → "Outra" → "Adicionar Assinatura de Calendário".',
+      "Cole o link e confirme — pode deixar as opções padrão.",
+    ],
+  },
+];
 
 /** Link .ics pra assinar no Google Calendar/Outlook/Apple Calendar — aulas, provas e prazos de tarefa. */
 export function CalendarSyncCard() {
@@ -53,8 +86,8 @@ export function CalendarSyncCard() {
       <span className="min-w-0 flex-1">
         <span className="block font-medium text-foreground">Agenda pessoal</span>
         <span className="block text-sm text-muted-foreground">
-          Cole esse link no Google Calendar, Outlook ou Apple Calendar ("assinar calendário por
-          URL") pra ver aulas, provas e prazos de tarefa direto na sua agenda — atualiza sozinho.
+          Assine esse link no seu app de calendário pra ver aulas, provas e prazos de tarefa direto
+          na sua agenda — atualiza sozinho, sem precisar fazer nada de novo depois.
         </span>
 
         <div className="mt-3 flex items-center gap-2">
@@ -70,11 +103,38 @@ export function CalendarSyncCard() {
           </Button>
         </div>
 
+        <div className="mt-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+            Como assinar
+          </p>
+          <Tabs defaultValue="google" className="mt-2">
+            <TabsList>
+              {PROVIDER_STEPS.map((provider) => (
+                <TabsTrigger key={provider.id} value={provider.id}>
+                  {provider.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            {PROVIDER_STEPS.map((provider) => (
+              <TabsContent key={provider.id} value={provider.id}>
+                <ol className="list-decimal space-y-1.5 pl-4 text-sm text-muted-foreground">
+                  {provider.steps.map((step, index) => (
+                    <li key={index}>{step}</li>
+                  ))}
+                </ol>
+                {provider.note ? (
+                  <p className="mt-2 text-xs text-muted-foreground">{provider.note}</p>
+                ) : null}
+              </TabsContent>
+            ))}
+          </Tabs>
+        </div>
+
         <Button
           type="button"
           variant="ghost"
           size="sm"
-          className="mt-2 text-muted-foreground"
+          className="mt-3 text-muted-foreground"
           onClick={() => regenerateMutation.mutate()}
           disabled={regenerateMutation.isPending}
         >

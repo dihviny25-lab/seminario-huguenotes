@@ -1,13 +1,23 @@
 import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useFieldArray, useForm } from "react-hook-form";
 import { ArrowLeft, CheckCircle2, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
 import { PainelShell } from "@/components/painel/PainelShell";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -39,6 +49,7 @@ import {
 } from "@/components/ui/table";
 import {
   addExamQuestionFn,
+  deleteExamFn,
   deleteExamQuestionFn,
   getExamByIdFn,
   getExamResultsFn,
@@ -58,6 +69,7 @@ const statusLabel: Record<string, string> = {
 };
 
 export function ExamEditor({ examId }: { examId: string }) {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data: exam, isLoading } = useQuery({
     queryKey: examKey(examId),
@@ -65,6 +77,7 @@ export function ExamEditor({ examId }: { examId: string }) {
   });
   const [addQuestionOpen, setAddQuestionOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   function invalidate() {
     return queryClient.invalidateQueries({ queryKey: examKey(examId) });
@@ -79,6 +92,19 @@ export function ExamEditor({ examId }: { examId: string }) {
     },
     onError: (error) =>
       toast.error(error instanceof Error ? error.message : "Não foi possível remover."),
+  });
+
+  const deleteExamMutation = useMutation({
+    mutationFn: () => deleteExamFn({ data: { disciplineId: exam!.disciplineId, examId } }),
+    onSuccess: async () => {
+      toast.success("Prova apagada.");
+      await navigate({
+        to: "/painel/disciplinas/$disciplineId",
+        params: { disciplineId: exam!.disciplineId },
+      });
+    },
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Não foi possível apagar a prova."),
   });
 
   if (isLoading || !exam) {
@@ -111,10 +137,21 @@ export function ExamEditor({ examId }: { examId: string }) {
           <ArrowLeft className="size-4 shrink-0" aria-hidden />
           Voltar para a disciplina
         </Link>
-        <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
-          <Pencil className="size-4" aria-hidden />
-          Editar prova ({exam.weight === 1 ? "peso 1" : `peso ${exam.weight}`})
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+            <Pencil className="size-4" aria-hidden />
+            Editar prova ({exam.weight === 1 ? "peso 1" : `peso ${exam.weight}`})
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-destructive hover:text-destructive"
+            onClick={() => setDeleteOpen(true)}
+          >
+            <Trash2 className="size-4" aria-hidden />
+            Excluir prova
+          </Button>
+        </div>
       </div>
 
       <div className="flex items-center justify-between">
@@ -208,6 +245,27 @@ export function ExamEditor({ examId }: { examId: string }) {
         onOpenChange={setEditOpen}
         onUpdated={invalidate}
       />
+
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir "{exam.title}"?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Isso apaga a prova, as perguntas e qualquer tentativa/nota que os alunos já tenham
+              feito nela. Não dá pra desfazer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteExamMutation.mutate()}
+              disabled={deleteExamMutation.isPending}
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PainelShell>
   );
 }

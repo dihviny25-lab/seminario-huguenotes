@@ -1,10 +1,20 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
-import { ArrowLeft, Download, Pencil } from "lucide-react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { ArrowLeft, Download, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { PainelShell } from "@/components/painel/PainelShell";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,6 +29,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  deleteAssignmentFn,
   getAssignmentByIdFn,
   getAssignmentSubmissionsFn,
   gradeSubmissionFn,
@@ -35,11 +46,27 @@ function submissionsKey(assignmentId: string) {
 }
 
 export function AssignmentEditor({ assignmentId }: { assignmentId: string }) {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const { data: assignment, isLoading } = useQuery({
     queryKey: assignmentKey(assignmentId),
     queryFn: () => getAssignmentByIdFn({ data: { assignmentId } }),
+  });
+
+  const deleteAssignmentMutation = useMutation({
+    mutationFn: () =>
+      deleteAssignmentFn({ data: { disciplineId: assignment!.disciplineId, assignmentId } }),
+    onSuccess: async () => {
+      toast.success("Tarefa apagada.");
+      await navigate({
+        to: "/painel/disciplinas/$disciplineId",
+        params: { disciplineId: assignment!.disciplineId },
+      });
+    },
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Não foi possível apagar a tarefa."),
   });
   const { data: submissions, isLoading: loadingSubmissions } = useQuery({
     queryKey: submissionsKey(assignmentId),
@@ -69,10 +96,21 @@ export function AssignmentEditor({ assignmentId }: { assignmentId: string }) {
           <ArrowLeft className="size-4 shrink-0" aria-hidden />
           Voltar para a disciplina
         </Link>
-        <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
-          <Pencil className="size-4" aria-hidden />
-          Editar tarefa (peso {assignment.weight})
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+            <Pencil className="size-4" aria-hidden />
+            Editar tarefa (peso {assignment.weight})
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-destructive hover:text-destructive"
+            onClick={() => setDeleteOpen(true)}
+          >
+            <Trash2 className="size-4" aria-hidden />
+            Excluir tarefa
+          </Button>
+        </div>
       </div>
 
       <h2 className="font-display text-lg font-semibold text-foreground">Entregas</h2>
@@ -101,6 +139,27 @@ export function AssignmentEditor({ assignmentId }: { assignmentId: string }) {
         onOpenChange={setEditOpen}
         onUpdated={() => queryClient.invalidateQueries({ queryKey: assignmentKey(assignmentId) })}
       />
+
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir "{assignment.title}"?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Isso apaga a tarefa, as entregas dos alunos e qualquer nota já lançada nela. Não dá
+              pra desfazer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteAssignmentMutation.mutate()}
+              disabled={deleteAssignmentMutation.isPending}
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PainelShell>
   );
 }
