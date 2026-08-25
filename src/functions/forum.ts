@@ -6,7 +6,7 @@ import { logAudit } from "@/server/audit";
 import { requireAnyIdentity, requireOwnDiscipline } from "@/server/auth/guard";
 import { sendPushToOwner } from "@/server/push";
 import { db } from "@/server/db/client";
-import { forumPosts, forumThreads } from "@/server/db/schema";
+import { disciplines, forumPosts, forumThreads } from "@/server/db/schema";
 
 const disciplineIdSchema = z.object({ disciplineId: z.string().uuid() });
 
@@ -18,6 +18,73 @@ export type ForumThreadSummary = {
   createdAt: string;
   postCount: number;
 };
+
+export type RecentForumThread = {
+  id: string;
+  disciplineId: string;
+  disciplineName: string;
+  title: string;
+  authorName: string;
+  authorRole: "teacher" | "student";
+  lastActivityAt: string;
+  postCount: number;
+};
+
+/**
+ * Últimos tópicos com atividade, de qualquer disciplina — pro dashboard do
+ * portal mostrar o que está "em aberto" sem o aluno precisar entrar
+ * disciplina por disciplina procurando.
+ */
+export const listRecentForumThreadsFn = createServerFn({ method: "GET" }).handler(
+  async (): Promise<Array<RecentForumThread>> => {
+    await requireAnyIdentity();
+
+    const threadRows = await db
+      .select({
+        id: forumThreads.id,
+        disciplineId: forumThreads.disciplineId,
+        disciplineName: disciplines.discipline,
+        title: forumThreads.title,
+        authorName: forumThreads.authorName,
+        authorRole: forumThreads.authorRole,
+        createdAt: forumThreads.createdAt,
+      })
+      .from(forumThreads)
+      .innerJoin(disciplines, eq(disciplines.id, forumThreads.disciplineId))
+      .orderBy(desc(forumThreads.createdAt))
+      .limit(50);
+
+    const threadIds = threadRows.map((t) => t.id);
+    const postRows =
+      threadIds.length === 0
+        ? []
+        : await db
+            .select({ threadId: forumPosts.threadId, createdAt: forumPosts.createdAt })
+            .from(forumPosts)
+            .where(inArray(forumPosts.threadId, threadIds));
+
+    return threadRows
+      .map((thread) => {
+        const posts = postRows.filter((p) => p.threadId === thread.id);
+        const lastActivityAt = posts.reduce(
+          (max, p) => (p.createdAt > max ? p.createdAt : max),
+          thread.createdAt,
+        );
+        return {
+          id: thread.id,
+          disciplineId: thread.disciplineId,
+          disciplineName: thread.disciplineName,
+          title: thread.title,
+          authorName: thread.authorName,
+          authorRole: thread.authorRole,
+          lastActivityAt: lastActivityAt.toISOString(),
+          postCount: posts.length,
+        };
+      })
+      .sort((a, b) => (a.lastActivityAt < b.lastActivityAt ? 1 : -1))
+      .slice(0, 8);
+  },
+);
 
 /** Tópicos de uma disciplina — qualquer professor ou aluno logado pode ver. */
 export const listDisciplineThreadsFn = createServerFn({ method: "GET" })

@@ -26,6 +26,7 @@ import { Route as SemestreSemesterRouteImport } from './routes/semestre/$semeste
 import { Route as PortalVideosRouteImport } from './routes/portal/videos'
 import { Route as PortalTrocarSenhaRouteImport } from './routes/portal/trocar-senha'
 import { Route as PortalPdfRouteImport } from './routes/portal/pdf'
+import { Route as PortalNotasRouteImport } from './routes/portal/notas'
 import { Route as PortalMensalidadesRouteImport } from './routes/portal/mensalidades'
 import { Route as PortalDiscipuladoRouteImport } from './routes/portal/discipulado'
 import { Route as PortalContaRouteImport } from './routes/portal/conta'
@@ -149,6 +150,11 @@ const PortalTrocarSenhaRoute = PortalTrocarSenhaRouteImport.update({
 const PortalPdfRoute = PortalPdfRouteImport.update({
   id: '/pdf',
   path: '/pdf',
+  getParentRoute: () => PortalRouteRoute,
+} as any)
+const PortalNotasRoute = PortalNotasRouteImport.update({
+  id: '/notas',
+  path: '/notas',
   getParentRoute: () => PortalRouteRoute,
 } as any)
 const PortalMensalidadesRoute = PortalMensalidadesRouteImport.update({
@@ -380,6 +386,7 @@ export interface FileRoutesByFullPath {
   '/portal/conta': typeof PortalContaRoute
   '/portal/discipulado': typeof PortalDiscipuladoRoute
   '/portal/mensalidades': typeof PortalMensalidadesRoute
+  '/portal/notas': typeof PortalNotasRoute
   '/portal/pdf': typeof PortalPdfRoute
   '/portal/trocar-senha': typeof PortalTrocarSenhaRoute
   '/portal/videos': typeof PortalVideosRoute
@@ -436,6 +443,7 @@ export interface FileRoutesByTo {
   '/portal/conta': typeof PortalContaRoute
   '/portal/discipulado': typeof PortalDiscipuladoRoute
   '/portal/mensalidades': typeof PortalMensalidadesRoute
+  '/portal/notas': typeof PortalNotasRoute
   '/portal/pdf': typeof PortalPdfRoute
   '/portal/trocar-senha': typeof PortalTrocarSenhaRoute
   '/portal/videos': typeof PortalVideosRoute
@@ -495,6 +503,7 @@ export interface FileRoutesById {
   '/portal/conta': typeof PortalContaRoute
   '/portal/discipulado': typeof PortalDiscipuladoRoute
   '/portal/mensalidades': typeof PortalMensalidadesRoute
+  '/portal/notas': typeof PortalNotasRoute
   '/portal/pdf': typeof PortalPdfRoute
   '/portal/trocar-senha': typeof PortalTrocarSenhaRoute
   '/portal/videos': typeof PortalVideosRoute
@@ -555,6 +564,7 @@ export interface FileRouteTypes {
     | '/portal/conta'
     | '/portal/discipulado'
     | '/portal/mensalidades'
+    | '/portal/notas'
     | '/portal/pdf'
     | '/portal/trocar-senha'
     | '/portal/videos'
@@ -611,6 +621,7 @@ export interface FileRouteTypes {
     | '/portal/conta'
     | '/portal/discipulado'
     | '/portal/mensalidades'
+    | '/portal/notas'
     | '/portal/pdf'
     | '/portal/trocar-senha'
     | '/portal/videos'
@@ -669,6 +680,7 @@ export interface FileRouteTypes {
     | '/portal/conta'
     | '/portal/discipulado'
     | '/portal/mensalidades'
+    | '/portal/notas'
     | '/portal/pdf'
     | '/portal/trocar-senha'
     | '/portal/videos'
@@ -841,6 +853,13 @@ declare module '@tanstack/react-router' {
       path: '/pdf'
       fullPath: '/portal/pdf'
       preLoaderRoute: typeof PortalPdfRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
+    '/portal/notas': {
+      id: '/portal/notas'
+      path: '/notas'
+      fullPath: '/portal/notas'
+      preLoaderRoute: typeof PortalNotasRouteImport
       parentRoute: typeof PortalRouteRoute
     }
     '/portal/mensalidades': {
@@ -1184,6 +1203,7 @@ interface PortalRouteRouteChildren {
   PortalContaRoute: typeof PortalContaRoute
   PortalDiscipuladoRoute: typeof PortalDiscipuladoRoute
   PortalMensalidadesRoute: typeof PortalMensalidadesRoute
+  PortalNotasRoute: typeof PortalNotasRoute
   PortalPdfRoute: typeof PortalPdfRoute
   PortalTrocarSenhaRoute: typeof PortalTrocarSenhaRoute
   PortalVideosRoute: typeof PortalVideosRoute
@@ -1207,6 +1227,7 @@ const PortalRouteRouteChildren: PortalRouteRouteChildren = {
   PortalContaRoute: PortalContaRoute,
   PortalDiscipuladoRoute: PortalDiscipuladoRoute,
   PortalMensalidadesRoute: PortalMensalidadesRoute,
+  PortalNotasRoute: PortalNotasRoute,
   PortalPdfRoute: PortalPdfRoute,
   PortalTrocarSenhaRoute: PortalTrocarSenhaRoute,
   PortalVideosRoute: PortalVideosRoute,

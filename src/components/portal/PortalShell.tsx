@@ -7,6 +7,7 @@ import {
   FileCheck2,
   GraduationCap,
   HeartHandshake,
+  Home,
   Library,
   ListChecks,
   LogOut,
@@ -42,8 +43,9 @@ interface PortalShellProps {
 }
 
 const portalNavItems = [
+  { to: "/portal", label: "Início", icon: Home },
   { to: "/portal/disciplinas", label: "Minhas disciplinas", icon: GraduationCap },
-  { to: "/portal", label: "Minhas notas", icon: ClipboardList },
+  { to: "/portal/notas", label: "Minhas notas", icon: ClipboardList },
   { to: "/portal/provas", label: "Provas", icon: FileCheck2 },
   { to: "/portal/tarefas", label: "Tarefas", icon: ListChecks },
   { to: "/portal/videos", label: "Vídeo-aulas", icon: Video },
