@@ -505,6 +505,7 @@ export const revertChargeToPendingFn = createServerFn({ method: "POST" })
 
 export type OverdueCharge = {
   chargeId: string;
+  studentId: string;
   studentName: string;
   description: string;
   amount: number;
@@ -582,6 +583,7 @@ export const getFinancialSummaryFn = createServerFn({ method: "GET" }).handler(
           );
           overdueList.push({
             chargeId: charge.id,
+            studentId: charge.studentId,
             studentName,
             description: charge.description,
             amount,

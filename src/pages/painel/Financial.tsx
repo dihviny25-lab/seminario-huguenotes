@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { AlertTriangle, Ban, Clock, Printer, Wallet } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, XAxis } from "recharts";
 
@@ -130,7 +131,8 @@ export function Financial() {
                 Alunos inadimplentes
               </h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Cobranças vencidas e ainda não pagas — busque o aluno em "Pagamentos" pra gerenciar.
+                Cobranças vencidas e ainda não pagas — clique num aluno pra gerenciar as cobranças
+                dele.
               </p>
             </div>
             <Table>
@@ -140,12 +142,13 @@ export function Financial() {
                   <TableHead>Descrição</TableHead>
                   <TableHead className="text-center">Valor</TableHead>
                   <TableHead className="text-center">Dias em atraso</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {summary.overdueList.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="py-6 text-center text-muted-foreground">
+                    <TableCell colSpan={5} className="py-6 text-center text-muted-foreground">
                       Nenhuma cobrança em atraso.
                     </TableCell>
                   </TableRow>
@@ -161,6 +164,13 @@ export function Financial() {
                       </TableCell>
                       <TableCell className="text-center text-destructive">
                         {item.daysOverdue}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="outline" size="sm" asChild>
+                          <Link to="/painel/pagamentos" search={{ studentId: item.studentId }}>
+                            Gerenciar
+                          </Link>
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))

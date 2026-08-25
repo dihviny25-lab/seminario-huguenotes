@@ -84,9 +84,9 @@ const paymentMethodLabel: Record<NonNullable<Charge["paymentMethod"]>, string> =
 };
 
 /** Cobranças de mensalidade/taxas por aluno — cria, gera em lote e confirma pagamentos. */
-export function Payments() {
+export function Payments({ initialStudentId }: { initialStudentId?: string } = {}) {
   const [query, setQuery] = useState("");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(initialStudentId ?? null);
   const [createOpen, setCreateOpen] = useState(false);
   const [generateOpen, setGenerateOpen] = useState(false);
   const [editingCharge, setEditingCharge] = useState<Charge | null>(null);
