@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Settings2 } from "lucide-react";
 
 import { PortalShell } from "@/components/portal/PortalShell";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +15,7 @@ import {
 } from "@/components/ui/table";
 import { listMyChargesFn, type Charge } from "@/functions/payments";
 import { PaymentMethodsDialog } from "@/pages/portal/PaymentMethodsDialog";
+import { SelfScheduleChargesDialog } from "@/pages/portal/SelfScheduleChargesDialog";
 
 function formatAmount(amount: string): string {
   return Number(amount).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -37,12 +39,20 @@ export function PortalPayments() {
     queryFn: () => listMyChargesFn(),
   });
   const [selectedCharge, setSelectedCharge] = useState<Charge | null>(null);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
 
   return (
     <PortalShell
       title="Mensalidades"
       description="Acompanhe e pague suas mensalidades e taxas do seminário."
     >
+      <div className="mb-4 flex justify-end">
+        <Button variant="outline" onClick={() => setScheduleOpen(true)}>
+          <Settings2 className="size-4" aria-hidden />
+          Configurar minhas mensalidades
+        </Button>
+      </div>
+
       <div className="overflow-hidden rounded-md border border-border/70 bg-card/70 shadow-soft">
         <Table>
           <TableHeader>
@@ -128,6 +138,7 @@ export function PortalPayments() {
         charge={selectedCharge}
         onOpenChange={(open) => !open && setSelectedCharge(null)}
       />
+      <SelfScheduleChargesDialog open={scheduleOpen} onOpenChange={setScheduleOpen} />
     </PortalShell>
   );
 }

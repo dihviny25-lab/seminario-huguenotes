@@ -7,7 +7,7 @@ import { getPaymentModality, PUNCTUALITY_DISCOUNT_PERCENT } from "@/lib/paymentM
 import { logAudit } from "@/server/audit";
 import { requireAdminId, requireStudentId, requireTeacherId } from "@/server/auth/guard";
 import { db } from "@/server/db/client";
-import { charges, students } from "@/server/db/schema";
+import { charges, disciplines, students } from "@/server/db/schema";
 import { createPreference } from "@/server/payments/mercadopago";
 
 export type Charge = {
@@ -240,6 +240,88 @@ export const generateMonthlyChargesFn = createServerFn({ method: "POST" })
     await logAudit(
       "financeiro.mensalidades_gerar",
       `Gerou ${toInsert.length} mensalidade(s) de ${modality.name} para ${student?.name ?? data.studentId}.`,
+    );
+    return { created: toInsert.length, skippedPeriods };
+  });
+
+const selfScheduleSchema = z.object({
+  modalityId: z.string().min(1, "Escolha a modalidade."),
+  dueDay: z.number().int().min(1).max(31),
+});
+
+/**
+ * O próprio aluno escolhe o dia de vencimento e a modalidade — o sistema
+ * gera sozinho todas as mensalidades restantes, do mês atual até o fim do
+ * curso (maior data de término entre as disciplinas do currículo). Meses já
+ * cobrados são pulados, então dá pra rodar de novo sem duplicar.
+ */
+export const selfScheduleMyChargesFn = createServerFn({ method: "POST" })
+  .validator(selfScheduleSchema)
+  .handler(async ({ data }): Promise<GenerateMonthlyChargesResult> => {
+    const studentId = await requireStudentId();
+
+    const modality = getPaymentModality(data.modalityId);
+    if (!modality) {
+      throw new Error("Modalidade inválida.");
+    }
+
+    const disciplineRows = await db.select({ endDate: disciplines.endDate }).from(disciplines);
+    const courseEndDate = disciplineRows
+      .map((d) => d.endDate)
+      .filter((d): d is string => d !== null)
+      .sort()
+      .at(-1);
+    if (!courseEndDate) {
+      throw new Error(
+        "Não foi possível calcular o fim do curso — nenhuma disciplina tem data de término definida.",
+      );
+    }
+
+    const now = new Date();
+    const startPeriod = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const [endYear, endMonth] = courseEndDate.split("-").map(Number);
+    const monthsUntilEnd =
+      (endYear - now.getFullYear()) * 12 + (endMonth - (now.getMonth() + 1)) + 1;
+    if (monthsUntilEnd < 1) {
+      throw new Error("O curso já terminou — não há mensalidades futuras pra gerar.");
+    }
+
+    const series = computeMonthlySeries(startPeriod, Math.min(monthsUntilEnd, 36), data.dueDay);
+
+    const existing = await db
+      .select({ period: charges.period })
+      .from(charges)
+      .where(eq(charges.studentId, studentId));
+    const existingPeriods = new Set(
+      existing.map((c) => c.period).filter((p): p is string => p !== null),
+    );
+
+    const skippedPeriods: Array<string> = [];
+    const toInsert: Array<typeof charges.$inferInsert> = [];
+    for (const { period, dueDate } of series) {
+      if (existingPeriods.has(period)) {
+        skippedPeriods.push(period);
+        continue;
+      }
+      toInsert.push({
+        studentId,
+        description: `Mensalidade — ${formatPeriodLabel(period)}`,
+        modality: modality.name,
+        fullAmount: String(modality.fullValue),
+        discountPercent: String(PUNCTUALITY_DISCOUNT_PERCENT),
+        dueDate,
+        period,
+        createdById: null,
+      });
+    }
+
+    if (toInsert.length > 0) {
+      await db.insert(charges).values(toInsert);
+    }
+
+    await logAudit(
+      "financeiro.mensalidades_autoconfigurar",
+      `Configurou vencimento todo dia ${data.dueDay} e gerou ${toInsert.length} mensalidade(s) de ${modality.name} até o fim do curso.`,
     );
     return { created: toInsert.length, skippedPeriods };
   });

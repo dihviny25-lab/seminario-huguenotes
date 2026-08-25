@@ -6,6 +6,7 @@ import { getPublicDisciplinesFn } from "@/functions/schedule";
 import { DisciplineAssignmentsTab } from "@/pages/portal/discipline/DisciplineAssignmentsTab";
 import { DisciplineExamsTab } from "@/pages/portal/discipline/DisciplineExamsTab";
 import { DisciplineGradesTab } from "@/pages/portal/discipline/DisciplineGradesTab";
+import { DisciplineHelpDialog } from "@/pages/portal/discipline/DisciplineHelpDialog";
 import { DisciplineMaterialsTab } from "@/pages/portal/discipline/DisciplineMaterialsTab";
 import { DisciplineNotesTab } from "@/pages/portal/discipline/DisciplineNotesTab";
 import { DisciplineVideosTab } from "@/pages/portal/discipline/DisciplineVideosTab";
@@ -30,15 +31,18 @@ export function PortalDisciplineDetail({ disciplineId }: { disciplineId: string 
       }
     >
       <Tabs defaultValue="aulas">
-        <TabsList>
-          <TabsTrigger value="aulas">Aulas</TabsTrigger>
-          <TabsTrigger value="apostila">Apostila</TabsTrigger>
-          <TabsTrigger value="tarefas">Tarefas</TabsTrigger>
-          <TabsTrigger value="provas">Provas</TabsTrigger>
-          <TabsTrigger value="notas">Notas</TabsTrigger>
-          <TabsTrigger value="anotacoes">Anotações</TabsTrigger>
-          <TabsTrigger value="forum">Fórum</TabsTrigger>
-        </TabsList>
+        <div className="flex items-center justify-between gap-3">
+          <TabsList>
+            <TabsTrigger value="aulas">Aulas</TabsTrigger>
+            <TabsTrigger value="apostila">Apostila</TabsTrigger>
+            <TabsTrigger value="tarefas">Tarefas</TabsTrigger>
+            <TabsTrigger value="provas">Provas</TabsTrigger>
+            <TabsTrigger value="notas">Notas</TabsTrigger>
+            <TabsTrigger value="anotacoes">Anotações</TabsTrigger>
+            <TabsTrigger value="forum">Fórum</TabsTrigger>
+          </TabsList>
+          <DisciplineHelpDialog />
+        </div>
         <TabsContent value="aulas">
           <DisciplineVideosTab disciplineId={disciplineId} />
         </TabsContent>

@@ -25,6 +25,7 @@ export const authorRole = pgEnum("author_role", ["teacher", "student"]);
 export const videoSource = pgEnum("video_source", ["youtube", "upload"]);
 export const noteKind = pgEnum("note_kind", ["note", "question"]);
 export const auditActorType = pgEnum("audit_actor_type", ["teacher", "student"]);
+export const pushOwnerType = pgEnum("push_owner_type", ["teacher", "student"]);
 
 export const teachers = pgTable("teachers", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -66,6 +67,9 @@ export const students = pgTable("students", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
   email: text("email"),
+  // Informações pessoais básicas — o próprio aluno preenche em "Minha conta".
+  phone: text("phone"),
+  birthDate: date("birth_date"),
   active: boolean("active").notNull().default(true),
   // Nulo = aluno sem login no portal ainda (precisa que um admin defina a senha).
   passwordHash: text("password_hash"),
@@ -421,6 +425,20 @@ export const studentNotes = pgTable("student_notes", {
   }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Inscrição de push de UM dispositivo/navegador — o mesmo professor ou aluno
+// pode ter várias (celular, notebook…), por isso não há um dono único por
+// endpoint, e endpoint é a chave de deduplicação (é único por instalação do
+// navegador/PWA).
+export const pushSubscriptions = pgTable("push_subscriptions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  ownerType: pushOwnerType("owner_type").notNull(),
+  ownerId: uuid("owner_id").notNull(),
+  endpoint: text("endpoint").notNull().unique(),
+  p256dhKey: text("p256dh_key").notNull(),
+  authKey: text("auth_key").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 /**

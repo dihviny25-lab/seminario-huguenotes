@@ -1,11 +1,15 @@
 import { createServerFn } from "@tanstack/react-start";
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNotNull, lte } from "drizzle-orm";
 import { z } from "zod";
 
 import { logAudit } from "@/server/audit";
 import { requireAnyLogin, requireOwnDiscipline } from "@/server/auth/guard";
 import { db } from "@/server/db/client";
-import { readingMaterials } from "@/server/db/schema";
+import { disciplines, readingMaterials } from "@/server/db/schema";
+
+function todayIso(): string {
+  return new Date().toISOString().slice(0, 10);
+}
 
 export type ReadingMaterial = {
   id: string;
@@ -107,22 +111,52 @@ export const deleteMaterialFn = createServerFn({ method: "POST" })
     );
   });
 
-/** Todos os materiais do currículo, pra biblioteca do portal do aluno. */
+function selectMaterialColumns() {
+  return {
+    id: readingMaterials.id,
+    disciplineId: readingMaterials.disciplineId,
+    title: readingMaterials.title,
+    description: readingMaterials.description,
+    fileUrl: readingMaterials.fileUrl,
+    fileName: readingMaterials.fileName,
+    sequence: readingMaterials.sequence,
+  };
+}
+
+/**
+ * Todos os materiais do currículo, pra biblioteca do portal do aluno — só das
+ * disciplinas cuja aula já começou (data de início definida e já passada).
+ */
 export const listAllReadingMaterialsFn = createServerFn({ method: "GET" }).handler(
   async (): Promise<Array<ReadingMaterial>> => {
     await requireAnyLogin();
-    return db.select().from(readingMaterials).orderBy(asc(readingMaterials.sequence));
+    return db
+      .select(selectMaterialColumns())
+      .from(readingMaterials)
+      .innerJoin(disciplines, eq(disciplines.id, readingMaterials.disciplineId))
+      .where(and(isNotNull(disciplines.startDate), lte(disciplines.startDate, todayIso())))
+      .orderBy(asc(readingMaterials.sequence));
   },
 );
 
-/** Materiais de UMA disciplina — pra página do curso no portal (qualquer aluno/professor). */
+/**
+ * Materiais de UMA disciplina — pra página do curso no portal (qualquer
+ * aluno/professor). Some vazio se a disciplina ainda não começou.
+ */
 export const listDisciplineMaterialsFn = createServerFn({ method: "GET" })
   .validator(disciplineIdSchema)
   .handler(async ({ data }): Promise<Array<ReadingMaterial>> => {
     await requireAnyLogin();
     return db
-      .select()
+      .select(selectMaterialColumns())
       .from(readingMaterials)
-      .where(eq(readingMaterials.disciplineId, data.disciplineId))
+      .innerJoin(disciplines, eq(disciplines.id, readingMaterials.disciplineId))
+      .where(
+        and(
+          eq(readingMaterials.disciplineId, data.disciplineId),
+          isNotNull(disciplines.startDate),
+          lte(disciplines.startDate, todayIso()),
+        ),
+      )
       .orderBy(asc(readingMaterials.sequence));
   });

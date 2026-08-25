@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { BookOpen, GraduationCap, Users } from "lucide-react";
 
+import { NotificationToggle } from "@/components/NotificationToggle";
 import { PainelShell } from "@/components/painel/PainelShell";
 import { Skeleton } from "@/components/ui/skeleton";
 import { listMyDisciplinesFn } from "@/functions/disciplines";
@@ -33,6 +34,10 @@ export function PainelHome() {
       title="Painel do professor"
       description="Área interna para lançar notas, faltas e administrar contas de acesso."
     >
+      <div className="mb-4">
+        <NotificationToggle />
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-2">
         {shortcuts.map((item) => (
           <Link

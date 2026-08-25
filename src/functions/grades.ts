@@ -6,6 +6,7 @@ import { logAudit } from "@/server/audit";
 import { requireOwnDiscipline } from "@/server/auth/guard";
 import { db } from "@/server/db/client";
 import { assessments, grades, students } from "@/server/db/schema";
+import { sendPushToOwner } from "@/server/push";
 
 const disciplineIdSchema = z.object({ disciplineId: z.string().uuid() });
 
@@ -135,4 +136,9 @@ export const setGradeFn = createServerFn({ method: "POST" })
       "nota.lancar",
       `Lançou nota ${data.score} de ${row?.studentName ?? "aluno"} em "${row?.assessmentTitle ?? "avaliação"}".`,
     );
+    await sendPushToOwner("student", data.studentId, {
+      title: "Nota lançada",
+      body: `Você tirou ${data.score} em "${row?.assessmentTitle ?? "uma avaliação"}".`,
+      url: "/portal",
+    });
   });

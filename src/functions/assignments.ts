@@ -12,6 +12,7 @@ import {
   grades,
   students,
 } from "@/server/db/schema";
+import { sendPushToOwner } from "@/server/push";
 
 const disciplineIdSchema = z.object({ disciplineId: z.string().uuid() });
 const assignmentIdSchema = z.object({
@@ -309,4 +310,9 @@ export const gradeSubmissionFn = createServerFn({ method: "POST" })
       "tarefa.corrigir",
       `Corrigiu a entrega de ${student?.name ?? "aluno"} em "${assignment.title}" (nota ${data.score}).`,
     );
+    await sendPushToOwner("student", submission.studentId, {
+      title: "Nota lançada",
+      body: `Sua tarefa "${assignment.title}" foi corrigida — nota ${data.score}.`,
+      url: "/portal",
+    });
   });

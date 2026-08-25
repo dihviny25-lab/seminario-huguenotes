@@ -54,6 +54,8 @@ export const getCurrentStudentFn = createServerFn({ method: "GET" }).handler(asy
       id: students.id,
       name: students.name,
       email: students.email,
+      phone: students.phone,
+      birthDate: students.birthDate,
       mustChangePassword: students.mustChangePassword,
     })
     .from(students)
@@ -72,6 +74,22 @@ export const requireStudentFn = createServerFn({ method: "GET" }).handler(async 
     .limit(1);
   return { mustChangePassword: student?.mustChangePassword ?? false };
 });
+
+const updateProfileSchema = z.object({
+  phone: z.string().trim().optional(),
+  birthDate: z.string().trim().optional(), // ISO "YYYY-MM-DD", de <input type="date">
+});
+
+/** O próprio aluno preenche/edita telefone e data de nascimento. */
+export const updateMyStudentProfileFn = createServerFn({ method: "POST" })
+  .validator(updateProfileSchema)
+  .handler(async ({ data }) => {
+    const studentId = await requireStudentId();
+    await db
+      .update(students)
+      .set({ phone: data.phone || null, birthDate: data.birthDate || null })
+      .where(eq(students.id, studentId));
+  });
 
 const changePasswordSchema = z.object({
   currentPassword: z.string().min(1, "Informe a senha atual."),

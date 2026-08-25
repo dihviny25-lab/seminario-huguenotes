@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { logAudit } from "@/server/audit";
 import { requireAnyIdentity, requireOwnDiscipline } from "@/server/auth/guard";
+import { sendPushToOwner } from "@/server/push";
 import { db } from "@/server/db/client";
 import { forumPosts, forumThreads } from "@/server/db/schema";
 
@@ -149,6 +150,18 @@ export const replyToThreadFn = createServerFn({ method: "POST" })
   .validator(replySchema)
   .handler(async ({ data }) => {
     const identity = await requireAnyIdentity();
+
+    // Pega quem já participou ANTES de inserir a resposta nova, pra poder
+    // avisar todo mundo menos quem acabou de responder.
+    const previousPosts = await db
+      .select({
+        authorRole: forumPosts.authorRole,
+        authorTeacherId: forumPosts.authorTeacherId,
+        authorStudentId: forumPosts.authorStudentId,
+      })
+      .from(forumPosts)
+      .where(eq(forumPosts.threadId, data.threadId));
+
     await db.insert(forumPosts).values({
       threadId: data.threadId,
       authorRole: identity.role,
@@ -165,6 +178,23 @@ export const replyToThreadFn = createServerFn({ method: "POST" })
     await logAudit(
       "forum.responder",
       `Respondeu no tópico "${thread?.title ?? data.threadId}" do fórum.`,
+    );
+
+    const participants = new Map<string, { type: "teacher" | "student"; id: string }>();
+    for (const post of previousPosts) {
+      const id = post.authorRole === "teacher" ? post.authorTeacherId : post.authorStudentId;
+      if (!id) continue;
+      if (post.authorRole === identity.role && id === identity.id) continue; // não notifica quem respondeu
+      participants.set(`${post.authorRole}:${id}`, { type: post.authorRole, id });
+    }
+    await Promise.all(
+      [...participants.values()].map((participant) =>
+        sendPushToOwner(participant.type, participant.id, {
+          title: `Nova resposta: ${thread?.title ?? "Fórum"}`,
+          body: `${identity.name}: ${data.content.slice(0, 120)}`,
+          url: participant.type === "teacher" ? "/painel/forum" : "/portal/forum",
+        }),
+      ),
     );
   });
 
