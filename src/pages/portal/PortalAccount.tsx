@@ -5,8 +5,12 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
+import { CheckCircle2 } from "lucide-react";
+
 import { NotificationToggle } from "@/components/NotificationToggle";
+import { CalendarSyncCard } from "@/components/portal/CalendarSyncCard";
 import { PortalShell } from "@/components/portal/PortalShell";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -20,6 +24,7 @@ import { Input } from "@/components/ui/input";
 import {
   changeMyStudentPasswordFn,
   getCurrentStudentFn,
+  requestEmailVerificationFn,
   updateMyStudentProfileFn,
 } from "@/functions/studentAuth";
 
@@ -70,6 +75,13 @@ export function PortalAccount() {
       toast.error(error instanceof Error ? error.message : "Não foi possível salvar."),
   });
 
+  const verifyEmailMutation = useMutation({
+    mutationFn: () => requestEmailVerificationFn(),
+    onSuccess: (result) => toast.success(result.message),
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Não foi possível enviar o e-mail."),
+  });
+
   const passwordForm = useForm<z.infer<typeof passwordSchema>>({
     resolver: zodResolver(passwordSchema),
     defaultValues: { currentPassword: "", newPassword: "", confirm: "" },
@@ -99,6 +111,39 @@ export function PortalAccount() {
         <p className="mt-1 text-sm text-muted-foreground">
           Ajude a secretaria a manter seu cadastro em dia.
         </p>
+
+        {student?.email ? (
+          <div className="mt-4 flex items-center justify-between gap-3 rounded-md border border-border/70 bg-muted/30 px-3 py-2.5">
+            <span className="min-w-0">
+              <span className="block truncate text-sm text-foreground">{student.email}</span>
+              {student.emailVerified ? (
+                <span className="mt-0.5 flex items-center gap-1 text-xs text-success">
+                  <CheckCircle2 className="size-3.5 shrink-0" aria-hidden />
+                  Confirmado
+                </span>
+              ) : (
+                <span className="mt-0.5 block text-xs text-muted-foreground">Não confirmado</span>
+              )}
+            </span>
+            {student.emailVerified ? (
+              <Badge variant="outline" className="shrink-0">
+                OK
+              </Badge>
+            ) : (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="shrink-0"
+                onClick={() => verifyEmailMutation.mutate()}
+                disabled={verifyEmailMutation.isPending}
+              >
+                {verifyEmailMutation.isPending ? "Enviando…" : "Confirmar e-mail"}
+              </Button>
+            )}
+          </div>
+        ) : null}
+
         <Form {...profileForm}>
           <form
             className="mt-4 space-y-4"
@@ -139,6 +184,10 @@ export function PortalAccount() {
 
       <div className="mt-6 max-w-sm">
         <NotificationToggle />
+      </div>
+
+      <div className="mt-6 max-w-sm">
+        <CalendarSyncCard />
       </div>
 
       <div className="mt-6 max-w-sm rounded-md border border-border/70 bg-card/70 p-6 shadow-soft">

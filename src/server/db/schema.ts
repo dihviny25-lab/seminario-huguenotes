@@ -77,6 +77,17 @@ export const students = pgTable("students", {
   // Recuperação de senha self-service — token opaco de uso único, expira em 1h.
   resetToken: text("reset_token"),
   resetTokenExpiresAt: timestamp("reset_token_expires_at", { withTimezone: true }),
+  // Confirmação de e-mail — token separado do de redefinição de senha, pra
+  // pedir um não invalidar o outro se os dois estiverem pendentes.
+  emailVerified: boolean("email_verified").notNull().default(false),
+  emailVerificationToken: text("email_verification_token"),
+  emailVerificationTokenExpiresAt: timestamp("email_verification_token_expires_at", {
+    withTimezone: true,
+  }),
+  // Token opaco de longa duração (não expira) usado na URL do feed de
+  // calendário (.ics) — não é sessão de login, é só pra identificar de quem
+  // é o feed quando o Google Calendar/Outlook busca a URL sozinho.
+  calendarToken: text("calendar_token").unique(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

@@ -15,6 +15,8 @@ import { Route as LoginAlunoRouteImport } from './routes/login-aluno'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as EsqueciSenhaAlunoRouteImport } from './routes/esqueci-senha-aluno'
 import { Route as EsqueciSenhaRouteImport } from './routes/esqueci-senha'
+import { Route as ConfirmarEmailRouteImport } from './routes/confirmar-email'
+import { Route as AgendaDoticsRouteImport } from './routes/agenda[.]ics'
 import { Route as PortalRouteRouteImport } from './routes/portal/route'
 import { Route as PainelRouteRouteImport } from './routes/painel/route'
 import { Route as IndexRouteImport } from './routes/index'
@@ -92,6 +94,16 @@ const EsqueciSenhaAlunoRoute = EsqueciSenhaAlunoRouteImport.update({
 const EsqueciSenhaRoute = EsqueciSenhaRouteImport.update({
   id: '/esqueci-senha',
   path: '/esqueci-senha',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConfirmarEmailRoute = ConfirmarEmailRouteImport.update({
+  id: '/confirmar-email',
+  path: '/confirmar-email',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AgendaDoticsRoute = AgendaDoticsRouteImport.update({
+  id: '/agenda.ics',
+  path: '/agenda.ics',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PortalRouteRoute = PortalRouteRouteImport.update({
@@ -347,6 +359,8 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/painel': typeof PainelRouteRouteWithChildren
   '/portal': typeof PortalRouteRouteWithChildren
+  '/agenda.ics': typeof AgendaDoticsRoute
+  '/confirmar-email': typeof ConfirmarEmailRoute
   '/esqueci-senha': typeof EsqueciSenhaRoute
   '/esqueci-senha-aluno': typeof EsqueciSenhaAlunoRoute
   '/login': typeof LoginRoute
@@ -401,6 +415,8 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/agenda.ics': typeof AgendaDoticsRoute
+  '/confirmar-email': typeof ConfirmarEmailRoute
   '/esqueci-senha': typeof EsqueciSenhaRoute
   '/esqueci-senha-aluno': typeof EsqueciSenhaAlunoRoute
   '/login': typeof LoginRoute
@@ -458,6 +474,8 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/painel': typeof PainelRouteRouteWithChildren
   '/portal': typeof PortalRouteRouteWithChildren
+  '/agenda.ics': typeof AgendaDoticsRoute
+  '/confirmar-email': typeof ConfirmarEmailRoute
   '/esqueci-senha': typeof EsqueciSenhaRoute
   '/esqueci-senha-aluno': typeof EsqueciSenhaAlunoRoute
   '/login': typeof LoginRoute
@@ -516,6 +534,8 @@ export interface FileRouteTypes {
     | '/'
     | '/painel'
     | '/portal'
+    | '/agenda.ics'
+    | '/confirmar-email'
     | '/esqueci-senha'
     | '/esqueci-senha-aluno'
     | '/login'
@@ -570,6 +590,8 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/agenda.ics'
+    | '/confirmar-email'
     | '/esqueci-senha'
     | '/esqueci-senha-aluno'
     | '/login'
@@ -626,6 +648,8 @@ export interface FileRouteTypes {
     | '/'
     | '/painel'
     | '/portal'
+    | '/agenda.ics'
+    | '/confirmar-email'
     | '/esqueci-senha'
     | '/esqueci-senha-aluno'
     | '/login'
@@ -683,6 +707,8 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   PainelRouteRoute: typeof PainelRouteRouteWithChildren
   PortalRouteRoute: typeof PortalRouteRouteWithChildren
+  AgendaDoticsRoute: typeof AgendaDoticsRoute
+  ConfirmarEmailRoute: typeof ConfirmarEmailRoute
   EsqueciSenhaRoute: typeof EsqueciSenhaRoute
   EsqueciSenhaAlunoRoute: typeof EsqueciSenhaAlunoRoute
   LoginRoute: typeof LoginRoute
@@ -738,6 +764,20 @@ declare module '@tanstack/react-router' {
       path: '/esqueci-senha'
       fullPath: '/esqueci-senha'
       preLoaderRoute: typeof EsqueciSenhaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/confirmar-email': {
+      id: '/confirmar-email'
+      path: '/confirmar-email'
+      fullPath: '/confirmar-email'
+      preLoaderRoute: typeof ConfirmarEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agenda.ics': {
+      id: '/agenda.ics'
+      path: '/agenda.ics'
+      fullPath: '/agenda.ics'
+      preLoaderRoute: typeof AgendaDoticsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/portal': {
@@ -1194,6 +1234,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   PainelRouteRoute: PainelRouteRouteWithChildren,
   PortalRouteRoute: PortalRouteRouteWithChildren,
+  AgendaDoticsRoute: AgendaDoticsRoute,
+  ConfirmarEmailRoute: ConfirmarEmailRoute,
   EsqueciSenhaRoute: EsqueciSenhaRoute,
   EsqueciSenhaAlunoRoute: EsqueciSenhaAlunoRoute,
   LoginRoute: LoginRoute,

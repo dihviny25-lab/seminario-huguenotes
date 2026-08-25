@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { and, asc, eq, isNotNull, lte } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { logAudit } from "@/server/audit";
@@ -19,6 +19,8 @@ export type ReadingMaterial = {
   fileUrl: string;
   fileName: string;
   sequence: number;
+  /** null = disponível já (ou disciplina sem data de início definida). */
+  availableAt: string | null;
 };
 
 const disciplineIdSchema = z.object({ disciplineId: z.string().uuid() });
@@ -28,11 +30,14 @@ export const listMyDisciplineMaterialsFn = createServerFn({ method: "GET" })
   .validator(disciplineIdSchema)
   .handler(async ({ data }): Promise<Array<ReadingMaterial>> => {
     await requireOwnDiscipline(data.disciplineId);
-    return db
+    const rows = await db
       .select()
       .from(readingMaterials)
       .where(eq(readingMaterials.disciplineId, data.disciplineId))
       .orderBy(asc(readingMaterials.sequence));
+    // Visão do professor gerenciando o conteúdo — sempre "disponível", o
+    // bloqueio por data é só pro lado do aluno lendo.
+    return rows.map((row) => ({ ...row, availableAt: null }));
   });
 
 const createSchema = z.object({
@@ -120,43 +125,45 @@ function selectMaterialColumns() {
     fileUrl: readingMaterials.fileUrl,
     fileName: readingMaterials.fileName,
     sequence: readingMaterials.sequence,
+    startDate: disciplines.startDate,
   };
 }
 
+function withAvailability(
+  row: Omit<ReadingMaterial, "availableAt"> & { startDate: string | null },
+): ReadingMaterial {
+  const { startDate, ...material } = row;
+  const available = startDate === null || startDate <= todayIso();
+  return { ...material, availableAt: available ? null : startDate };
+}
+
 /**
- * Todos os materiais do currículo, pra biblioteca do portal do aluno — só das
- * disciplinas cuja aula já começou (data de início definida e já passada).
+ * Todos os materiais do currículo, pra biblioteca do portal do aluno —
+ * aparecem todos, mas os de disciplinas que ainda não começaram vêm
+ * marcados com `availableAt` (o cliente mostra bloqueado até essa data).
  */
 export const listAllReadingMaterialsFn = createServerFn({ method: "GET" }).handler(
   async (): Promise<Array<ReadingMaterial>> => {
     await requireAnyLogin();
-    return db
+    const rows = await db
       .select(selectMaterialColumns())
       .from(readingMaterials)
       .innerJoin(disciplines, eq(disciplines.id, readingMaterials.disciplineId))
-      .where(and(isNotNull(disciplines.startDate), lte(disciplines.startDate, todayIso())))
       .orderBy(asc(readingMaterials.sequence));
+    return rows.map(withAvailability);
   },
 );
 
-/**
- * Materiais de UMA disciplina — pra página do curso no portal (qualquer
- * aluno/professor). Some vazio se a disciplina ainda não começou.
- */
+/** Materiais de UMA disciplina — pra página do curso no portal (qualquer aluno/professor). */
 export const listDisciplineMaterialsFn = createServerFn({ method: "GET" })
   .validator(disciplineIdSchema)
   .handler(async ({ data }): Promise<Array<ReadingMaterial>> => {
     await requireAnyLogin();
-    return db
+    const rows = await db
       .select(selectMaterialColumns())
       .from(readingMaterials)
       .innerJoin(disciplines, eq(disciplines.id, readingMaterials.disciplineId))
-      .where(
-        and(
-          eq(readingMaterials.disciplineId, data.disciplineId),
-          isNotNull(disciplines.startDate),
-          lte(disciplines.startDate, todayIso()),
-        ),
-      )
+      .where(eq(readingMaterials.disciplineId, data.disciplineId))
       .orderBy(asc(readingMaterials.sequence));
+    return rows.map(withAvailability);
   });

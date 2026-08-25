@@ -1,10 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Lock } from "lucide-react";
 
 import { PortalShell } from "@/components/portal/PortalShell";
 import { Skeleton } from "@/components/ui/skeleton";
 import { listAllReadingMaterialsFn } from "@/functions/readingMaterials";
+
+function formatDate(iso: string): string {
+  const [year, month, day] = iso.split("-");
+  return `${day}/${month}/${year}`;
+}
 
 /** Leitor online da apostila — sem link de download, só o PDF embutido. */
 export function PortalMaterialReader({ materialId }: { materialId: string }) {
@@ -27,6 +32,13 @@ export function PortalMaterialReader({ materialId }: { materialId: string }) {
 
       {isLoading || !material ? (
         <Skeleton className="h-[85vh] w-full" />
+      ) : material.availableAt ? (
+        <div className="flex h-[50vh] flex-col items-center justify-center gap-3 rounded-md border border-border/70 bg-card/70 text-center shadow-soft">
+          <Lock className="size-8 text-muted-foreground" aria-hidden />
+          <p className="text-muted-foreground">
+            Essa apostila fica disponível a partir de {formatDate(material.availableAt)}.
+          </p>
+        </div>
       ) : (
         <div className="overflow-hidden rounded-md border border-border/70 bg-card/70 shadow-soft">
           <iframe

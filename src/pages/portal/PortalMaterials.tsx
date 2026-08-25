@@ -1,8 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
-import { BookOpen } from "lucide-react";
 
 import { PortalShell } from "@/components/portal/PortalShell";
+import { ReadingMaterialCard } from "@/components/portal/ReadingMaterialCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getPublicDisciplinesFn } from "@/functions/schedule";
 import { listAllReadingMaterialsFn, type ReadingMaterial } from "@/functions/readingMaterials";
@@ -75,30 +74,7 @@ export function PortalMaterials() {
                         ) : null}
                         <div className="mt-3 grid gap-3 sm:grid-cols-2">
                           {disciplineMaterials.map((material) => (
-                            <Link
-                              key={material.id}
-                              to="/portal/apostilas/$materialId"
-                              params={{ materialId: material.id }}
-                              className="flex items-start gap-3 rounded-md border border-border/70 bg-card/70 p-4 shadow-soft transition-colors hover:border-primary/50"
-                            >
-                              <BookOpen
-                                className="mt-0.5 size-4 shrink-0 text-accent"
-                                aria-hidden
-                              />
-                              <span className="min-w-0 flex-1">
-                                <span className="block truncate font-medium text-foreground">
-                                  {material.title}
-                                </span>
-                                {material.description ? (
-                                  <span className="mt-1 block line-clamp-2 text-xs text-muted-foreground">
-                                    {material.description}
-                                  </span>
-                                ) : null}
-                                <span className="mt-2 inline-block text-xs font-medium text-accent">
-                                  Ler online
-                                </span>
-                              </span>
-                            </Link>
+                            <ReadingMaterialCard key={material.id} material={material} />
                           ))}
                         </div>
                       </div>
