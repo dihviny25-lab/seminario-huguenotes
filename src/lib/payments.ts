@@ -60,6 +60,11 @@ export function computeDiscountedAmount(fullAmount: number, discountPercent: num
   return fullAmount * (1 - discountPercent / 100);
 }
 
+/** Valor da modalidade já com a bolsa do aluno aplicada (0% = sem bolsa, 100% = integral). */
+export function applyScholarship(fullValue: number, scholarshipPercent: number): number {
+  return Math.round(fullValue * (1 - scholarshipPercent / 100) * 100) / 100;
+}
+
 export type CurrentAmountInput = {
   fullAmount: number;
   discountPercent: number;

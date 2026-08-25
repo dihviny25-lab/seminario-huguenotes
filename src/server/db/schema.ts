@@ -21,6 +21,13 @@ import {
 export const scheduleStatus = pgEnum("schedule_status", ["confirmed", "pending"]);
 export const teacherRole = pgEnum("teacher_role", ["admin", "teacher"]);
 export const chargeStatus = pgEnum("charge_status", ["pending", "paid", "canceled"]);
+export const paymentMethod = pgEnum("payment_method", [
+  "pix",
+  "dinheiro",
+  "cartao",
+  "transferencia",
+  "outro",
+]);
 export const authorRole = pgEnum("author_role", ["teacher", "student"]);
 export const videoSource = pgEnum("video_source", ["youtube", "upload"]);
 export const noteKind = pgEnum("note_kind", ["note", "question"]);
@@ -71,6 +78,9 @@ export const students = pgTable("students", {
   phone: text("phone"),
   birthDate: date("birth_date"),
   active: boolean("active").notNull().default(true),
+  // Bolsa (0-100%) — decidida pelo admin. Aplica desconto nas mensalidades
+  // geradas (0 = sem bolsa, 100 = bolsa integral, isento).
+  scholarshipPercent: integer("scholarship_percent").notNull().default(0),
   // Nulo = aluno sem login no portal ainda (precisa que um admin defina a senha).
   passwordHash: text("password_hash"),
   mustChangePassword: boolean("must_change_password").notNull().default(true),
@@ -282,6 +292,9 @@ export const charges = pgTable("charges", {
   // de quando foi pago) — o que entra de verdade no dashboard financeiro.
   paidAmount: numeric("paid_amount", { precision: 10, scale: 2 }),
   paidManually: boolean("paid_manually").notNull().default(false),
+  // Como foi pago — só preenchido quando é dado baixa manual (PIX, dinheiro
+  // etc.); pagamento pelo site já se sabe que foi Mercado Pago.
+  paymentMethod: paymentMethod("payment_method"),
   note: text("note"),
   createdById: uuid("created_by_id").references(() => teachers.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

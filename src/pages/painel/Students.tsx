@@ -2,7 +2,16 @@ import { useRef, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
-import { KeyRound, Pencil, Plus, ShieldOff, Trash2, Undo2, Upload } from "lucide-react";
+import {
+  GraduationCap,
+  KeyRound,
+  Pencil,
+  Plus,
+  ShieldOff,
+  Trash2,
+  Undo2,
+  Upload,
+} from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -54,6 +63,7 @@ import {
   revokeStudentLoginFn,
   setStudentActiveFn,
   setStudentPasswordFn,
+  setStudentScholarshipFn,
   updateStudentFn,
   type Student,
 } from "@/functions/students";
@@ -81,6 +91,7 @@ export function Students() {
   const [editing, setEditing] = useState<Student | null>(null);
   const [settingPasswordFor, setSettingPasswordFor] = useState<Student | null>(null);
   const [deleting, setDeleting] = useState<Student | null>(null);
+  const [settingScholarshipFor, setSettingScholarshipFor] = useState<Student | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function invalidate() {
@@ -188,13 +199,14 @@ export function Students() {
               <TableHead>E-mail</TableHead>
               <TableHead>Situação</TableHead>
               <TableHead>Portal</TableHead>
+              <TableHead>Bolsa</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={5} className="py-6 text-center text-muted-foreground">
+                <TableCell colSpan={6} className="py-6 text-center text-muted-foreground">
                   Carregando…
                 </TableCell>
               </TableRow>
@@ -214,6 +226,17 @@ export function Students() {
                     </Badge>
                   </TableCell>
                   <TableCell>
+                    {student.scholarshipPercent > 0 ? (
+                      <Badge variant="outline">
+                        {student.scholarshipPercent === 100
+                          ? "Integral"
+                          : `${student.scholarshipPercent}%`}
+                      </Badge>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
                     {isAdmin ? (
                       <div className="flex justify-end gap-1">
                         <Button
@@ -223,6 +246,14 @@ export function Students() {
                           onClick={() => setEditing(student)}
                         >
                           <Pencil className="size-4" aria-hidden />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title="Definir bolsa"
+                          onClick={() => setSettingScholarshipFor(student)}
+                        >
+                          <GraduationCap className="size-4" aria-hidden />
                         </Button>
                         <Button
                           variant="ghost"
@@ -269,7 +300,7 @@ export function Students() {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={5} className="py-6 text-center text-muted-foreground">
+                <TableCell colSpan={6} className="py-6 text-center text-muted-foreground">
                   Nenhum aluno cadastrado ainda.
                 </TableCell>
               </TableRow>
@@ -283,6 +314,13 @@ export function Students() {
         <EditStudentDialog
           student={editing}
           onOpenChange={(open) => !open && setEditing(null)}
+          onSaved={invalidate}
+        />
+      ) : null}
+      {settingScholarshipFor ? (
+        <SetScholarshipDialog
+          student={settingScholarshipFor}
+          onOpenChange={(open) => !open && setSettingScholarshipFor(null)}
           onSaved={invalidate}
         />
       ) : null}
@@ -565,6 +603,60 @@ function SetStudentPasswordDialog({
             </form>
           </Form>
         )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function SetScholarshipDialog({
+  student,
+  onOpenChange,
+  onSaved,
+}: {
+  student: Student;
+  onOpenChange: (open: boolean) => void;
+  onSaved: () => Promise<unknown>;
+}) {
+  const [percent, setPercent] = useState(String(student.scholarshipPercent));
+
+  const mutation = useMutation({
+    mutationFn: () =>
+      setStudentScholarshipFn({ data: { id: student.id, scholarshipPercent: Number(percent) } }),
+    onSuccess: async () => {
+      toast.success("Bolsa atualizada.");
+      onOpenChange(false);
+      await onSaved();
+    },
+    onError: (error) => toast.error(errorMessage(error, "Não foi possível salvar.")),
+  });
+
+  return (
+    <Dialog open onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Bolsa de {student.name}</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">
+          Percentual de desconto aplicado nas mensalidades geradas pra esse aluno. 0% = sem bolsa,
+          100% = bolsa integral (as mensalidades já entram quitadas, sem precisar dar baixa).
+        </p>
+        <div>
+          <label className="text-sm font-medium text-foreground">Bolsa (%)</label>
+          <Input
+            type="number"
+            min={0}
+            max={100}
+            step={1}
+            value={percent}
+            onChange={(event) => setPercent(event.target.value)}
+            className="mt-1.5"
+          />
+        </div>
+        <DialogFooter>
+          <Button type="button" onClick={() => mutation.mutate()} disabled={mutation.isPending}>
+            {mutation.isPending ? "Salvando…" : "Salvar"}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

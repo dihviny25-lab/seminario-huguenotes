@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
-import { Ban, CheckCircle2, Plus, RefreshCcw } from "lucide-react";
+import { Ban, CheckCircle2, Pencil, Plus, RefreshCcw, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -49,6 +49,8 @@ import {
   generateMonthlyChargesFn,
   listStudentChargesFn,
   markChargePaidManuallyFn,
+  revertChargeToPendingFn,
+  updateChargeFn,
   type Charge,
 } from "@/functions/payments";
 import { computeDiscountedAmount } from "@/lib/payments";
@@ -73,12 +75,21 @@ const statusLabel: Record<Charge["status"], string> = {
   canceled: "Cancelado",
 };
 
+const paymentMethodLabel: Record<NonNullable<Charge["paymentMethod"]>, string> = {
+  pix: "PIX",
+  dinheiro: "Dinheiro",
+  cartao: "Cartão",
+  transferencia: "Transferência",
+  outro: "Outro",
+};
+
 /** Cobranças de mensalidade/taxas por aluno — cria, gera em lote e confirma pagamentos. */
 export function Payments() {
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [generateOpen, setGenerateOpen] = useState(false);
+  const [editingCharge, setEditingCharge] = useState<Charge | null>(null);
   const queryClient = useQueryClient();
 
   const { data: students } = useQuery({
@@ -118,6 +129,15 @@ export function Payments() {
       await invalidate();
     },
     onError: (error) => toast.error(errorMessage(error, "Não foi possível cancelar.")),
+  });
+
+  const revertMutation = useMutation({
+    mutationFn: (chargeId: string) => revertChargeToPendingFn({ data: { chargeId } }),
+    onSuccess: async () => {
+      toast.success("Pagamento desfeito — cobrança voltou pra pendente.");
+      await invalidate();
+    },
+    onError: (error) => toast.error(errorMessage(error, "Não foi possível desfazer.")),
   });
 
   return (
@@ -237,10 +257,23 @@ export function Payments() {
                         >
                           {statusLabel[charge.status]}
                         </Badge>
+                        {charge.status === "paid" && charge.paymentMethod ? (
+                          <span className="mt-1 block text-xs text-muted-foreground">
+                            {paymentMethodLabel[charge.paymentMethod]}
+                          </span>
+                        ) : null}
                       </TableCell>
                       <TableCell>
                         {isAdmin && charge.status === "pending" ? (
                           <div className="flex justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title="Editar"
+                              onClick={() => setEditingCharge(charge)}
+                            >
+                              <Pencil className="size-4" aria-hidden />
+                            </Button>
                             <MarkPaidButton
                               chargeId={charge.id}
                               suggestedAmount={charge.currentAmount}
@@ -253,6 +286,18 @@ export function Payments() {
                               onClick={() => cancelMutation.mutate(charge.id)}
                             >
                               <Ban className="size-4" aria-hidden />
+                            </Button>
+                          </div>
+                        ) : isAdmin && charge.status === "paid" ? (
+                          <div className="flex justify-end">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title="Desfazer pagamento"
+                              onClick={() => revertMutation.mutate(charge.id)}
+                              disabled={revertMutation.isPending}
+                            >
+                              <Undo2 className="size-4" aria-hidden />
                             </Button>
                           </div>
                         ) : null}
@@ -282,9 +327,115 @@ export function Payments() {
             onOpenChange={setGenerateOpen}
             onGenerated={invalidate}
           />
+          <EditChargeDialog
+            charge={editingCharge}
+            onOpenChange={(open) => !open && setEditingCharge(null)}
+            onSaved={invalidate}
+          />
         </div>
       ) : null}
     </PainelShell>
+  );
+}
+
+const editChargeSchema = z.object({
+  description: z.string().trim().min(1, "Informe a descrição."),
+  amount: z.coerce.number().positive("O valor precisa ser maior que zero."),
+  dueDate: z.string().min(1, "Informe o vencimento."),
+});
+
+function EditChargeDialog({
+  charge,
+  onOpenChange,
+  onSaved,
+}: {
+  charge: Charge | null;
+  onOpenChange: (open: boolean) => void;
+  onSaved: () => Promise<unknown>;
+}) {
+  const form = useForm<z.infer<typeof editChargeSchema>>({
+    resolver: zodResolver(editChargeSchema),
+    values: charge
+      ? {
+          description: charge.description,
+          amount: Number(charge.fullAmount),
+          dueDate: charge.dueDate,
+        }
+      : { description: "", amount: 0, dueDate: "" },
+  });
+
+  const mutation = useMutation({
+    mutationFn: (values: z.infer<typeof editChargeSchema>) =>
+      updateChargeFn({ data: { chargeId: charge!.id, ...values } }),
+    onSuccess: async () => {
+      toast.success("Cobrança atualizada.");
+      onOpenChange(false);
+      await onSaved();
+    },
+    onError: (error) => toast.error(errorMessage(error, "Não foi possível salvar.")),
+  });
+
+  return (
+    <Dialog open={charge !== null} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Editar cobrança</DialogTitle>
+        </DialogHeader>
+        <Form {...form}>
+          <form
+            className="space-y-4"
+            onSubmit={form.handleSubmit((values) => mutation.mutate(values))}
+          >
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Descrição</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="amount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Valor</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="dueDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Vencimento</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <DialogFooter>
+              <Button type="submit" disabled={mutation.isPending}>
+                {mutation.isPending ? "Salvando…" : "Salvar"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -299,12 +450,15 @@ function MarkPaidButton({
 }) {
   const [open, setOpen] = useState(false);
   const [paidAmount, setPaidAmount] = useState(suggestedAmount);
+  const [paymentMethod, setPaymentMethod] = useState<
+    "pix" | "dinheiro" | "cartao" | "transferencia" | "outro"
+  >("pix");
   const [note, setNote] = useState("");
 
   const mutation = useMutation({
     mutationFn: () =>
       markChargePaidManuallyFn({
-        data: { chargeId, paidAmount: Number(paidAmount), note: note || undefined },
+        data: { chargeId, paidAmount: Number(paidAmount), paymentMethod, note: note || undefined },
       }),
     onSuccess: async () => {
       toast.success("Cobrança marcada como paga.");
@@ -346,6 +500,24 @@ function MarkPaidButton({
               onChange={(event) => setPaidAmount(event.target.value)}
               className="mt-1.5"
             />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-foreground">Forma de pagamento</label>
+            <Select
+              value={paymentMethod}
+              onValueChange={(value) => setPaymentMethod(value as typeof paymentMethod)}
+            >
+              <SelectTrigger className="mt-1.5">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pix">PIX</SelectItem>
+                <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                <SelectItem value="cartao">Cartão</SelectItem>
+                <SelectItem value="transferencia">Transferência</SelectItem>
+                <SelectItem value="outro">Outro</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <Textarea
             placeholder="Observação (opcional)"

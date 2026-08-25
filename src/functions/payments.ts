@@ -2,7 +2,12 @@ import { createServerFn } from "@tanstack/react-start";
 import { asc, eq } from "drizzle-orm";
 import { z } from "zod";
 
-import { computeCurrentAmount, computeMonthlySeries, formatPeriodLabel } from "@/lib/payments";
+import {
+  applyScholarship,
+  computeCurrentAmount,
+  computeMonthlySeries,
+  formatPeriodLabel,
+} from "@/lib/payments";
 import { getPaymentModality, PUNCTUALITY_DISCOUNT_PERCENT } from "@/lib/paymentModalities";
 import { logAudit } from "@/server/audit";
 import { requireAdminId, requireStudentId, requireTeacherId } from "@/server/auth/guard";
@@ -24,6 +29,7 @@ export type Charge = {
   status: "pending" | "paid" | "canceled";
   paidAt: string | null;
   paidManually: boolean;
+  paymentMethod: "pix" | "dinheiro" | "cartao" | "transferencia" | "outro" | null;
   note: string | null;
 };
 
@@ -59,6 +65,7 @@ function toCharge(row: typeof charges.$inferSelect): Charge {
     status: row.status,
     paidAt: row.paidAt ? row.paidAt.toISOString() : null,
     paidManually: row.paidManually,
+    paymentMethod: row.paymentMethod,
     note: row.note,
   };
 }
@@ -199,6 +206,13 @@ export const generateMonthlyChargesFn = createServerFn({ method: "POST" })
       throw new Error("Modalidade inválida.");
     }
 
+    const [student] = await db
+      .select({ name: students.name, scholarshipPercent: students.scholarshipPercent })
+      .from(students)
+      .where(eq(students.id, data.studentId))
+      .limit(1);
+    const effectiveValue = applyScholarship(modality.fullValue, student?.scholarshipPercent ?? 0);
+
     const series = computeMonthlySeries(data.startPeriod, data.months, data.dueDay);
 
     const existing = await db
@@ -216,15 +230,25 @@ export const generateMonthlyChargesFn = createServerFn({ method: "POST" })
         skippedPeriods.push(period);
         continue;
       }
+      const isFullScholarship = effectiveValue === 0;
       toInsert.push({
         studentId: data.studentId,
         description: `Mensalidade — ${formatPeriodLabel(period)}`,
         modality: modality.name,
-        fullAmount: String(modality.fullValue),
+        fullAmount: String(effectiveValue),
         discountPercent: String(PUNCTUALITY_DISCOUNT_PERCENT),
         dueDate,
         period,
         createdById: teacherId,
+        ...(isFullScholarship
+          ? {
+              status: "paid" as const,
+              paidAt: new Date(),
+              paidAmount: "0",
+              paidManually: true,
+              note: "Bolsa integral (100%)",
+            }
+          : {}),
       });
     }
 
@@ -232,11 +256,6 @@ export const generateMonthlyChargesFn = createServerFn({ method: "POST" })
       await db.insert(charges).values(toInsert);
     }
 
-    const [student] = await db
-      .select({ name: students.name })
-      .from(students)
-      .where(eq(students.id, data.studentId))
-      .limit(1);
     await logAudit(
       "financeiro.mensalidades_gerar",
       `Gerou ${toInsert.length} mensalidade(s) de ${modality.name} para ${student?.name ?? data.studentId}.`,
@@ -264,6 +283,16 @@ export const selfScheduleMyChargesFn = createServerFn({ method: "POST" })
     if (!modality) {
       throw new Error("Modalidade inválida.");
     }
+
+    const [studentRow] = await db
+      .select({ scholarshipPercent: students.scholarshipPercent })
+      .from(students)
+      .where(eq(students.id, studentId))
+      .limit(1);
+    const effectiveValue = applyScholarship(
+      modality.fullValue,
+      studentRow?.scholarshipPercent ?? 0,
+    );
 
     const disciplineRows = await db.select({ endDate: disciplines.endDate }).from(disciplines);
     const courseEndDate = disciplineRows
@@ -303,15 +332,25 @@ export const selfScheduleMyChargesFn = createServerFn({ method: "POST" })
         skippedPeriods.push(period);
         continue;
       }
+      const isFullScholarship = effectiveValue === 0;
       toInsert.push({
         studentId,
         description: `Mensalidade — ${formatPeriodLabel(period)}`,
         modality: modality.name,
-        fullAmount: String(modality.fullValue),
+        fullAmount: String(effectiveValue),
         discountPercent: String(PUNCTUALITY_DISCOUNT_PERCENT),
         dueDate,
         period,
         createdById: null,
+        ...(isFullScholarship
+          ? {
+              status: "paid" as const,
+              paidAt: new Date(),
+              paidAmount: "0",
+              paidManually: true,
+              note: "Bolsa integral (100%)",
+            }
+          : {}),
       });
     }
 
@@ -326,9 +365,18 @@ export const selfScheduleMyChargesFn = createServerFn({ method: "POST" })
     return { created: toInsert.length, skippedPeriods };
   });
 
+const paymentMethodLabels: Record<string, string> = {
+  pix: "PIX",
+  dinheiro: "Dinheiro",
+  cartao: "Cartão",
+  transferencia: "Transferência",
+  outro: "Outro",
+};
+
 const markPaidSchema = z.object({
   chargeId: z.string().uuid(),
   paidAmount: z.number().positive("Informe o valor recebido."),
+  paymentMethod: z.enum(["pix", "dinheiro", "cartao", "transferencia", "outro"]),
   note: z.string().trim().optional(),
 });
 
@@ -344,6 +392,7 @@ export const markChargePaidManuallyFn = createServerFn({ method: "POST" })
         paidManually: true,
         paidAt: new Date(),
         paidAmount: String(data.paidAmount),
+        paymentMethod: data.paymentMethod,
         note: data.note || null,
       })
       .where(eq(charges.id, data.chargeId));
@@ -355,7 +404,7 @@ export const markChargePaidManuallyFn = createServerFn({ method: "POST" })
       .limit(1);
     await logAudit(
       "financeiro.marcar_pago",
-      `Marcou como pago manualmente: ${row?.description ?? data.chargeId} de ${row?.studentName ?? "aluno"} (R$ ${data.paidAmount.toFixed(2)}).`,
+      `Marcou como pago manualmente: ${row?.description ?? data.chargeId} de ${row?.studentName ?? "aluno"} (R$ ${data.paidAmount.toFixed(2)}, ${paymentMethodLabels[data.paymentMethod]}).`,
     );
   });
 
@@ -375,6 +424,82 @@ export const cancelChargeFn = createServerFn({ method: "POST" })
     await logAudit(
       "financeiro.cancelar",
       `Cancelou a cobrança ${row?.description ?? data.chargeId} de ${row?.studentName ?? "aluno"}.`,
+    );
+  });
+
+const updateChargeSchema = z.object({
+  chargeId: z.string().uuid(),
+  description: z.string().trim().min(1, "Informe a descrição."),
+  amount: z.number().positive("O valor precisa ser maior que zero."),
+  dueDate: z.string().min(1, "Informe o vencimento."),
+});
+
+/** Corrige descrição/valor/vencimento de uma cobrança pendente — não mexe em cobranças já pagas ou canceladas. */
+export const updateChargeFn = createServerFn({ method: "POST" })
+  .validator(updateChargeSchema)
+  .handler(async ({ data }) => {
+    await requireAdminId();
+    const [charge] = await db
+      .select({ status: charges.status, studentName: students.name })
+      .from(charges)
+      .innerJoin(students, eq(charges.studentId, students.id))
+      .where(eq(charges.id, data.chargeId))
+      .limit(1);
+    if (!charge) throw new Error("Cobrança não encontrada.");
+    if (charge.status !== "pending") {
+      throw new Error("Só dá pra editar cobranças pendentes.");
+    }
+
+    await db
+      .update(charges)
+      .set({
+        description: data.description,
+        fullAmount: String(data.amount),
+        dueDate: data.dueDate,
+      })
+      .where(eq(charges.id, data.chargeId));
+    await logAudit(
+      "financeiro.cobranca_editar",
+      `Editou a cobrança de ${charge.studentName} — ${data.description}, R$ ${data.amount.toFixed(2)}, vencimento ${data.dueDate}.`,
+    );
+  });
+
+const revertChargeSchema = z.object({ chargeId: z.string().uuid() });
+
+/** Desfaz um "marcar como pago" feito por engano — volta a cobrança pra pendente. */
+export const revertChargeToPendingFn = createServerFn({ method: "POST" })
+  .validator(revertChargeSchema)
+  .handler(async ({ data }) => {
+    await requireAdminId();
+    const [charge] = await db
+      .select({
+        status: charges.status,
+        description: charges.description,
+        studentName: students.name,
+      })
+      .from(charges)
+      .innerJoin(students, eq(charges.studentId, students.id))
+      .where(eq(charges.id, data.chargeId))
+      .limit(1);
+    if (!charge) throw new Error("Cobrança não encontrada.");
+    if (charge.status !== "paid") {
+      throw new Error("Só dá pra desfazer cobranças marcadas como pagas.");
+    }
+
+    await db
+      .update(charges)
+      .set({
+        status: "pending",
+        paidAt: null,
+        paidAmount: null,
+        paidManually: false,
+        mpPaymentId: null,
+        note: null,
+      })
+      .where(eq(charges.id, data.chargeId));
+    await logAudit(
+      "financeiro.desfazer_pagamento",
+      `Desfez o pagamento da cobrança ${charge.description} de ${charge.studentName} — voltou pra pendente.`,
     );
   });
 

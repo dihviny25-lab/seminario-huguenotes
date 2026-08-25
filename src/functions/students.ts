@@ -14,6 +14,7 @@ export type Student = {
   email: string | null;
   active: boolean;
   hasLogin: boolean;
+  scholarshipPercent: number;
 };
 
 export const listStudentsFn = createServerFn({ method: "GET" }).handler(
@@ -26,6 +27,7 @@ export const listStudentsFn = createServerFn({ method: "GET" }).handler(
         email: students.email,
         active: students.active,
         passwordHash: students.passwordHash,
+        scholarshipPercent: students.scholarshipPercent,
       })
       .from(students)
       .orderBy(asc(students.name));
@@ -84,6 +86,31 @@ export const updateStudentFn = createServerFn({ method: "POST" })
       .update(students)
       .set({ name: data.name, email: data.email || null })
       .where(eq(students.id, data.id));
+  });
+
+const setScholarshipSchema = z.object({
+  id: z.string().uuid(),
+  scholarshipPercent: z.number().int().min(0).max(100),
+});
+
+/** Admin define o percentual de bolsa do aluno (0 = sem bolsa, 100 = integral). */
+export const setStudentScholarshipFn = createServerFn({ method: "POST" })
+  .validator(setScholarshipSchema)
+  .handler(async ({ data }) => {
+    await requireAdminId();
+    await db
+      .update(students)
+      .set({ scholarshipPercent: data.scholarshipPercent })
+      .where(eq(students.id, data.id));
+    const [student] = await db
+      .select({ name: students.name })
+      .from(students)
+      .where(eq(students.id, data.id))
+      .limit(1);
+    await logAudit(
+      "aluno.bolsa_definir",
+      `Definiu bolsa de ${data.scholarshipPercent}% para ${student?.name ?? data.id}.`,
+    );
   });
 
 const setActiveSchema = z.object({ id: z.string().uuid(), active: z.boolean() });
