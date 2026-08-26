@@ -64,7 +64,9 @@ import { Route as ApiMercadopagoWebhookRouteImport } from './routes/api/mercadop
 import { Route as ApiCronPaymentRemindersRouteImport } from './routes/api/cron/payment-reminders'
 import { Route as ApiCronFinalizeExpiredExamsRouteImport } from './routes/api/cron/finalize-expired-exams'
 import { Route as ApiBlobUploadRouteImport } from './routes/api/blob/upload'
+import { Route as PortalMensalidadesChargeIdReciboRouteImport } from './routes/portal/mensalidades/$chargeId/recibo'
 import { Route as PainelRelatorioStudentIdPdfRouteImport } from './routes/painel/relatorio/$studentId/pdf'
+import { Route as PainelPagamentosChargeIdReciboRouteImport } from './routes/painel/pagamentos/$chargeId/recibo'
 import { Route as PainelRelatorioTurmaDisciplineIdPdfRouteImport } from './routes/painel/relatorio/turma/$disciplineId/pdf'
 
 const RedefinirSenhaAlunoRoute = RedefinirSenhaAlunoRouteImport.update({
@@ -348,11 +350,23 @@ const ApiBlobUploadRoute = ApiBlobUploadRouteImport.update({
   path: '/api/blob/upload',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PortalMensalidadesChargeIdReciboRoute =
+  PortalMensalidadesChargeIdReciboRouteImport.update({
+    id: '/$chargeId/recibo',
+    path: '/$chargeId/recibo',
+    getParentRoute: () => PortalMensalidadesRoute,
+  } as any)
 const PainelRelatorioStudentIdPdfRoute =
   PainelRelatorioStudentIdPdfRouteImport.update({
     id: '/$studentId/pdf',
     path: '/$studentId/pdf',
     getParentRoute: () => PainelRelatorioRoute,
+  } as any)
+const PainelPagamentosChargeIdReciboRoute =
+  PainelPagamentosChargeIdReciboRouteImport.update({
+    id: '/$chargeId/recibo',
+    path: '/$chargeId/recibo',
+    getParentRoute: () => PainelPagamentosRoute,
   } as any)
 const PainelRelatorioTurmaDisciplineIdPdfRoute =
   PainelRelatorioTurmaDisciplineIdPdfRouteImport.update({
@@ -378,14 +392,14 @@ export interface FileRoutesByFullPath {
   '/painel/auditoria': typeof PainelAuditoriaRoute
   '/painel/biblioteca': typeof PainelBibliotecaRoute
   '/painel/financeiro': typeof PainelFinanceiroRoute
-  '/painel/pagamentos': typeof PainelPagamentosRoute
+  '/painel/pagamentos': typeof PainelPagamentosRouteWithChildren
   '/painel/professores': typeof PainelProfessoresRoute
   '/painel/relatorio': typeof PainelRelatorioRouteWithChildren
   '/painel/relatorio-modulo': typeof PainelRelatorioModuloRoute
   '/painel/trocar-senha': typeof PainelTrocarSenhaRoute
   '/portal/conta': typeof PortalContaRoute
   '/portal/discipulado': typeof PortalDiscipuladoRoute
-  '/portal/mensalidades': typeof PortalMensalidadesRoute
+  '/portal/mensalidades': typeof PortalMensalidadesRouteWithChildren
   '/portal/notas': typeof PortalNotasRoute
   '/portal/pdf': typeof PortalPdfRoute
   '/portal/trocar-senha': typeof PortalTrocarSenhaRoute
@@ -417,7 +431,9 @@ export interface FileRoutesByFullPath {
   '/portal/forum/': typeof PortalForumIndexRoute
   '/portal/provas/': typeof PortalProvasIndexRoute
   '/portal/tarefas/': typeof PortalTarefasIndexRoute
+  '/painel/pagamentos/$chargeId/recibo': typeof PainelPagamentosChargeIdReciboRoute
   '/painel/relatorio/$studentId/pdf': typeof PainelRelatorioStudentIdPdfRoute
+  '/portal/mensalidades/$chargeId/recibo': typeof PortalMensalidadesChargeIdReciboRoute
   '/painel/relatorio/turma/$disciplineId/pdf': typeof PainelRelatorioTurmaDisciplineIdPdfRoute
 }
 export interface FileRoutesByTo {
@@ -435,14 +451,14 @@ export interface FileRoutesByTo {
   '/painel/auditoria': typeof PainelAuditoriaRoute
   '/painel/biblioteca': typeof PainelBibliotecaRoute
   '/painel/financeiro': typeof PainelFinanceiroRoute
-  '/painel/pagamentos': typeof PainelPagamentosRoute
+  '/painel/pagamentos': typeof PainelPagamentosRouteWithChildren
   '/painel/professores': typeof PainelProfessoresRoute
   '/painel/relatorio': typeof PainelRelatorioRouteWithChildren
   '/painel/relatorio-modulo': typeof PainelRelatorioModuloRoute
   '/painel/trocar-senha': typeof PainelTrocarSenhaRoute
   '/portal/conta': typeof PortalContaRoute
   '/portal/discipulado': typeof PortalDiscipuladoRoute
-  '/portal/mensalidades': typeof PortalMensalidadesRoute
+  '/portal/mensalidades': typeof PortalMensalidadesRouteWithChildren
   '/portal/notas': typeof PortalNotasRoute
   '/portal/pdf': typeof PortalPdfRoute
   '/portal/trocar-senha': typeof PortalTrocarSenhaRoute
@@ -474,7 +490,9 @@ export interface FileRoutesByTo {
   '/portal/forum': typeof PortalForumIndexRoute
   '/portal/provas': typeof PortalProvasIndexRoute
   '/portal/tarefas': typeof PortalTarefasIndexRoute
+  '/painel/pagamentos/$chargeId/recibo': typeof PainelPagamentosChargeIdReciboRoute
   '/painel/relatorio/$studentId/pdf': typeof PainelRelatorioStudentIdPdfRoute
+  '/portal/mensalidades/$chargeId/recibo': typeof PortalMensalidadesChargeIdReciboRoute
   '/painel/relatorio/turma/$disciplineId/pdf': typeof PainelRelatorioTurmaDisciplineIdPdfRoute
 }
 export interface FileRoutesById {
@@ -495,14 +513,14 @@ export interface FileRoutesById {
   '/painel/auditoria': typeof PainelAuditoriaRoute
   '/painel/biblioteca': typeof PainelBibliotecaRoute
   '/painel/financeiro': typeof PainelFinanceiroRoute
-  '/painel/pagamentos': typeof PainelPagamentosRoute
+  '/painel/pagamentos': typeof PainelPagamentosRouteWithChildren
   '/painel/professores': typeof PainelProfessoresRoute
   '/painel/relatorio': typeof PainelRelatorioRouteWithChildren
   '/painel/relatorio-modulo': typeof PainelRelatorioModuloRoute
   '/painel/trocar-senha': typeof PainelTrocarSenhaRoute
   '/portal/conta': typeof PortalContaRoute
   '/portal/discipulado': typeof PortalDiscipuladoRoute
-  '/portal/mensalidades': typeof PortalMensalidadesRoute
+  '/portal/mensalidades': typeof PortalMensalidadesRouteWithChildren
   '/portal/notas': typeof PortalNotasRoute
   '/portal/pdf': typeof PortalPdfRoute
   '/portal/trocar-senha': typeof PortalTrocarSenhaRoute
@@ -534,7 +552,9 @@ export interface FileRoutesById {
   '/portal/forum/': typeof PortalForumIndexRoute
   '/portal/provas/': typeof PortalProvasIndexRoute
   '/portal/tarefas/': typeof PortalTarefasIndexRoute
+  '/painel/pagamentos/$chargeId/recibo': typeof PainelPagamentosChargeIdReciboRoute
   '/painel/relatorio/$studentId/pdf': typeof PainelRelatorioStudentIdPdfRoute
+  '/portal/mensalidades/$chargeId/recibo': typeof PortalMensalidadesChargeIdReciboRoute
   '/painel/relatorio/turma/$disciplineId/pdf': typeof PainelRelatorioTurmaDisciplineIdPdfRoute
 }
 export interface FileRouteTypes {
@@ -595,7 +615,9 @@ export interface FileRouteTypes {
     | '/portal/forum/'
     | '/portal/provas/'
     | '/portal/tarefas/'
+    | '/painel/pagamentos/$chargeId/recibo'
     | '/painel/relatorio/$studentId/pdf'
+    | '/portal/mensalidades/$chargeId/recibo'
     | '/painel/relatorio/turma/$disciplineId/pdf'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -652,7 +674,9 @@ export interface FileRouteTypes {
     | '/portal/forum'
     | '/portal/provas'
     | '/portal/tarefas'
+    | '/painel/pagamentos/$chargeId/recibo'
     | '/painel/relatorio/$studentId/pdf'
+    | '/portal/mensalidades/$chargeId/recibo'
     | '/painel/relatorio/turma/$disciplineId/pdf'
   id:
     | '__root__'
@@ -711,7 +735,9 @@ export interface FileRouteTypes {
     | '/portal/forum/'
     | '/portal/provas/'
     | '/portal/tarefas/'
+    | '/painel/pagamentos/$chargeId/recibo'
     | '/painel/relatorio/$studentId/pdf'
+    | '/portal/mensalidades/$chargeId/recibo'
     | '/painel/relatorio/turma/$disciplineId/pdf'
   fileRoutesById: FileRoutesById
 }
@@ -1121,12 +1147,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiBlobUploadRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/portal/mensalidades/$chargeId/recibo': {
+      id: '/portal/mensalidades/$chargeId/recibo'
+      path: '/$chargeId/recibo'
+      fullPath: '/portal/mensalidades/$chargeId/recibo'
+      preLoaderRoute: typeof PortalMensalidadesChargeIdReciboRouteImport
+      parentRoute: typeof PortalMensalidadesRoute
+    }
     '/painel/relatorio/$studentId/pdf': {
       id: '/painel/relatorio/$studentId/pdf'
       path: '/$studentId/pdf'
       fullPath: '/painel/relatorio/$studentId/pdf'
       preLoaderRoute: typeof PainelRelatorioStudentIdPdfRouteImport
       parentRoute: typeof PainelRelatorioRoute
+    }
+    '/painel/pagamentos/$chargeId/recibo': {
+      id: '/painel/pagamentos/$chargeId/recibo'
+      path: '/$chargeId/recibo'
+      fullPath: '/painel/pagamentos/$chargeId/recibo'
+      preLoaderRoute: typeof PainelPagamentosChargeIdReciboRouteImport
+      parentRoute: typeof PainelPagamentosRoute
     }
     '/painel/relatorio/turma/$disciplineId/pdf': {
       id: '/painel/relatorio/turma/$disciplineId/pdf'
@@ -1137,6 +1177,17 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface PainelPagamentosRouteChildren {
+  PainelPagamentosChargeIdReciboRoute: typeof PainelPagamentosChargeIdReciboRoute
+}
+
+const PainelPagamentosRouteChildren: PainelPagamentosRouteChildren = {
+  PainelPagamentosChargeIdReciboRoute: PainelPagamentosChargeIdReciboRoute,
+}
+
+const PainelPagamentosRouteWithChildren =
+  PainelPagamentosRoute._addFileChildren(PainelPagamentosRouteChildren)
 
 interface PainelRelatorioRouteChildren {
   PainelRelatorioStudentIdPdfRoute: typeof PainelRelatorioStudentIdPdfRoute
@@ -1159,7 +1210,7 @@ interface PainelRouteRouteChildren {
   PainelAuditoriaRoute: typeof PainelAuditoriaRoute
   PainelBibliotecaRoute: typeof PainelBibliotecaRoute
   PainelFinanceiroRoute: typeof PainelFinanceiroRoute
-  PainelPagamentosRoute: typeof PainelPagamentosRoute
+  PainelPagamentosRoute: typeof PainelPagamentosRouteWithChildren
   PainelProfessoresRoute: typeof PainelProfessoresRoute
   PainelRelatorioRoute: typeof PainelRelatorioRouteWithChildren
   PainelRelatorioModuloRoute: typeof PainelRelatorioModuloRoute
@@ -1180,7 +1231,7 @@ const PainelRouteRouteChildren: PainelRouteRouteChildren = {
   PainelAuditoriaRoute: PainelAuditoriaRoute,
   PainelBibliotecaRoute: PainelBibliotecaRoute,
   PainelFinanceiroRoute: PainelFinanceiroRoute,
-  PainelPagamentosRoute: PainelPagamentosRoute,
+  PainelPagamentosRoute: PainelPagamentosRouteWithChildren,
   PainelProfessoresRoute: PainelProfessoresRoute,
   PainelRelatorioRoute: PainelRelatorioRouteWithChildren,
   PainelRelatorioModuloRoute: PainelRelatorioModuloRoute,
@@ -1199,10 +1250,21 @@ const PainelRouteRouteWithChildren = PainelRouteRoute._addFileChildren(
   PainelRouteRouteChildren,
 )
 
+interface PortalMensalidadesRouteChildren {
+  PortalMensalidadesChargeIdReciboRoute: typeof PortalMensalidadesChargeIdReciboRoute
+}
+
+const PortalMensalidadesRouteChildren: PortalMensalidadesRouteChildren = {
+  PortalMensalidadesChargeIdReciboRoute: PortalMensalidadesChargeIdReciboRoute,
+}
+
+const PortalMensalidadesRouteWithChildren =
+  PortalMensalidadesRoute._addFileChildren(PortalMensalidadesRouteChildren)
+
 interface PortalRouteRouteChildren {
   PortalContaRoute: typeof PortalContaRoute
   PortalDiscipuladoRoute: typeof PortalDiscipuladoRoute
-  PortalMensalidadesRoute: typeof PortalMensalidadesRoute
+  PortalMensalidadesRoute: typeof PortalMensalidadesRouteWithChildren
   PortalNotasRoute: typeof PortalNotasRoute
   PortalPdfRoute: typeof PortalPdfRoute
   PortalTrocarSenhaRoute: typeof PortalTrocarSenhaRoute
@@ -1226,7 +1288,7 @@ interface PortalRouteRouteChildren {
 const PortalRouteRouteChildren: PortalRouteRouteChildren = {
   PortalContaRoute: PortalContaRoute,
   PortalDiscipuladoRoute: PortalDiscipuladoRoute,
-  PortalMensalidadesRoute: PortalMensalidadesRoute,
+  PortalMensalidadesRoute: PortalMensalidadesRouteWithChildren,
   PortalNotasRoute: PortalNotasRoute,
   PortalPdfRoute: PortalPdfRoute,
   PortalTrocarSenhaRoute: PortalTrocarSenhaRoute,

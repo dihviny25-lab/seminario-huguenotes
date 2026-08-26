@@ -70,6 +70,17 @@ function toCharge(row: typeof charges.$inferSelect): Charge {
   };
 }
 
+/** Busca uma cobrança com o nome do aluno pra gerar o recibo em PDF. */
+export async function getChargeForReceipt(chargeId: string) {
+  const [row] = await db
+    .select({ charge: charges, studentName: students.name })
+    .from(charges)
+    .innerJoin(students, eq(charges.studentId, students.id))
+    .where(eq(charges.id, chargeId))
+    .limit(1);
+  return row ?? null;
+}
+
 /** Cobranças do próprio aluno logado no portal. */
 export const listMyChargesFn = createServerFn({ method: "GET" }).handler(
   async (): Promise<Array<Charge>> => {

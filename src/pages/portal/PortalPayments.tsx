@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Settings2 } from "lucide-react";
+import { Download, Settings2 } from "lucide-react";
 
 import { PortalShell } from "@/components/portal/PortalShell";
 import { Badge } from "@/components/ui/badge";
@@ -118,6 +118,16 @@ export function PortalPayments() {
                     {charge.status === "pending" ? (
                       <Button size="sm" onClick={() => setSelectedCharge(charge)}>
                         Pagar
+                      </Button>
+                    ) : charge.status === "paid" ? (
+                      <Button asChild variant="ghost" size="icon" title="Baixar recibo">
+                        <a
+                          href={`/portal/mensalidades/${charge.id}/recibo`}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          <Download className="size-4" aria-hidden />
+                        </a>
                       </Button>
                     ) : null}
                   </TableCell>

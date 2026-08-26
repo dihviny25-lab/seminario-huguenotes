@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
-import { Ban, CheckCircle2, Pencil, Plus, RefreshCcw, Undo2 } from "lucide-react";
+import { Ban, CheckCircle2, Download, Pencil, Plus, RefreshCcw, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -289,7 +289,16 @@ export function Payments({ initialStudentId }: { initialStudentId?: string } = {
                             </Button>
                           </div>
                         ) : isAdmin && charge.status === "paid" ? (
-                          <div className="flex justify-end">
+                          <div className="flex justify-end gap-1">
+                            <Button asChild variant="ghost" size="icon" title="Baixar recibo">
+                              <a
+                                href={`/painel/pagamentos/${charge.id}/recibo`}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                <Download className="size-4" aria-hidden />
+                              </a>
+                            </Button>
                             <Button
                               variant="ghost"
                               size="icon"
