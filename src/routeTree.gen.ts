@@ -37,6 +37,7 @@ import { Route as PainelProfessoresRouteImport } from './routes/painel/professor
 import { Route as PainelPagamentosRouteImport } from './routes/painel/pagamentos'
 import { Route as PainelMateriaisRouteImport } from './routes/painel/materiais'
 import { Route as PainelFinanceiroRouteImport } from './routes/painel/financeiro'
+import { Route as PainelDespesasRouteImport } from './routes/painel/despesas'
 import { Route as PainelBibliotecaRouteImport } from './routes/painel/biblioteca'
 import { Route as PainelAuditoriaRouteImport } from './routes/painel/auditoria'
 import { Route as PainelAlunosRouteImport } from './routes/painel/alunos'
@@ -206,6 +207,11 @@ const PainelMateriaisRoute = PainelMateriaisRouteImport.update({
 const PainelFinanceiroRoute = PainelFinanceiroRouteImport.update({
   id: '/financeiro',
   path: '/financeiro',
+  getParentRoute: () => PainelRouteRoute,
+} as any)
+const PainelDespesasRoute = PainelDespesasRouteImport.update({
+  id: '/despesas',
+  path: '/despesas',
   getParentRoute: () => PainelRouteRoute,
 } as any)
 const PainelBibliotecaRoute = PainelBibliotecaRouteImport.update({
@@ -383,6 +389,7 @@ export interface FileRoutesByFullPath {
   '/painel/alunos': typeof PainelAlunosRoute
   '/painel/auditoria': typeof PainelAuditoriaRoute
   '/painel/biblioteca': typeof PainelBibliotecaRoute
+  '/painel/despesas': typeof PainelDespesasRoute
   '/painel/financeiro': typeof PainelFinanceiroRoute
   '/painel/materiais': typeof PainelMateriaisRoute
   '/painel/pagamentos': typeof PainelPagamentosRoute
@@ -441,6 +448,7 @@ export interface FileRoutesByTo {
   '/painel/alunos': typeof PainelAlunosRoute
   '/painel/auditoria': typeof PainelAuditoriaRoute
   '/painel/biblioteca': typeof PainelBibliotecaRoute
+  '/painel/despesas': typeof PainelDespesasRoute
   '/painel/financeiro': typeof PainelFinanceiroRoute
   '/painel/materiais': typeof PainelMateriaisRoute
   '/painel/pagamentos': typeof PainelPagamentosRoute
@@ -502,6 +510,7 @@ export interface FileRoutesById {
   '/painel/alunos': typeof PainelAlunosRoute
   '/painel/auditoria': typeof PainelAuditoriaRoute
   '/painel/biblioteca': typeof PainelBibliotecaRoute
+  '/painel/despesas': typeof PainelDespesasRoute
   '/painel/financeiro': typeof PainelFinanceiroRoute
   '/painel/materiais': typeof PainelMateriaisRoute
   '/painel/pagamentos': typeof PainelPagamentosRoute
@@ -564,6 +573,7 @@ export interface FileRouteTypes {
     | '/painel/alunos'
     | '/painel/auditoria'
     | '/painel/biblioteca'
+    | '/painel/despesas'
     | '/painel/financeiro'
     | '/painel/materiais'
     | '/painel/pagamentos'
@@ -622,6 +632,7 @@ export interface FileRouteTypes {
     | '/painel/alunos'
     | '/painel/auditoria'
     | '/painel/biblioteca'
+    | '/painel/despesas'
     | '/painel/financeiro'
     | '/painel/materiais'
     | '/painel/pagamentos'
@@ -682,6 +693,7 @@ export interface FileRouteTypes {
     | '/painel/alunos'
     | '/painel/auditoria'
     | '/painel/biblioteca'
+    | '/painel/despesas'
     | '/painel/financeiro'
     | '/painel/materiais'
     | '/painel/pagamentos'
@@ -944,6 +956,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PainelFinanceiroRouteImport
       parentRoute: typeof PainelRouteRoute
     }
+    '/painel/despesas': {
+      id: '/painel/despesas'
+      path: '/despesas'
+      fullPath: '/painel/despesas'
+      preLoaderRoute: typeof PainelDespesasRouteImport
+      parentRoute: typeof PainelRouteRoute
+    }
     '/painel/biblioteca': {
       id: '/painel/biblioteca'
       path: '/biblioteca'
@@ -1177,6 +1196,7 @@ interface PainelRouteRouteChildren {
   PainelAlunosRoute: typeof PainelAlunosRoute
   PainelAuditoriaRoute: typeof PainelAuditoriaRoute
   PainelBibliotecaRoute: typeof PainelBibliotecaRoute
+  PainelDespesasRoute: typeof PainelDespesasRoute
   PainelFinanceiroRoute: typeof PainelFinanceiroRoute
   PainelMateriaisRoute: typeof PainelMateriaisRoute
   PainelPagamentosRoute: typeof PainelPagamentosRoute
@@ -1199,6 +1219,7 @@ const PainelRouteRouteChildren: PainelRouteRouteChildren = {
   PainelAlunosRoute: PainelAlunosRoute,
   PainelAuditoriaRoute: PainelAuditoriaRoute,
   PainelBibliotecaRoute: PainelBibliotecaRoute,
+  PainelDespesasRoute: PainelDespesasRoute,
   PainelFinanceiroRoute: PainelFinanceiroRoute,
   PainelMateriaisRoute: PainelMateriaisRoute,
   PainelPagamentosRoute: PainelPagamentosRoute,

@@ -319,6 +319,18 @@ export const charges = pgTable("charges", {
   reminderOverdueSentAt: timestamp("reminder_overdue_sent_at", { withTimezone: true }),
 });
 
+export const expenses = pgTable("expenses", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  description: text("description").notNull(),
+  amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
+  // Texto livre (não enum) — mesmo padrão do campo `modality` em `charges`.
+  category: text("category").notNull(),
+  date: date("date").notNull(),
+  note: text("note"),
+  createdById: uuid("created_by_id").references(() => teachers.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const studentObservations = pgTable("student_observations", {
   id: uuid("id").primaryKey().defaultRandom(),
   studentId: uuid("student_id")
