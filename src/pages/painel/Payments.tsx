@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
-import { Ban, CheckCircle2, Pencil, Plus, RefreshCcw, Undo2 } from "lucide-react";
+import { Ban, BookOpen, CheckCircle2, Pencil, Plus, RefreshCcw, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -32,6 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Table,
@@ -42,6 +43,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { getCurrentTeacherFn } from "@/functions/auth";
+import { assignMaterialToStudentFn, listCourseMaterialsFn } from "@/functions/materials";
 import { listStudentsFn } from "@/functions/students";
 import {
   cancelChargeFn,
@@ -89,6 +91,7 @@ export function Payments({ initialStudentId }: { initialStudentId?: string } = {
   const [selectedId, setSelectedId] = useState<string | null>(initialStudentId ?? null);
   const [createOpen, setCreateOpen] = useState(false);
   const [generateOpen, setGenerateOpen] = useState(false);
+  const [materialOpen, setMaterialOpen] = useState(false);
   const [editingCharge, setEditingCharge] = useState<Charge | null>(null);
   const queryClient = useQueryClient();
 
@@ -187,6 +190,10 @@ export function Payments({ initialStudentId }: { initialStudentId?: string } = {
                 <Button variant="outline" onClick={() => setGenerateOpen(true)}>
                   <RefreshCcw className="size-4" aria-hidden />
                   Gerar mensalidades
+                </Button>
+                <Button variant="outline" onClick={() => setMaterialOpen(true)}>
+                  <BookOpen className="size-4" aria-hidden />
+                  Dar/cobrar material
                 </Button>
                 <Button onClick={() => setCreateOpen(true)}>
                   <Plus className="size-4" aria-hidden />
@@ -326,6 +333,12 @@ export function Payments({ initialStudentId }: { initialStudentId?: string } = {
             open={generateOpen}
             onOpenChange={setGenerateOpen}
             onGenerated={invalidate}
+          />
+          <AssignMaterialDialog
+            studentId={selectedId}
+            open={materialOpen}
+            onOpenChange={setMaterialOpen}
+            onAssigned={invalidate}
           />
           <EditChargeDialog
             charge={editingCharge}
@@ -761,6 +774,133 @@ function GenerateMonthlyDialog({
             <DialogFooter>
               <Button type="submit" disabled={mutation.isPending}>
                 Gerar
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+const assignMaterialSchema = z
+  .object({
+    materialId: z.string().uuid("Escolha um material."),
+    donate: z.boolean(),
+    dueDate: z.string().optional(),
+  })
+  .refine((data) => data.donate || (data.dueDate?.length ?? 0) > 0, {
+    message: "Informe o vencimento.",
+    path: ["dueDate"],
+  });
+
+/** Atribui um material do catálogo ao aluno — cobra normalmente ou já dá como doado (isento). */
+function AssignMaterialDialog({
+  studentId,
+  open,
+  onOpenChange,
+  onAssigned,
+}: {
+  studentId: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onAssigned: () => Promise<unknown>;
+}) {
+  const { data: materials } = useQuery({
+    queryKey: ["course-materials"],
+    queryFn: () => listCourseMaterialsFn(),
+    enabled: open,
+  });
+  const activeMaterials = (materials ?? []).filter((m) => m.active);
+
+  const form = useForm<z.infer<typeof assignMaterialSchema>>({
+    resolver: zodResolver(assignMaterialSchema),
+    defaultValues: { materialId: "", donate: false, dueDate: "" },
+  });
+  const donate = form.watch("donate");
+
+  const mutation = useMutation({
+    mutationFn: (values: z.infer<typeof assignMaterialSchema>) =>
+      assignMaterialToStudentFn({ data: { studentId, ...values } }),
+    onSuccess: async () => {
+      toast.success(donate ? "Material doado ao aluno." : "Material cobrado do aluno.");
+      form.reset();
+      onOpenChange(false);
+      await onAssigned();
+    },
+    onError: (error) => toast.error(errorMessage(error, "Não foi possível registrar.")),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Dar ou cobrar material</DialogTitle>
+        </DialogHeader>
+        <Form {...form}>
+          <form
+            className="space-y-4"
+            onSubmit={form.handleSubmit((values) => mutation.mutate(values))}
+          >
+            <FormField
+              control={form.control}
+              name="materialId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Material</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Escolha um material do catálogo" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {activeMaterials.map((material) => (
+                        <SelectItem key={material.id} value={material.id}>
+                          {material.title} — {formatAmount(material.price)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {activeMaterials.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      Nenhum material ativo no catálogo — cadastre um em "Materiais".
+                    </p>
+                  ) : null}
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="donate"
+              render={({ field }) => (
+                <FormItem className="flex items-center justify-between rounded-md border border-border/70 p-3">
+                  <FormLabel className="mb-0">Doar (sem cobrar do aluno)</FormLabel>
+                  <FormControl>
+                    <Switch checked={field.value} onCheckedChange={field.onChange} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            {!donate ? (
+              <FormField
+                control={form.control}
+                name="dueDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Vencimento</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            ) : null}
+            <DialogFooter>
+              <Button type="submit" disabled={mutation.isPending}>
+                {donate ? "Doar material" : "Cobrar material"}
               </Button>
             </DialogFooter>
           </form>

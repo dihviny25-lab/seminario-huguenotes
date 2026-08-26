@@ -266,11 +266,27 @@ export const examAnswers = pgTable(
   (table) => [unique().on(table.attemptId, table.questionId)],
 );
 
+// Catálogo de materiais/livros que podem ser cobrados (ou doados) do aluno —
+// separado da biblioteca virtual (`libraryBooks`), que é leitura online livre.
+export const courseMaterials = pgTable("course_materials", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  title: text("title").notNull(),
+  price: numeric("price", { precision: 10, scale: 2 }).notNull(),
+  active: boolean("active").notNull().default(true),
+  createdById: uuid("created_by_id").references(() => teachers.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const charges = pgTable("charges", {
   id: uuid("id").primaryKey().defaultRandom(),
   studentId: uuid("student_id")
     .notNull()
     .references(() => students.id, { onDelete: "cascade" }),
+  // Presente só quando a cobrança veio de um material do catálogo (cobrado
+  // ou doado) — nulo pra mensalidade e cobrança avulsa comuns.
+  courseMaterialId: uuid("course_material_id").references(() => courseMaterials.id, {
+    onDelete: "set null",
+  }),
   description: text("description").notNull(),
   // Valor cheio (sem desconto) — pra avulsa é o que o admin digitou; pra
   // mensalidade é o valor da modalidade escolhida, copiado na criação.

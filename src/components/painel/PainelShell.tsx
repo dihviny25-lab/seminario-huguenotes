@@ -13,6 +13,7 @@ import {
   ListChecks,
   LogOut,
   MessageCircle,
+  PackageOpen,
   ShieldCheck,
   Users,
   Wallet,
@@ -49,6 +50,7 @@ const painelNavItems = [
 
 const adminOnlyNavItems = [
   { to: "/painel/financeiro", label: "Financeiro", icon: BarChart3 },
+  { to: "/painel/materiais", label: "Materiais", icon: PackageOpen },
   { to: "/painel/auditoria", label: "Auditoria", icon: ShieldCheck },
 ] as const;
 
