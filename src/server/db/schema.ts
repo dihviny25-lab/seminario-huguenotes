@@ -266,11 +266,27 @@ export const examAnswers = pgTable(
   (table) => [unique().on(table.attemptId, table.questionId)],
 );
 
+// Catálogo de materiais/livros que podem ser cobrados (ou doados) do aluno —
+// separado da biblioteca virtual (`libraryBooks`), que é leitura online livre.
+export const courseMaterials = pgTable("course_materials", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  title: text("title").notNull(),
+  price: numeric("price", { precision: 10, scale: 2 }).notNull(),
+  active: boolean("active").notNull().default(true),
+  createdById: uuid("created_by_id").references(() => teachers.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const charges = pgTable("charges", {
   id: uuid("id").primaryKey().defaultRandom(),
   studentId: uuid("student_id")
     .notNull()
     .references(() => students.id, { onDelete: "cascade" }),
+  // Presente só quando a cobrança veio de um material do catálogo (cobrado
+  // ou doado) — nulo pra mensalidade e cobrança avulsa comuns.
+  courseMaterialId: uuid("course_material_id").references(() => courseMaterials.id, {
+    onDelete: "set null",
+  }),
   description: text("description").notNull(),
   // Valor cheio (sem desconto) — pra avulsa é o que o admin digitou; pra
   // mensalidade é o valor da modalidade escolhida, copiado na criação.
@@ -301,6 +317,18 @@ export const charges = pgTable("charges", {
   // Controla o lembrete de vencimento por e-mail — evita mandar duas vezes.
   reminderUpcomingSentAt: timestamp("reminder_upcoming_sent_at", { withTimezone: true }),
   reminderOverdueSentAt: timestamp("reminder_overdue_sent_at", { withTimezone: true }),
+});
+
+export const expenses = pgTable("expenses", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  description: text("description").notNull(),
+  amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
+  // Texto livre (não enum) — mesmo padrão do campo `modality` em `charges`.
+  category: text("category").notNull(),
+  date: date("date").notNull(),
+  note: text("note"),
+  createdById: uuid("created_by_id").references(() => teachers.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const studentObservations = pgTable("student_observations", {
