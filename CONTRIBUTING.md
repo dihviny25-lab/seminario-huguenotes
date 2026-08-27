@@ -1,3 +1,5 @@
+> Trabalho de motion/animação de UI segue o padrão em [MOTION.md](MOTION.md).
+
 # Fluxo de trabalho: issues e pull requests
 
 Este projeto usa GitHub Issues + Pull Requests para gerenciar todo o trabalho e os deploys.

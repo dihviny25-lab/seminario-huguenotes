@@ -187,4 +187,18 @@
     background-color: color-mix(in srgb, var(--primary) 25%, transparent);
     color: var(--foreground);
   }
+
+  /* Mandatory motion-accessibility guard — qualquer animação/transição no
+     app (inclusive as classes animate-in/animate-out do tw-animate-css)
+     encolhe pra quase-instantâneo quando o usuário pede menos movimento. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }

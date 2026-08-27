@@ -7,6 +7,7 @@ import {
   BookOpen,
   CheckCircle2,
   Download,
+  Loader2,
   Pencil,
   Plus,
   RefreshCcw,
@@ -51,6 +52,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TableSkeletonRows } from "@/components/TableSkeletonRows";
 import { getCurrentTeacherFn } from "@/functions/auth";
 import { assignMaterialToStudentFn, listCourseMaterialsFn } from "@/functions/materials";
 import { listStudentsFn } from "@/functions/students";
@@ -225,14 +227,13 @@ export function Payments({ initialStudentId }: { initialStudentId?: string } = {
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="py-6 text-center text-muted-foreground">
-                      Carregando…
-                    </TableCell>
-                  </TableRow>
+                  <TableSkeletonRows columns={5} />
                 ) : charges && charges.length > 0 ? (
                   charges.map((charge) => (
-                    <TableRow key={charge.id}>
+                    <TableRow
+                      key={charge.id}
+                      className="animate-in fade-in slide-in-from-top-1 duration-200"
+                    >
                       <TableCell className="font-medium text-foreground">
                         {charge.description}
                         {charge.modality ? (
@@ -460,6 +461,9 @@ function EditChargeDialog({
             </div>
             <DialogFooter>
               <Button type="submit" disabled={mutation.isPending}>
+                {mutation.isPending ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                ) : null}
                 {mutation.isPending ? "Salvando…" : "Salvar"}
               </Button>
             </DialogFooter>
@@ -557,6 +561,7 @@ function MarkPaidButton({
           />
           <DialogFooter>
             <Button onClick={() => mutation.mutate()} disabled={mutation.isPending}>
+              {mutation.isPending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
               Confirmar pagamento
             </Button>
           </DialogFooter>
@@ -652,6 +657,9 @@ function CreateChargeDialog({
             />
             <DialogFooter>
               <Button type="submit" disabled={mutation.isPending}>
+                {mutation.isPending ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                ) : null}
                 Criar
               </Button>
             </DialogFooter>
@@ -791,6 +799,9 @@ function GenerateMonthlyDialog({
             </div>
             <DialogFooter>
               <Button type="submit" disabled={mutation.isPending}>
+                {mutation.isPending ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                ) : null}
                 Gerar
               </Button>
             </DialogFooter>
@@ -918,6 +929,9 @@ function AssignMaterialDialog({
             ) : null}
             <DialogFooter>
               <Button type="submit" disabled={mutation.isPending}>
+                {mutation.isPending ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                ) : null}
                 {donate ? "Doar material" : "Cobrar material"}
               </Button>
             </DialogFooter>
