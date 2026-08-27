@@ -2,7 +2,7 @@ import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -44,6 +44,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TableSkeletonRows } from "@/components/TableSkeletonRows";
 import {
   createCourseMaterialFn,
   deleteCourseMaterialFn,
@@ -111,14 +112,13 @@ export function Materials() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={4} className="py-6 text-center text-muted-foreground">
-                  Carregando…
-                </TableCell>
-              </TableRow>
+              <TableSkeletonRows columns={4} />
             ) : materials && materials.length > 0 ? (
               materials.map((material) => (
-                <TableRow key={material.id}>
+                <TableRow
+                  key={material.id}
+                  className="animate-in fade-in slide-in-from-top-1 duration-200"
+                >
                   <TableCell className="font-medium text-foreground">{material.title}</TableCell>
                   <TableCell>{formatAmount(material.price)}</TableCell>
                   <TableCell>
@@ -181,6 +181,9 @@ export function Materials() {
               onClick={() => deleting && deleteMutation.mutate(deleting.id)}
               disabled={deleteMutation.isPending}
             >
+              {deleteMutation.isPending ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden />
+              ) : null}
               Remover
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -260,6 +263,9 @@ function CreateMaterialDialog({
             />
             <DialogFooter>
               <Button type="submit" disabled={mutation.isPending}>
+                {mutation.isPending ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                ) : null}
                 Criar
               </Button>
             </DialogFooter>
@@ -350,6 +356,9 @@ function EditMaterialDialog({
             />
             <DialogFooter>
               <Button type="submit" disabled={mutation.isPending}>
+                {mutation.isPending ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                ) : null}
                 {mutation.isPending ? "Salvando…" : "Salvar"}
               </Button>
             </DialogFooter>

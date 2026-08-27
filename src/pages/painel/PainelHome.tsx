@@ -83,7 +83,7 @@ export function PainelHome() {
               key={discipline.id}
               to="/painel/disciplinas/$disciplineId"
               params={{ disciplineId: discipline.id }}
-              className="flex items-start gap-3 rounded-md border border-t-2 border-border/70 border-t-accent bg-card/70 p-4 shadow-soft transition-colors hover:border-primary/50"
+              className="flex items-start gap-3 rounded-md border border-t-2 border-border/70 border-t-accent bg-card/70 p-4 shadow-soft transition-colors animate-in fade-in slide-in-from-top-1 duration-200 hover:border-primary/50"
             >
               <BookOpen className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden />
               <span className="min-w-0">

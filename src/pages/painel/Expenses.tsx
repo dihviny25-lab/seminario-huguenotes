@@ -2,7 +2,7 @@ import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -51,6 +51,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TableSkeletonRows } from "@/components/TableSkeletonRows";
 import {
   createExpenseFn,
   deleteExpenseFn,
@@ -129,14 +130,13 @@ export function Expenses() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={6} className="py-6 text-center text-muted-foreground">
-                  Carregando…
-                </TableCell>
-              </TableRow>
+              <TableSkeletonRows columns={6} />
             ) : expenses && expenses.length > 0 ? (
               expenses.map((expense) => (
-                <TableRow key={expense.id}>
+                <TableRow
+                  key={expense.id}
+                  className="animate-in fade-in slide-in-from-top-1 duration-200"
+                >
                   <TableCell className="font-medium text-foreground">
                     {expense.description}
                   </TableCell>
@@ -213,6 +213,9 @@ export function Expenses() {
               onClick={() => deletingExpense && deleteMutation.mutate(deletingExpense.id)}
               disabled={deleteMutation.isPending}
             >
+              {deleteMutation.isPending ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden />
+              ) : null}
               Apagar
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -356,6 +359,9 @@ function CreateExpenseDialog({
             <ExpenseFormFields form={form} />
             <DialogFooter>
               <Button type="submit" disabled={mutation.isPending}>
+                {mutation.isPending ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                ) : null}
                 Registrar
               </Button>
             </DialogFooter>
@@ -413,6 +419,9 @@ function EditExpenseDialog({
             <ExpenseFormFields form={form} />
             <DialogFooter>
               <Button type="submit" disabled={mutation.isPending}>
+                {mutation.isPending ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                ) : null}
                 {mutation.isPending ? "Salvando…" : "Salvar"}
               </Button>
             </DialogFooter>

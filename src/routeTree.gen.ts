@@ -225,7 +225,9 @@ const PainelAuditoriaRoute = PainelAuditoriaRouteImport.update({
   id: '/auditoria',
   path: '/auditoria',
   getParentRoute: () => PainelRouteRoute,
-} as any)
+} as any).lazy(() =>
+  import('./routes/painel/auditoria.lazy').then((d) => d.Route),
+)
 const PainelAlunosRoute = PainelAlunosRouteImport.update({
   id: '/alunos',
   path: '/alunos',

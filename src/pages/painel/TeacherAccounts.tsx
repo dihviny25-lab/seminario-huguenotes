@@ -2,7 +2,7 @@ import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
-import { KeyRound, Pencil, Plus, ShieldOff, Trash2 } from "lucide-react";
+import { KeyRound, Loader2, Pencil, Plus, ShieldOff, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -42,6 +42,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TableSkeletonRows } from "@/components/TableSkeletonRows";
 import { PainelShell } from "@/components/painel/PainelShell";
 import { getCurrentTeacherFn } from "@/functions/auth";
 import {
@@ -133,17 +134,16 @@ export function TeacherAccounts() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={5} className="py-6 text-center text-muted-foreground">
-                  Carregando…
-                </TableCell>
-              </TableRow>
+              <TableSkeletonRows columns={5} />
             ) : teachers && teachers.length > 0 ? (
               teachers.map((teacher) => {
                 const isSelf = teacher.id === me?.id;
                 const canEdit = isAdmin || isSelf;
                 return (
-                  <TableRow key={teacher.id} className="even:bg-muted/30">
+                  <TableRow
+                    key={teacher.id}
+                    className="animate-in fade-in slide-in-from-top-1 even:bg-muted/30 duration-200"
+                  >
                     <TableCell className="font-medium text-foreground">{teacher.name}</TableCell>
                     <TableCell className="text-muted-foreground">{teacher.email}</TableCell>
                     <TableCell>
@@ -245,6 +245,9 @@ export function TeacherAccounts() {
               onClick={() => deleting && deleteMutation.mutate(deleting.id)}
               disabled={deleteMutation.isPending}
             >
+              {deleteMutation.isPending ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden />
+              ) : null}
               Excluir
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -337,6 +340,9 @@ function CreateTeacherDialog({
             />
             <DialogFooter>
               <Button type="submit" disabled={mutation.isPending}>
+                {mutation.isPending ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                ) : null}
                 Criar
               </Button>
             </DialogFooter>
@@ -416,6 +422,9 @@ function EditTeacherDialog({
             />
             <DialogFooter>
               <Button type="submit" disabled={mutation.isPending}>
+                {mutation.isPending ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                ) : null}
                 Salvar
               </Button>
             </DialogFooter>
@@ -502,6 +511,9 @@ function SetPasswordDialog({
             />
             <DialogFooter>
               <Button type="submit" disabled={mutation.isPending}>
+                {mutation.isPending ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                ) : null}
                 Salvar
               </Button>
             </DialogFooter>
