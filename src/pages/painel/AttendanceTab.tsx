@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, QrCode, Trash2 } from "lucide-react";
+import { Loader2, Plus, QrCode, Trash2 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
 
@@ -129,7 +129,11 @@ export function AttendanceTab({ disciplineId }: { disciplineId: string }) {
           onClick={() => startTodayCheckInMutation.mutate()}
           disabled={startTodayCheckInMutation.isPending}
         >
-          <QrCode className="size-4" aria-hidden />
+          {startTodayCheckInMutation.isPending ? (
+            <Loader2 className="size-4 animate-spin" aria-hidden />
+          ) : (
+            <QrCode className="size-4" aria-hidden />
+          )}
           {startTodayCheckInMutation.isPending ? "Abrindo…" : "Chamada de hoje"}
         </Button>
 
@@ -145,7 +149,11 @@ export function AttendanceTab({ disciplineId }: { disciplineId: string }) {
             onClick={() => createLessonMutation.mutate()}
             disabled={createLessonMutation.isPending}
           >
-            <Plus className="size-4" aria-hidden />
+            {createLessonMutation.isPending ? (
+              <Loader2 className="size-4 animate-spin" aria-hidden />
+            ) : (
+              <Plus className="size-4" aria-hidden />
+            )}
             Nova aula
           </Button>
         </div>
@@ -219,7 +227,10 @@ export function AttendanceTab({ disciplineId }: { disciplineId: string }) {
                 ).length;
 
                 return (
-                  <TableRow key={student.id} className="even:bg-muted/30">
+                  <TableRow
+                    key={student.id}
+                    className="animate-in fade-in slide-in-from-top-1 duration-200 even:bg-muted/30"
+                  >
                     <TableCell className="font-medium text-foreground">{student.name}</TableCell>
                     {data.lessons.map((lesson) => {
                       const key = `${lesson.id}:${student.id}`;
@@ -329,11 +340,15 @@ function LessonCheckInDialog({
               onClick={() => lesson && closeMutation.mutate(lesson.id)}
               disabled={closeMutation.isPending}
             >
+              {closeMutation.isPending ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden />
+              ) : null}
               Encerrar chamada
             </Button>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-4 py-8">
+            <Loader2 className="size-5 animate-spin text-muted-foreground" aria-hidden />
             <p className="text-sm text-muted-foreground">Abrindo chamada…</p>
           </div>
         )}

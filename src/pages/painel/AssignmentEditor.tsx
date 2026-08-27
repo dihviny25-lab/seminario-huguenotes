@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Download, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Download, Loader2, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { PainelShell } from "@/components/painel/PainelShell";
@@ -123,12 +123,16 @@ export function AssignmentEditor({ assignmentId }: { assignmentId: string }) {
       ) : (
         <div className="mt-4 grid gap-3">
           {submissions.map((row) => (
-            <SubmissionCard
+            <div
               key={row.studentId}
-              disciplineId={assignment.disciplineId}
-              row={row}
-              assignmentId={assignmentId}
-            />
+              className="animate-in fade-in slide-in-from-top-1 duration-200"
+            >
+              <SubmissionCard
+                disciplineId={assignment.disciplineId}
+                row={row}
+                assignmentId={assignmentId}
+              />
+            </div>
           ))}
         </div>
       )}
@@ -155,6 +159,9 @@ export function AssignmentEditor({ assignmentId }: { assignmentId: string }) {
               onClick={() => deleteAssignmentMutation.mutate()}
               disabled={deleteAssignmentMutation.isPending}
             >
+              {deleteAssignmentMutation.isPending ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden />
+              ) : null}
               Excluir
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -276,6 +283,7 @@ function EditAssignmentDialog({
           </div>
           <DialogFooter>
             <Button type="submit" disabled={mutation.isPending}>
+              {mutation.isPending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
               Salvar
             </Button>
           </DialogFooter>
@@ -392,6 +400,7 @@ function SubmissionCard({
               onClick={() => mutation.mutate()}
               disabled={score.trim().length === 0 || mutation.isPending}
             >
+              {mutation.isPending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
               Lançar nota
             </Button>
           </div>

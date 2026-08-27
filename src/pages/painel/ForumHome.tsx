@@ -3,7 +3,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
-import { BookOpen, ChevronLeft, MessageCircle, Plus } from "lucide-react";
+import { BookOpen, ChevronLeft, Loader2, MessageCircle, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -82,7 +82,7 @@ export function ForumHome() {
               key={discipline.id}
               type="button"
               onClick={() => setSelectedId(discipline.id)}
-              className="flex items-start gap-3 rounded-md border border-t-2 border-border/70 border-t-accent bg-card/70 p-4 text-left shadow-soft transition-colors hover:border-primary/50"
+              className="flex animate-in items-start gap-3 rounded-md border border-t-2 border-border/70 border-t-accent bg-card/70 p-4 text-left shadow-soft fade-in slide-in-from-top-1 duration-200 transition-colors hover:border-primary/50"
             >
               <BookOpen className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden />
               <span className="min-w-0">
@@ -138,7 +138,7 @@ export function ForumThreadList({ disciplineId }: { disciplineId: string }) {
               key={thread.id}
               to="/painel/forum/$threadId"
               params={{ threadId: thread.id }}
-              className="flex items-start gap-3 rounded-md border border-t-2 border-border/70 border-t-accent bg-card/70 p-4 shadow-soft transition-colors hover:border-primary/50"
+              className="flex animate-in items-start gap-3 rounded-md border border-t-2 border-border/70 border-t-accent bg-card/70 p-4 shadow-soft fade-in slide-in-from-top-1 duration-200 transition-colors hover:border-primary/50"
             >
               <MessageCircle className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden />
               <span className="min-w-0">
@@ -236,6 +236,9 @@ function CreateThreadDialog({
             />
             <DialogFooter>
               <Button type="submit" disabled={mutation.isPending}>
+                {mutation.isPending ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                ) : null}
                 Criar tópico
               </Button>
             </DialogFooter>

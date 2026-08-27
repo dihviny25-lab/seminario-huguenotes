@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BookOpen, Download, Pencil, Plus, Trash2 } from "lucide-react";
+import { BookOpen, Download, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -84,7 +84,7 @@ export function ReadingMaterialsTab({ disciplineId }: { disciplineId: string }) 
           {materials.map((material) => (
             <div
               key={material.id}
-              className="flex items-start gap-3 rounded-md border border-t-2 border-border/70 border-t-accent bg-card/70 p-4 shadow-soft"
+              className="animate-in flex items-start gap-3 rounded-md border border-t-2 border-border/70 border-t-accent bg-card/70 p-4 shadow-soft fade-in slide-in-from-top-1 duration-200"
             >
               <BookOpen className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden />
               <span className="min-w-0 flex-1">
@@ -219,6 +219,7 @@ function EditMaterialDialog({
           </div>
           <DialogFooter>
             <Button type="submit" disabled={mutation.isPending}>
+              {mutation.isPending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
               Salvar
             </Button>
           </DialogFooter>
@@ -327,6 +328,7 @@ function CreateMaterialDialog({
           </div>
           <DialogFooter>
             <Button type="submit" disabled={mutation.isPending || uploading}>
+              {uploading ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
               {uploading ? "Enviando…" : "Adicionar"}
             </Button>
           </DialogFooter>

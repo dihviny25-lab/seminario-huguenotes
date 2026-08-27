@@ -2,7 +2,7 @@ import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
-import { Plus, Trash2 } from "lucide-react";
+import { Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -158,7 +158,10 @@ export function GradesTab({ disciplineId }: { disciplineId: string }) {
                   const avg = computeWeightedAverage(scores);
 
                   return (
-                    <TableRow key={student.id} className="even:bg-muted/30">
+                    <TableRow
+                      key={student.id}
+                      className="animate-in fade-in slide-in-from-top-1 duration-200 even:bg-muted/30"
+                    >
                       <TableCell className="font-medium text-foreground">{student.name}</TableCell>
                       {data.assessments.map((a) => {
                         const key = `${a.id}:${student.id}`;
@@ -294,6 +297,9 @@ function CreateAssessmentDialog({
             </div>
             <DialogFooter>
               <Button type="submit" disabled={mutation.isPending}>
+                {mutation.isPending ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                ) : null}
                 Criar
               </Button>
             </DialogFooter>
