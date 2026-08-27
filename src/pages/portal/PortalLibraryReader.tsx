@@ -28,7 +28,7 @@ export function PortalLibraryReader({ bookId }: { bookId: string }) {
       {isLoading || !book ? (
         <Skeleton className="h-[85vh] w-full" />
       ) : (
-        <div className="overflow-hidden rounded-md border border-border/70 bg-card/70 shadow-soft">
+        <div className="animate-in overflow-hidden rounded-md border border-border/70 bg-card/70 shadow-soft fade-in duration-300">
           <iframe
             src={`${book.fileUrl}#toolbar=0&navpanes=0`}
             title={book.title}

@@ -10,7 +10,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useDelayedUnmount } from "@/hooks/useDelayedUnmount";
 import { PAYMENT_INFO } from "@/lib/paymentInfo";
+import { cn } from "@/lib/utils";
 
 function formatAmount(amount: string): string {
   return Number(amount).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -24,6 +26,9 @@ export function PaymentMethodsDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const [copied, setCopied] = useState(false);
+  // "Copiado!" desaparece sozinho depois de 2s — o delayed unmount dá tempo do
+  // fade/slide de saída rodar antes de voltar pro rótulo "Copiar".
+  const copiedMounted = useDelayedUnmount(copied, 200);
 
   async function copyPixKey() {
     await navigator.clipboard.writeText(PAYMENT_INFO.pix.chave);
@@ -62,16 +67,21 @@ export function PaymentMethodsDialog({
                 {PAYMENT_INFO.pix.chave}
               </span>
               <span className="flex shrink-0 items-center gap-1.5 text-xs font-medium text-accent">
-                {copied ? (
-                  <>
+                {copiedMounted ? (
+                  <span
+                    className={cn(
+                      "flex items-center gap-1.5 transition-all duration-200",
+                      copied ? "translate-y-0 opacity-100" : "-translate-y-1 opacity-0",
+                    )}
+                  >
                     <Check className="size-3.5 shrink-0" aria-hidden />
                     Copiado!
-                  </>
+                  </span>
                 ) : (
-                  <>
+                  <span className="flex items-center gap-1.5">
                     <Copy className="size-3.5 shrink-0" aria-hidden />
                     Copiar
-                  </>
+                  </span>
                 )}
               </span>
             </button>

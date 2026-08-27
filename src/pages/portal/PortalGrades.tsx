@@ -145,7 +145,7 @@ function DisciplineCard({
     <Link
       to="/portal/disciplinas/$disciplineId"
       params={{ disciplineId }}
-      className="flex items-start gap-3 rounded-md border border-t-2 border-border/70 border-t-accent bg-card/70 p-4 shadow-soft transition-colors hover:border-primary/50"
+      className="flex animate-in items-start gap-3 rounded-md border border-t-2 border-border/70 border-t-accent bg-card/70 p-4 shadow-soft fade-in slide-in-from-top-1 duration-200 transition-colors hover:border-primary/50"
     >
       <BookOpen className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden />
       <span className="min-w-0 flex-1">

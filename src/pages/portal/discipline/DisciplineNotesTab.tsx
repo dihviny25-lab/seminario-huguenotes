@@ -1,7 +1,15 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { HelpCircle, MessageSquare, NotebookPen, Pencil, Plus, Trash2 } from "lucide-react";
+import {
+  HelpCircle,
+  Loader2,
+  MessageSquare,
+  NotebookPen,
+  Pencil,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -84,7 +92,7 @@ export function DisciplineNotesTab({ disciplineId }: { disciplineId: string }) {
           ))}
         </div>
       ) : notes.length === 0 ? (
-        <p className="rounded-md border border-border/70 bg-card/70 p-6 text-center text-muted-foreground shadow-soft">
+        <p className="animate-in rounded-md border border-border/70 bg-card/70 p-6 text-center text-muted-foreground shadow-soft fade-in zoom-in-95 duration-300">
           Nenhuma anotação ainda. Que tal começar uma agora?
         </p>
       ) : (
@@ -93,7 +101,7 @@ export function DisciplineNotesTab({ disciplineId }: { disciplineId: string }) {
             <div
               key={note.id}
               className={
-                "flex items-start gap-3 rounded-md border border-t-2 bg-card/70 p-4 shadow-soft " +
+                "flex animate-in items-start gap-3 rounded-md border border-t-2 bg-card/70 p-4 shadow-soft fade-in slide-in-from-top-1 duration-200 " +
                 (note.kind === "question"
                   ? "border-border/70 border-t-primary"
                   : "border-border/70 border-t-accent")
@@ -139,7 +147,11 @@ export function DisciplineNotesTab({ disciplineId }: { disciplineId: string }) {
                       onClick={() => convertMutation.mutate(note.id)}
                       disabled={convertMutation.isPending}
                     >
-                      <MessageSquare className="size-3.5 shrink-0" aria-hidden />
+                      {convertMutation.isPending && convertMutation.variables === note.id ? (
+                        <Loader2 className="size-3.5 shrink-0 animate-spin" aria-hidden />
+                      ) : (
+                        <MessageSquare className="size-3.5 shrink-0" aria-hidden />
+                      )}
                       Publicar no fórum
                     </Button>
                   )
@@ -159,8 +171,13 @@ export function DisciplineNotesTab({ disciplineId }: { disciplineId: string }) {
                   size="icon"
                   title="Excluir"
                   onClick={() => deleteMutation.mutate(note.id)}
+                  disabled={deleteMutation.isPending && deleteMutation.variables === note.id}
                 >
-                  <Trash2 className="size-4" aria-hidden />
+                  {deleteMutation.isPending && deleteMutation.variables === note.id ? (
+                    <Loader2 className="size-4 animate-spin" aria-hidden />
+                  ) : (
+                    <Trash2 className="size-4" aria-hidden />
+                  )}
                 </Button>
               </div>
             </div>
@@ -279,6 +296,7 @@ function CreateNoteDialog({
           </div>
           <DialogFooter>
             <Button type="submit" disabled={mutation.isPending}>
+              {mutation.isPending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
               Salvar
             </Button>
           </DialogFooter>
@@ -375,6 +393,7 @@ function EditNoteDialog({
           </div>
           <DialogFooter>
             <Button type="submit" disabled={mutation.isPending}>
+              {mutation.isPending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
               Salvar
             </Button>
           </DialogFooter>

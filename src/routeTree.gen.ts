@@ -170,7 +170,9 @@ const PortalDiscipuladoRoute = PortalDiscipuladoRouteImport.update({
   id: '/discipulado',
   path: '/discipulado',
   getParentRoute: () => PortalRouteRoute,
-} as any)
+} as any).lazy(() =>
+  import('./routes/portal/discipulado.lazy').then((d) => d.Route),
+)
 const PortalContaRoute = PortalContaRouteImport.update({
   id: '/conta',
   path: '/conta',
@@ -291,7 +293,9 @@ const PortalProvasExamIdRoute = PortalProvasExamIdRouteImport.update({
   id: '/provas/$examId',
   path: '/provas/$examId',
   getParentRoute: () => PortalRouteRoute,
-} as any)
+} as any).lazy(() =>
+  import('./routes/portal/provas/$examId.lazy').then((d) => d.Route),
+)
 const PortalForumThreadIdRoute = PortalForumThreadIdRouteImport.update({
   id: '/forum/$threadId',
   path: '/forum/$threadId',

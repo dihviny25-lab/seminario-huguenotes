@@ -50,7 +50,7 @@ export function PortalMaterials() {
           ))}
         </div>
       ) : semesters.length === 0 ? (
-        <p className="rounded-md border border-border/70 bg-card/70 p-6 text-center text-muted-foreground shadow-soft">
+        <p className="animate-in rounded-md border border-border/70 bg-card/70 p-6 text-center text-muted-foreground shadow-soft fade-in zoom-in-95 duration-300">
           Nenhum material de leitura disponível no momento.
         </p>
       ) : (
@@ -74,7 +74,12 @@ export function PortalMaterials() {
                         ) : null}
                         <div className="mt-3 grid gap-3 sm:grid-cols-2">
                           {disciplineMaterials.map((material) => (
-                            <ReadingMaterialCard key={material.id} material={material} />
+                            <div
+                              key={material.id}
+                              className="animate-in fade-in slide-in-from-top-1 duration-200"
+                            >
+                              <ReadingMaterialCard material={material} />
+                            </div>
                           ))}
                         </div>
                       </div>
