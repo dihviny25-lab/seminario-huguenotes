@@ -1,4 +1,24 @@
 import { Document, Page, StyleSheet, Text, View, renderToBuffer } from "@react-pdf/renderer";
+import { eq } from "drizzle-orm";
+
+import { db } from "@/server/db/client";
+import { charges, students } from "@/server/db/schema";
+
+/**
+ * Busca uma cobrança com o nome do aluno pra gerar o recibo em PDF. Vive
+ * neste arquivo (e não em functions/payments.ts) de propósito: este módulo
+ * só é importado pelos handlers de rota (server-side), nunca por páginas
+ * client-side — importar `db`/schema aqui não vaza pro bundle do navegador.
+ */
+export async function getChargeForReceipt(chargeId: string) {
+  const [row] = await db
+    .select({ charge: charges, studentName: students.name })
+    .from(charges)
+    .innerJoin(students, eq(charges.studentId, students.id))
+    .where(eq(charges.id, chargeId))
+    .limit(1);
+  return row ?? null;
+}
 
 const styles = StyleSheet.create({
   page: { padding: 32, fontSize: 10, fontFamily: "Helvetica" },
