@@ -79,7 +79,7 @@ export function ClassReport() {
                   key={discipline.id}
                   type="button"
                   onClick={() => setSelectedId(discipline.id)}
-                  className="flex items-start gap-3 rounded-md border border-t-2 border-border/70 border-t-accent bg-card/70 p-4 text-left shadow-soft transition-colors hover:border-primary/50"
+                  className="flex animate-in items-start gap-3 rounded-md border border-t-2 border-border/70 border-t-accent bg-card/70 p-4 text-left shadow-soft fade-in slide-in-from-top-1 duration-200 transition-colors hover:border-primary/50"
                 >
                   <BookOpen className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden />
                   <span className="min-w-0">
@@ -107,7 +107,22 @@ export function ClassReport() {
           </button>
 
           {loadingReport || !report || !summary ? (
-            <p className="text-muted-foreground">Carregando relatório…</p>
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <Skeleton key={index} className="h-20 w-full" />
+                ))}
+              </div>
+              <div className="space-y-3 rounded-md border border-border/70 bg-card/70 p-6 shadow-soft">
+                <Skeleton className="h-6 w-1/3" />
+                <Skeleton className="h-4 w-1/4" />
+                <div className="mt-4 space-y-2">
+                  {Array.from({ length: 5 }).map((_, index) => (
+                    <Skeleton key={index} className="h-8 w-full" />
+                  ))}
+                </div>
+              </div>
+            </div>
           ) : (
             <>
               <div className="mb-6 grid grid-cols-2 gap-4 print:hidden lg:grid-cols-4">
@@ -184,7 +199,10 @@ export function ClassReport() {
                       </TableRow>
                     ) : (
                       report.rows.map((row) => (
-                        <TableRow key={row.studentId}>
+                        <TableRow
+                          key={row.studentId}
+                          className="animate-in fade-in slide-in-from-top-1 duration-200"
+                        >
                           <TableCell className="font-medium text-foreground">
                             {row.studentName}
                           </TableCell>

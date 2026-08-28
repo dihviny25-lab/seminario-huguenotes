@@ -3,7 +3,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
-import { CalendarClock, ClipboardList, Plus } from "lucide-react";
+import { CalendarClock, ClipboardList, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -83,7 +83,7 @@ export function ExamsTab({ disciplineId }: { disciplineId: string }) {
               key={exam.id}
               to="/painel/provas/$examId"
               params={{ examId: exam.id }}
-              className="flex items-start gap-3 rounded-md border border-t-2 border-border/70 border-t-accent bg-card/70 p-4 shadow-soft transition-colors hover:border-primary/50"
+              className="flex animate-in items-start gap-3 rounded-md border border-t-2 border-border/70 border-t-accent bg-card/70 p-4 shadow-soft fade-in slide-in-from-top-1 duration-200 transition-colors hover:border-primary/50"
             >
               <ClipboardList className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden />
               <span className="min-w-0">
@@ -219,6 +219,9 @@ function CreateExamDialog({
             </p>
             <DialogFooter>
               <Button type="submit" disabled={mutation.isPending}>
+                {mutation.isPending ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                ) : null}
                 Criar e adicionar perguntas
               </Button>
             </DialogFooter>

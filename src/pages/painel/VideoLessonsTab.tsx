@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Plus, Trash2, Users } from "lucide-react";
+import { CheckCircle2, Loader2, Plus, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -92,7 +92,7 @@ export function VideoLessonsTab({ disciplineId }: { disciplineId: string }) {
             return (
               <div
                 key={video.id}
-                className="overflow-hidden rounded-md border border-border/70 bg-card/70 shadow-soft"
+                className="animate-in overflow-hidden rounded-md border border-border/70 bg-card/70 shadow-soft fade-in slide-in-from-top-1 duration-200"
               >
                 {video.source === "upload" && video.fileUrl ? (
                   <video src={video.fileUrl} controls className="aspect-video w-full bg-black" />
@@ -260,6 +260,9 @@ function CreateVideoDialog({
                   extractYouTubeId(youtubeUrl) === null
                 }
               >
+                {mutation.isPending ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                ) : null}
                 Adicionar
               </Button>
             </DialogFooter>
@@ -292,6 +295,9 @@ function CreateVideoDialog({
                 onClick={() => mutation.mutate("upload")}
                 disabled={mutation.isPending || title.trim().length === 0 || !file}
               >
+                {mutation.isPending ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                ) : null}
                 {mutation.isPending ? "Enviando…" : "Adicionar"}
               </Button>
             </DialogFooter>

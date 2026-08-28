@@ -3,7 +3,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useFieldArray, useForm } from "react-hook-form";
-import { ArrowLeft, CheckCircle2, Pencil, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -47,6 +47,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TableSkeletonRows } from "@/components/TableSkeletonRows";
 import {
   addExamQuestionFn,
   deleteExamFn,
@@ -180,7 +181,7 @@ export function ExamEditor({ examId }: { examId: string }) {
           {exam.questions.map((question, index) => (
             <div
               key={question.id}
-              className="rounded-md border border-border/70 bg-card/70 p-4 shadow-soft"
+              className="animate-in rounded-md border border-border/70 bg-card/70 p-4 shadow-soft fade-in slide-in-from-top-1 duration-200"
             >
               <div className="flex items-start justify-between gap-3">
                 <p className="font-medium text-foreground">
@@ -261,6 +262,9 @@ export function ExamEditor({ examId }: { examId: string }) {
               onClick={() => deleteExamMutation.mutate()}
               disabled={deleteExamMutation.isPending}
             >
+              {deleteExamMutation.isPending ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden />
+              ) : null}
               Excluir
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -364,6 +368,9 @@ function EditExamDialog({
             />
             <DialogFooter>
               <Button type="submit" disabled={mutation.isPending}>
+                {mutation.isPending ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                ) : null}
                 Salvar
               </Button>
             </DialogFooter>
@@ -415,6 +422,7 @@ function ScheduleExamCard({
           onClick={() => mutation.mutate()}
           disabled={!opensAt || exam.questions.length === 0 || mutation.isPending}
         >
+          {mutation.isPending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
           Agendar
         </Button>
       </div>
@@ -450,14 +458,13 @@ function ExamResults({ examId, exam }: { examId: string; exam: ExamDetail }) {
           </TableHeader>
           <TableBody>
             {isLoading || !results ? (
-              <TableRow>
-                <TableCell colSpan={3} className="py-6 text-center text-muted-foreground">
-                  Carregando…
-                </TableCell>
-              </TableRow>
+              <TableSkeletonRows columns={3} />
             ) : (
               results.map((row) => (
-                <TableRow key={row.studentId} className="even:bg-muted/30">
+                <TableRow
+                  key={row.studentId}
+                  className="animate-in fade-in slide-in-from-top-1 duration-200 even:bg-muted/30"
+                >
                   <TableCell className="font-medium text-foreground">{row.studentName}</TableCell>
                   <TableCell className="text-muted-foreground">
                     {statusLabel[row.status]}
@@ -581,7 +588,10 @@ function AddQuestionDialog({
                 onValueChange={(value) => form.setValue("correctIndex", Number(value))}
               >
                 {fields.map((field, index) => (
-                  <div key={field.id} className="flex items-center gap-2">
+                  <div
+                    key={field.id}
+                    className="animate-in flex items-center gap-2 fade-in slide-in-from-top-1 duration-200"
+                  >
                     <RadioGroupItem value={String(index)} id={`option-${field.id}`} />
                     <FormField
                       control={form.control}
@@ -624,6 +634,9 @@ function AddQuestionDialog({
 
             <DialogFooter>
               <Button type="submit" disabled={mutation.isPending}>
+                {mutation.isPending ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                ) : null}
                 Adicionar pergunta
               </Button>
             </DialogFooter>

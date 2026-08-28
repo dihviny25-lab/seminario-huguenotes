@@ -5,6 +5,7 @@ import {
   ChevronsUpDown,
   Download,
   GraduationCap,
+  Loader2,
   Printer,
   ShieldCheck,
   Target,
@@ -181,7 +182,21 @@ export function StudentReport() {
       {selectedId && (
         <div className="mt-8">
           {isLoading || !report ? (
-            <p className="text-muted-foreground">Carregando relatório…</p>
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <Skeleton key={index} className="h-20 w-full" />
+                ))}
+              </div>
+              <div className="space-y-3 rounded-md border border-border/70 bg-card/70 p-6 shadow-soft">
+                <Skeleton className="h-6 w-1/3" />
+                <div className="mt-4 space-y-2">
+                  {Array.from({ length: 5 }).map((_, index) => (
+                    <Skeleton key={index} className="h-8 w-full" />
+                  ))}
+                </div>
+              </div>
+            </div>
           ) : (
             <>
               <div className="mb-6 grid grid-cols-2 gap-4 print:hidden lg:grid-cols-4">
@@ -249,7 +264,10 @@ export function StudentReport() {
                   </TableHeader>
                   <TableBody>
                     {filteredRows.map((row) => (
-                      <TableRow key={row.disciplineId}>
+                      <TableRow
+                        key={row.disciplineId}
+                        className="animate-in fade-in slide-in-from-top-1 duration-200"
+                      >
                         <TableCell>{row.semester}º</TableCell>
                         <TableCell>{row.module}</TableCell>
                         <TableCell className="font-medium text-foreground">
@@ -327,7 +345,7 @@ function DiscipleshipSection({ studentId }: { studentId: string }) {
           reflections.map((reflection) => (
             <div
               key={reflection.id}
-              className="rounded-md border border-border/70 bg-background/60 p-4"
+              className="animate-in rounded-md border border-border/70 bg-background/60 p-4 fade-in slide-in-from-top-1 duration-200"
             >
               <p className="text-sm font-medium text-accent">{reflection.prompt}</p>
               <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">
@@ -368,6 +386,9 @@ function DiscipleshipSection({ studentId }: { studentId: string }) {
                   }
                 />
                 <Button type="submit" size="sm" disabled={commentMutation.isPending}>
+                  {commentMutation.isPending ? (
+                    <Loader2 className="size-4 animate-spin" aria-hidden />
+                  ) : null}
                   Responder
                 </Button>
               </form>
@@ -435,6 +456,9 @@ function ObservationsSection({ studentId }: { studentId: string }) {
           rows={3}
         />
         <Button type="submit" disabled={createMutation.isPending} className="self-end">
+          {createMutation.isPending ? (
+            <Loader2 className="size-4 animate-spin" aria-hidden />
+          ) : null}
           Adicionar observação
         </Button>
       </form>
@@ -449,7 +473,7 @@ function ObservationsSection({ studentId }: { studentId: string }) {
           observations.map((observation) => (
             <div
               key={observation.id}
-              className="rounded-md border border-border/70 bg-background/60 p-4"
+              className="animate-in rounded-md border border-border/70 bg-background/60 p-4 fade-in slide-in-from-top-1 duration-200"
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -491,7 +515,13 @@ function ObservationsSection({ studentId }: { studentId: string }) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={() => deleteId && deleteMutation.mutate(deleteId)}>
+            <AlertDialogAction
+              onClick={() => deleteId && deleteMutation.mutate(deleteId)}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden />
+              ) : null}
               Apagar
             </AlertDialogAction>
           </AlertDialogFooter>

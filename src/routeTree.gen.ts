@@ -185,12 +185,16 @@ const PainelRelatorioModuloRoute = PainelRelatorioModuloRouteImport.update({
   id: '/relatorio-modulo',
   path: '/relatorio-modulo',
   getParentRoute: () => PainelRouteRoute,
-} as any)
+} as any).lazy(() =>
+  import('./routes/painel/relatorio-modulo.lazy').then((d) => d.Route),
+)
 const PainelRelatorioRoute = PainelRelatorioRouteImport.update({
   id: '/relatorio',
   path: '/relatorio',
   getParentRoute: () => PainelRouteRoute,
-} as any)
+} as any).lazy(() =>
+  import('./routes/painel/relatorio.lazy').then((d) => d.Route),
+)
 const PainelProfessoresRoute = PainelProfessoresRouteImport.update({
   id: '/professores',
   path: '/professores',
@@ -324,12 +328,16 @@ const PainelTarefasAssignmentIdRoute =
     id: '/tarefas/$assignmentId',
     path: '/tarefas/$assignmentId',
     getParentRoute: () => PainelRouteRoute,
-  } as any)
+  } as any).lazy(() =>
+    import('./routes/painel/tarefas/$assignmentId.lazy').then((d) => d.Route),
+  )
 const PainelProvasExamIdRoute = PainelProvasExamIdRouteImport.update({
   id: '/provas/$examId',
   path: '/provas/$examId',
   getParentRoute: () => PainelRouteRoute,
-} as any)
+} as any).lazy(() =>
+  import('./routes/painel/provas/$examId.lazy').then((d) => d.Route),
+)
 const PainelForumThreadIdRoute = PainelForumThreadIdRouteImport.update({
   id: '/forum/$threadId',
   path: '/forum/$threadId',
