@@ -1,8 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { getChargeForReceipt } from "@/functions/payments";
+import { getChargeForReceipt, renderChargeReceiptPdf } from "@/functions/receiptPdf";
 import { slugify } from "@/functions/reportPdf";
-import { renderChargeReceiptPdf } from "@/functions/receiptPdf";
 import { requireTeacherId } from "@/server/auth/guard";
 
 export const Route = createFileRoute("/painel/pagamentos/$chargeId/recibo")({
