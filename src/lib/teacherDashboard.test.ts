@@ -64,7 +64,12 @@ describe("computeDisciplineProgress", () => {
       lessonsFor("d1", 8, 0),
       TODAY,
     );
-    expect(p).toMatchObject({ lessonsGiven: 8, lessonsPlanned: 10, isStarted: true, isEnded: false });
+    expect(p).toMatchObject({
+      lessonsGiven: 8,
+      lessonsPlanned: 10,
+      isStarted: true,
+      isEnded: false,
+    });
     expect(p.progress).toBeCloseTo(0.8);
   });
 
@@ -79,11 +84,7 @@ describe("computeDisciplineProgress", () => {
   });
 
   it("progress = 0 quando não há aulas planejadas", () => {
-    const p = computeDisciplineProgress(
-      { id: "d1", discipline: "A", lessons: null },
-      [],
-      TODAY,
-    );
+    const p = computeDisciplineProgress({ id: "d1", discipline: "A", lessons: null }, [], TODAY);
     expect(p).toMatchObject({ lessonsGiven: 0, lessonsPlanned: 0, progress: 0, isStarted: false });
   });
 
@@ -201,7 +202,11 @@ describe("pickPendingGrading", () => {
     submissions: [
       { assignmentId: "a1", submittedAt: "2026-08-10T10:00:00.000Z", gradedAt: null },
       { assignmentId: "a1", submittedAt: "2026-08-05T10:00:00.000Z", gradedAt: null },
-      { assignmentId: "a1", submittedAt: "2026-08-01T10:00:00.000Z", gradedAt: "2026-08-02T10:00:00.000Z" },
+      {
+        assignmentId: "a1",
+        submittedAt: "2026-08-01T10:00:00.000Z",
+        gradedAt: "2026-08-02T10:00:00.000Z",
+      },
       { assignmentId: "a2", submittedAt: null, gradedAt: null },
       { assignmentId: "a2", submittedAt: "2026-08-20T10:00:00.000Z", gradedAt: null },
     ],
@@ -246,7 +251,13 @@ describe("pickMissingGrades", () => {
     });
     const out = pickMissingGrades(input);
     expect(out).toEqual([
-      { assessmentId: "av1", disciplineId: "d1", title: "Prova", disciplineName: "Disc", studentsMissing: 2 },
+      {
+        assessmentId: "av1",
+        disciplineId: "d1",
+        title: "Prova",
+        disciplineName: "Disc",
+        studentsMissing: 2,
+      },
     ]);
   });
 });
@@ -290,7 +301,12 @@ describe("pickForumActivity", () => {
   const input = emptyInput({
     disciplines: [{ id: "d1", discipline: "Disc", lessons: 10 }],
     threads: [
-      { id: "t1", disciplineId: "d1", title: "Sem resposta", createdAt: "2026-08-01T10:00:00.000Z" },
+      {
+        id: "t1",
+        disciplineId: "d1",
+        title: "Sem resposta",
+        createdAt: "2026-08-01T10:00:00.000Z",
+      },
       { id: "t2", disciplineId: "d1", title: "Respondido", createdAt: "2026-08-02T10:00:00.000Z" },
     ],
     posts: [
@@ -450,7 +466,9 @@ describe("buildTeacherDashboard", () => {
         { id: "l2", disciplineId: "d1", date: "2026-09-01", sequence: 2 },
       ],
       assignments: [{ id: "a1", disciplineId: "d1", title: "T1" }],
-      submissions: [{ assignmentId: "a1", submittedAt: "2026-08-10T10:00:00.000Z", gradedAt: null }],
+      submissions: [
+        { assignmentId: "a1", submittedAt: "2026-08-10T10:00:00.000Z", gradedAt: null },
+      ],
     });
     const out = buildTeacherDashboard(input);
     expect(out.scope).toBe("escola");

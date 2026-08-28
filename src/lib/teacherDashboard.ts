@@ -238,9 +238,7 @@ export function pickMissingAttendance(input: DashboardInput): {
   for (const d of input.disciplines) {
     const missing = input.lessons.filter(
       (l) =>
-        l.disciplineId === d.id &&
-        isPastLesson(l.date, input.today) &&
-        !withAttendance.has(l.id),
+        l.disciplineId === d.id && isPastLesson(l.date, input.today) && !withAttendance.has(l.id),
     ).length;
     if (missing < 1) continue;
     total += missing;
@@ -275,7 +273,8 @@ export function pickForumActivity(input: DashboardInput): ForumActivityItem[] {
         .filter((p) => p.threadId === thread.id)
         .sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1));
       const last = posts[posts.length - 1];
-      const lastActivityAt = last && last.createdAt > thread.createdAt ? last.createdAt : thread.createdAt;
+      const lastActivityAt =
+        last && last.createdAt > thread.createdAt ? last.createdAt : thread.createdAt;
       return {
         threadId: thread.id,
         disciplineName: disciplineName.get(thread.disciplineId) ?? "",
@@ -327,7 +326,8 @@ export function pickAtRiskStudents(input: DashboardInput): {
 
       const absent = absentByStudent.get(student.id) ?? new Set<string>();
       const faltas = countFaltas(pastLessonIds, absent);
-      const ratio = pastLessonIds.length > 0 ? (pastLessonIds.length - faltas) / pastLessonIds.length : null;
+      const ratio =
+        pastLessonIds.length > 0 ? (pastLessonIds.length - faltas) / pastLessonIds.length : null;
       const atRiskFreq = ratio !== null && ratio < MINIMUM_ATTENDANCE_RATIO;
 
       if (!atRiskMedia && !atRiskFreq) continue;
@@ -344,9 +344,7 @@ export function pickAtRiskStudents(input: DashboardInput): {
     }
   }
 
-  const all = [...byStudent.values()].sort(
-    (a, b) => b.disciplines.length - a.disciplines.length,
-  );
+  const all = [...byStudent.values()].sort((a, b) => b.disciplines.length - a.disciplines.length);
   const items = all.slice(0, AT_RISK_LIMIT).map((s) => ({
     ...s,
     disciplines: s.disciplines.slice(0, AT_RISK_LIMIT),
