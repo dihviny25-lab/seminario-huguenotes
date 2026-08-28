@@ -30,6 +30,8 @@ export const Route = createFileRoute("/api/blob/upload")({
                   "application/pdf",
                   "application/msword",
                   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                  "application/vnd.ms-powerpoint",
+                  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
                   "image/png",
                   "image/jpeg",
                   "video/mp4",

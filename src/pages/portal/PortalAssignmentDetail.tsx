@@ -128,7 +128,7 @@ export function PortalAssignmentDetail({ assignmentId }: { assignmentId: string 
             <TabsContent value="arquivo" className="mt-4">
               <Input
                 type="file"
-                accept=".pdf,.doc,.docx,image/png,image/jpeg"
+                accept=".pdf,.doc,.docx,.ppt,.pptx,image/png,image/jpeg"
                 onChange={(event) => setFile(event.target.files?.[0] ?? null)}
               />
               {submission.fileUrl ? (
