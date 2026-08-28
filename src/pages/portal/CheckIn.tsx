@@ -35,15 +35,15 @@ export function CheckIn({ lessonId, token }: { lessonId: string; token: string }
         {status === "loading" ? (
           <p className="text-muted-foreground">Confirmando sua presença…</p>
         ) : status === "success" ? (
-          <>
+          <div className="animate-in flex flex-col items-center gap-4 fade-in zoom-in-95 duration-300">
             <CheckCircle2 className="size-10 text-success" aria-hidden />
             <p className="font-medium text-foreground">{message}</p>
-          </>
+          </div>
         ) : (
-          <>
+          <div className="animate-in flex flex-col items-center gap-4 fade-in zoom-in-95 duration-300">
             <XCircle className="size-10 text-destructive" aria-hidden />
             <p className="font-medium text-foreground">{message}</p>
-          </>
+          </div>
         )}
       </div>
     </PortalShell>

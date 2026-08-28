@@ -35,7 +35,7 @@ export function PortalAssignments() {
           ))}
         </div>
       ) : assignments.length === 0 ? (
-        <p className="rounded-md border border-border/70 bg-card/70 p-6 text-center text-muted-foreground shadow-soft">
+        <p className="animate-in rounded-md border border-border/70 bg-card/70 p-6 text-center text-muted-foreground shadow-soft fade-in zoom-in-95 duration-300">
           Nenhuma tarefa no momento.
         </p>
       ) : (
@@ -65,7 +65,7 @@ function AssignmentCard({ assignment }: { assignment: AvailableAssignment }) {
     <Link
       to="/portal/tarefas/$assignmentId"
       params={{ assignmentId: assignment.id }}
-      className="flex items-center justify-between gap-4 rounded-md border border-border/70 bg-card/70 p-4 shadow-soft transition-colors hover:border-primary/50"
+      className="flex animate-in items-center justify-between gap-4 rounded-md border border-border/70 bg-card/70 p-4 shadow-soft fade-in slide-in-from-top-1 duration-200 transition-colors hover:border-primary/50"
     >
       <div className="min-w-0">
         <p className="truncate font-medium text-foreground">{assignment.title}</p>

@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, Loader2 } from "lucide-react";
 
 import { NotificationToggle } from "@/components/NotificationToggle";
 import { CalendarSyncCard } from "@/components/portal/CalendarSyncCard";
@@ -138,6 +138,9 @@ export function PortalAccount() {
                 onClick={() => verifyEmailMutation.mutate()}
                 disabled={verifyEmailMutation.isPending}
               >
+                {verifyEmailMutation.isPending ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                ) : null}
                 {verifyEmailMutation.isPending ? "Enviando…" : "Confirmar e-mail"}
               </Button>
             )}
@@ -176,6 +179,9 @@ export function PortalAccount() {
               )}
             />
             <Button type="submit" className="w-full" disabled={profileMutation.isPending}>
+              {profileMutation.isPending ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden />
+              ) : null}
               {profileMutation.isPending ? "Salvando…" : "Salvar informações"}
             </Button>
           </form>
@@ -234,6 +240,9 @@ export function PortalAccount() {
               )}
             />
             <Button type="submit" className="w-full" disabled={passwordForm.formState.isSubmitting}>
+              {passwordForm.formState.isSubmitting ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden />
+              ) : null}
               {passwordForm.formState.isSubmitting ? "Salvando…" : "Salvar nova senha"}
             </Button>
           </form>

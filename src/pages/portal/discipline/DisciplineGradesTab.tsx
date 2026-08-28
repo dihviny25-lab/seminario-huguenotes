@@ -25,7 +25,7 @@ export function DisciplineGradesTab({ disciplineId }: { disciplineId: string }) 
   const row = report.rows.find((r) => r.disciplineId === disciplineId);
   if (!row) {
     return (
-      <p className="rounded-md border border-border/70 bg-card/70 p-6 text-center text-muted-foreground shadow-soft">
+      <p className="animate-in rounded-md border border-border/70 bg-card/70 p-6 text-center text-muted-foreground shadow-soft fade-in zoom-in-95 duration-300">
         Nenhuma nota lançada ainda.
       </p>
     );
@@ -43,13 +43,19 @@ export function DisciplineGradesTab({ disciplineId }: { disciplineId: string }) 
         <TableBody>
           {row.assessments.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={2} className="py-6 text-center text-muted-foreground">
+              <TableCell
+                colSpan={2}
+                className="animate-in py-6 text-center text-muted-foreground fade-in zoom-in-95 duration-300"
+              >
                 Nenhuma avaliação lançada ainda.
               </TableCell>
             </TableRow>
           ) : (
             row.assessments.map((assessment) => (
-              <TableRow key={assessment.title}>
+              <TableRow
+                key={assessment.title}
+                className="animate-in fade-in slide-in-from-top-1 duration-200"
+              >
                 <TableCell className="font-medium text-foreground">{assessment.title}</TableCell>
                 <TableCell className="text-center">
                   {assessment.score === null

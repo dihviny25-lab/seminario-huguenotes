@@ -13,6 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TableSkeletonRows } from "@/components/TableSkeletonRows";
 import { listMyChargesFn, type Charge } from "@/functions/payments";
 import { PaymentMethodsDialog } from "@/pages/portal/PaymentMethodsDialog";
 import { SelfScheduleChargesDialog } from "@/pages/portal/SelfScheduleChargesDialog";
@@ -66,14 +67,13 @@ export function PortalPayments() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={5} className="py-6 text-center text-muted-foreground">
-                  Carregando…
-                </TableCell>
-              </TableRow>
+              <TableSkeletonRows columns={5} />
             ) : charges && charges.length > 0 ? (
               charges.map((charge) => (
-                <TableRow key={charge.id}>
+                <TableRow
+                  key={charge.id}
+                  className="animate-in fade-in slide-in-from-top-1 duration-300"
+                >
                   <TableCell className="font-medium text-foreground">
                     {charge.description}
                     {charge.modality ? (

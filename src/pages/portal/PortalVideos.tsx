@@ -77,7 +77,7 @@ export function PortalVideos() {
           ))}
         </div>
       ) : semesters.length === 0 ? (
-        <p className="rounded-md border border-border/70 bg-card/70 p-6 text-center text-muted-foreground shadow-soft">
+        <p className="animate-in rounded-md border border-border/70 bg-card/70 p-6 text-center text-muted-foreground shadow-soft fade-in zoom-in-95 duration-300">
           Nenhuma vídeo-aula disponível no momento.
         </p>
       ) : (
@@ -134,7 +134,7 @@ function VideoCard({
   const iframeRef = useYouTubeCompletion(onWatched);
 
   const containerClass = cn(
-    "overflow-hidden rounded-md border shadow-soft transition-colors",
+    "overflow-hidden rounded-md border shadow-soft animate-in fade-in slide-in-from-top-1 duration-200 transition-colors",
     watched ? "border-success/50 bg-success-soft/40" : "border-border/70 bg-card/70",
   );
   const footer = (

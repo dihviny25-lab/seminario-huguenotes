@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft, CheckCircle2, Download } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Download, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { PortalShell } from "@/components/portal/PortalShell";
@@ -77,7 +77,7 @@ export function PortalAssignmentDetail({ assignmentId }: { assignmentId: string 
       </Link>
 
       {isGraded ? (
-        <div className="rounded-md border border-t-2 border-success/50 border-t-success bg-success-soft/40 p-5 shadow-soft">
+        <div className="animate-in rounded-md border border-t-2 border-success/50 border-t-success bg-success-soft/40 p-5 shadow-soft fade-in zoom-in-95 duration-300">
           <p className="inline-flex items-center gap-2 font-display text-2xl font-semibold text-success">
             <CheckCircle2 className="size-6 shrink-0" aria-hidden />
             {Number(submission.score).toFixed(1)}/{Number(submission.maxScore).toFixed(1)}
@@ -150,6 +150,9 @@ export function PortalAssignmentDetail({ assignmentId }: { assignmentId: string 
             onClick={() => mutation.mutate()}
             disabled={mutation.isPending || uploading}
           >
+            {mutation.isPending || uploading ? (
+              <Loader2 className="size-4 animate-spin" aria-hidden />
+            ) : null}
             {uploading ? "Enviando arquivo…" : alreadySubmitted ? "Reenviar" : "Entregar"}
           </Button>
         </div>

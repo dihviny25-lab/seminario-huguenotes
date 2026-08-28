@@ -22,7 +22,7 @@ export function DisciplineMaterialsTab({ disciplineId }: { disciplineId: string 
 
   if (materials.length === 0) {
     return (
-      <p className="rounded-md border border-border/70 bg-card/70 p-6 text-center text-muted-foreground shadow-soft">
+      <p className="animate-in rounded-md border border-border/70 bg-card/70 p-6 text-center text-muted-foreground shadow-soft fade-in zoom-in-95 duration-300">
         Nenhum material de leitura cadastrado ainda.
       </p>
     );
@@ -31,7 +31,9 @@ export function DisciplineMaterialsTab({ disciplineId }: { disciplineId: string 
   return (
     <div className="grid gap-3 sm:grid-cols-2">
       {materials.map((material) => (
-        <ReadingMaterialCard key={material.id} material={material} />
+        <div key={material.id} className="animate-in fade-in slide-in-from-top-1 duration-200">
+          <ReadingMaterialCard material={material} />
+        </div>
       ))}
     </div>
   );

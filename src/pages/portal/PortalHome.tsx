@@ -160,7 +160,7 @@ export function PortalHome() {
               key={assignment.id}
               to="/portal/tarefas/$assignmentId"
               params={{ assignmentId: assignment.id }}
-              className="flex items-start gap-2.5 rounded-md border border-border/70 bg-card/70 p-3 shadow-soft transition-colors hover:border-primary/50"
+              className="flex animate-in items-start gap-2.5 rounded-md border border-border/70 bg-card/70 p-3 shadow-soft fade-in slide-in-from-top-1 duration-200 transition-colors hover:border-primary/50"
             >
               <ListChecks className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden />
               <span className="min-w-0 flex-1">
@@ -193,7 +193,7 @@ export function PortalHome() {
               key={exam.id}
               to="/portal/provas/$examId"
               params={{ examId: exam.id }}
-              className="flex items-start gap-2.5 rounded-md border border-border/70 bg-card/70 p-3 shadow-soft transition-colors hover:border-primary/50"
+              className="flex animate-in items-start gap-2.5 rounded-md border border-border/70 bg-card/70 p-3 shadow-soft fade-in slide-in-from-top-1 duration-200 transition-colors hover:border-primary/50"
             >
               <FileCheck2 className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden />
               <span className="min-w-0 flex-1">
@@ -231,7 +231,7 @@ export function PortalHome() {
               key={thread.id}
               to="/portal/forum/$threadId"
               params={{ threadId: thread.id }}
-              className="flex items-start gap-2.5 rounded-md border border-border/70 bg-card/70 p-3 shadow-soft transition-colors hover:border-primary/50"
+              className="flex animate-in items-start gap-2.5 rounded-md border border-border/70 bg-card/70 p-3 shadow-soft fade-in slide-in-from-top-1 duration-200 transition-colors hover:border-primary/50"
             >
               <MessageCircle className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden />
               <span className="min-w-0 flex-1">

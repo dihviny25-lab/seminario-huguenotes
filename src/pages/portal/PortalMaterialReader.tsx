@@ -33,14 +33,14 @@ export function PortalMaterialReader({ materialId }: { materialId: string }) {
       {isLoading || !material ? (
         <Skeleton className="h-[85vh] w-full" />
       ) : material.availableAt ? (
-        <div className="flex h-[50vh] flex-col items-center justify-center gap-3 rounded-md border border-border/70 bg-card/70 text-center shadow-soft">
+        <div className="animate-in flex h-[50vh] flex-col items-center justify-center gap-3 rounded-md border border-border/70 bg-card/70 text-center shadow-soft fade-in zoom-in-95 duration-300">
           <Lock className="size-8 text-muted-foreground" aria-hidden />
           <p className="text-muted-foreground">
             Essa apostila fica disponível a partir de {formatDate(material.availableAt)}.
           </p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-md border border-border/70 bg-card/70 shadow-soft">
+        <div className="animate-in overflow-hidden rounded-md border border-border/70 bg-card/70 shadow-soft fade-in duration-300">
           <iframe
             src={`${material.fileUrl}#toolbar=0&navpanes=0`}
             title={material.title}

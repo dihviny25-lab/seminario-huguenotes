@@ -27,7 +27,7 @@ export function DisciplineExamsTab({ disciplineId }: { disciplineId: string }) {
 
   if (exams.length === 0) {
     return (
-      <p className="rounded-md border border-border/70 bg-card/70 p-6 text-center text-muted-foreground shadow-soft">
+      <p className="animate-in rounded-md border border-border/70 bg-card/70 p-6 text-center text-muted-foreground shadow-soft fade-in zoom-in-95 duration-300">
         Nenhuma prova agendada ainda.
       </p>
     );
@@ -44,7 +44,7 @@ export function DisciplineExamsTab({ disciplineId }: { disciplineId: string }) {
 
 function ExamCard({ exam }: { exam: AvailableExam }) {
   const content = (
-    <div className="flex items-center justify-between gap-4 rounded-md border border-border/70 bg-card/70 p-4 shadow-soft transition-colors hover:border-primary/50">
+    <div className="flex animate-in items-center justify-between gap-4 rounded-md border border-border/70 bg-card/70 p-4 shadow-soft fade-in slide-in-from-top-1 duration-200 transition-colors hover:border-primary/50">
       <div className="min-w-0">
         <p className="truncate font-medium text-foreground">{exam.title}</p>
         <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">

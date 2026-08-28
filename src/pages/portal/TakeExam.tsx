@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { CheckCircle2, Clock } from "lucide-react";
+import { CheckCircle2, Clock, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -136,7 +136,7 @@ export function TakeExam({ examId }: { examId: string }) {
 
   if (attempt.submitted) {
     return (
-      <div className="mx-auto max-w-2xl px-4 py-16 text-center sm:px-6">
+      <div className="animate-in mx-auto max-w-2xl px-4 py-16 text-center fade-in zoom-in-95 duration-300 sm:px-6">
         <CheckCircle2 className="mx-auto size-12 text-success" aria-hidden />
         <h1 className="mt-4 font-display text-2xl font-semibold text-foreground">Prova enviada</h1>
         <p className="mt-2 text-muted-foreground">{attempt.title}</p>
@@ -191,7 +191,7 @@ export function TakeExam({ examId }: { examId: string }) {
           {attempt.questions.map((question, index) => (
             <div
               key={question.id}
-              className="rounded-md border border-border/70 bg-card/70 p-4 shadow-soft"
+              className="animate-in rounded-md border border-border/70 bg-card/70 p-4 shadow-soft fade-in slide-in-from-top-1 duration-200"
             >
               <p className="font-medium text-foreground">
                 {index + 1}. {question.text}
@@ -218,6 +218,9 @@ export function TakeExam({ examId }: { examId: string }) {
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button className="mt-8 w-full" disabled={submitMutation.isPending}>
+              {submitMutation.isPending ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden />
+              ) : null}
               Finalizar prova
             </Button>
           </AlertDialogTrigger>
@@ -233,7 +236,13 @@ export function TakeExam({ examId }: { examId: string }) {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Voltar</AlertDialogCancel>
-              <AlertDialogAction onClick={() => submitMutation.mutate(false)}>
+              <AlertDialogAction
+                onClick={() => submitMutation.mutate(false)}
+                disabled={submitMutation.isPending}
+              >
+                {submitMutation.isPending ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                ) : null}
                 Enviar
               </AlertDialogAction>
             </AlertDialogFooter>
@@ -250,7 +259,7 @@ function PledgeScreen({ onConfirm }: { onConfirm: () => void }) {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-primary px-4 py-10 text-primary-foreground">
-      <div className="w-full max-w-lg">
+      <div className="w-full max-w-lg animate-in fade-in slide-in-from-bottom-2 duration-500">
         <p className="text-center text-xs font-semibold uppercase tracking-[0.28em] text-accent">
           Antes de começar
         </p>

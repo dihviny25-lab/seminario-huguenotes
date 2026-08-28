@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { HeartHandshake } from "lucide-react";
+import { HeartHandshake, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { PortalShell } from "@/components/portal/PortalShell";
@@ -74,6 +74,7 @@ export function PortalDiscipleship() {
             rows={5}
           />
           <Button type="submit" disabled={mutation.isPending || !prompt} className="self-end">
+            {mutation.isPending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
             Enviar reflexão
           </Button>
         </form>
@@ -91,7 +92,7 @@ export function PortalDiscipleship() {
             reflections.map((reflection) => (
               <div
                 key={reflection.id}
-                className="rounded-md border border-border/70 bg-card/70 p-4 shadow-soft"
+                className="animate-in rounded-md border border-border/70 bg-card/70 p-4 shadow-soft fade-in slide-in-from-top-1 duration-300"
               >
                 <p className="text-sm font-medium text-accent">{reflection.prompt}</p>
                 <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">
@@ -117,7 +118,7 @@ export function PortalDiscipleship() {
               </div>
             ))
           ) : (
-            <p className="rounded-md border border-border/70 bg-card/70 p-6 text-center text-muted-foreground shadow-soft">
+            <p className="animate-in rounded-md border border-border/70 bg-card/70 p-6 text-center text-muted-foreground shadow-soft fade-in zoom-in-95 duration-300">
               Nenhuma reflexão registrada ainda.
             </p>
           )}
