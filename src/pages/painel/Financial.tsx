@@ -32,6 +32,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TableSkeletonRows } from "@/components/TableSkeletonRows";
 import { getFinancialReportFn, getFinancialSummaryFn } from "@/functions/payments";
 import { PAYMENT_MODALITIES } from "@/lib/paymentModalities";
 
@@ -154,7 +155,10 @@ export function Financial() {
                   </TableRow>
                 ) : (
                   summary.overdueList.map((item) => (
-                    <TableRow key={item.chargeId}>
+                    <TableRow
+                      key={item.chargeId}
+                      className="animate-in fade-in slide-in-from-top-1 duration-200"
+                    >
                       <TableCell className="font-medium text-foreground">
                         {item.studentName}
                       </TableCell>
@@ -274,7 +278,35 @@ function FinancialPeriodReport() {
       </div>
 
       {isLoading || !report ? (
-        <p className="mt-6 text-muted-foreground">Carregando relatório…</p>
+        <div className="mt-6 space-y-6">
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div
+                key={index}
+                className="rounded-lg border border-t-2 border-border/70 border-t-border bg-card/80 p-5 shadow-soft"
+              >
+                <Skeleton className="h-3 w-24" />
+                <Skeleton className="mt-3 h-8 w-28" />
+              </div>
+            ))}
+          </div>
+          <div className="overflow-hidden rounded-md border border-border/70">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Aluno</TableHead>
+                  <TableHead className="text-center">Cobrado</TableHead>
+                  <TableHead className="text-center">Pago</TableHead>
+                  <TableHead className="text-center">Pendente</TableHead>
+                  <TableHead className="text-center">Vencido</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableSkeletonRows columns={5} />
+              </TableBody>
+            </Table>
+          </div>
+        </div>
       ) : (
         <>
           <p className="mt-6 hidden text-sm text-muted-foreground print:block">
@@ -326,7 +358,10 @@ function FinancialPeriodReport() {
                   </TableRow>
                 ) : (
                   report.rows.map((row) => (
-                    <TableRow key={row.studentId}>
+                    <TableRow
+                      key={row.studentId}
+                      className="animate-in fade-in slide-in-from-top-1 duration-200"
+                    >
                       <TableCell className="font-medium text-foreground">
                         {row.studentName}
                       </TableCell>

@@ -7,7 +7,6 @@ import { StatisticCard } from "@/components/StatisticCard";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -16,6 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TableSkeletonRows } from "@/components/TableSkeletonRows";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { listAuditActionsFn, listAuditSessionsFn } from "@/functions/auditLog";
 
@@ -95,7 +95,7 @@ export function AuditLog() {
       </div>
 
       {summary ? (
-        <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <div className="mb-6 grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-1 duration-200 lg:grid-cols-4">
           <StatisticCard label="Logins de professores" value={summary.teacherLogins} icon={LogIn} />
           <StatisticCard label="Logins de alunos" value={summary.studentLogins} icon={Users} />
           <StatisticCard label="Sessões abertas agora" value={summary.openNow} icon={Activity} />
@@ -114,106 +114,108 @@ export function AuditLog() {
         </TabsList>
 
         <TabsContent value="sessoes">
-          {loadingSessions || !sessions ? (
-            <Skeleton className="h-48 w-full" />
-          ) : (
-            <div className="overflow-hidden rounded-md border border-border/70">
-              <Table>
-                <TableHeader>
+          <div className="overflow-hidden rounded-md border border-border/70">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Quem</TableHead>
+                  <TableHead>Entrada</TableHead>
+                  <TableHead>Saída</TableHead>
+                  <TableHead>Permanência</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loadingSessions || !sessions ? (
+                  <TableSkeletonRows columns={4} />
+                ) : sessions.length === 0 ? (
                   <TableRow>
-                    <TableHead>Quem</TableHead>
-                    <TableHead>Entrada</TableHead>
-                    <TableHead>Saída</TableHead>
-                    <TableHead>Permanência</TableHead>
+                    <TableCell colSpan={4} className="py-6 text-center text-muted-foreground">
+                      Nenhuma sessão encontrada com esses filtros.
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sessions.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={4} className="py-6 text-center text-muted-foreground">
-                        Nenhuma sessão encontrada com esses filtros.
+                ) : (
+                  sessions.map((session, index) => (
+                    <TableRow
+                      key={`${session.actorName}-${session.loginAt}-${index}`}
+                      className="animate-in fade-in slide-in-from-top-1 duration-200"
+                    >
+                      <TableCell className="font-medium text-foreground">
+                        <span className="flex items-center gap-2">
+                          {session.actorName}
+                          <Badge variant="outline" className="text-xs">
+                            {session.actorType === "teacher" ? "Professor" : "Aluno"}
+                          </Badge>
+                        </span>
                       </TableCell>
-                    </TableRow>
-                  ) : (
-                    sessions.map((session, index) => (
-                      <TableRow key={`${session.actorName}-${session.loginAt}-${index}`}>
-                        <TableCell className="font-medium text-foreground">
-                          <span className="flex items-center gap-2">
-                            {session.actorName}
-                            <Badge variant="outline" className="text-xs">
-                              {session.actorType === "teacher" ? "Professor" : "Aluno"}
-                            </Badge>
+                      <TableCell>{formatDateTime(session.loginAt)}</TableCell>
+                      <TableCell>
+                        {session.logoutAt ? (
+                          formatDateTime(session.logoutAt)
+                        ) : session.stillOpen ? (
+                          <Badge>Ainda ativo</Badge>
+                        ) : (
+                          <span className="text-muted-foreground">
+                            Sem saída — última atividade {formatDateTime(session.lastSeenAt)}
                           </span>
-                        </TableCell>
-                        <TableCell>{formatDateTime(session.loginAt)}</TableCell>
-                        <TableCell>
-                          {session.logoutAt ? (
-                            formatDateTime(session.logoutAt)
-                          ) : session.stillOpen ? (
-                            <Badge>Ainda ativo</Badge>
-                          ) : (
-                            <span className="text-muted-foreground">
-                              Sem saída — última atividade {formatDateTime(session.lastSeenAt)}
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell>{formatDuration(session.durationMinutes)}</TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+                        )}
+                      </TableCell>
+                      <TableCell>{formatDuration(session.durationMinutes)}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </TabsContent>
 
         <TabsContent value="acoes">
-          {loadingActions || !actions ? (
-            <Skeleton className="h-48 w-full" />
-          ) : (
-            <div className="overflow-hidden rounded-md border border-border/70">
-              <Table>
-                <TableHeader>
+          <div className="overflow-hidden rounded-md border border-border/70">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Quando</TableHead>
+                  <TableHead>Quem</TableHead>
+                  <TableHead>O que fez</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loadingActions || !actions ? (
+                  <TableSkeletonRows columns={3} />
+                ) : actions.length === 0 ? (
                   <TableRow>
-                    <TableHead>Quando</TableHead>
-                    <TableHead>Quem</TableHead>
-                    <TableHead>O que fez</TableHead>
+                    <TableCell colSpan={3} className="py-6 text-center text-muted-foreground">
+                      Nenhuma ação encontrada com esses filtros.
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {actions.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={3} className="py-6 text-center text-muted-foreground">
-                        Nenhuma ação encontrada com esses filtros.
+                ) : (
+                  actions.map((entry) => (
+                    <TableRow
+                      key={entry.id}
+                      className="animate-in fade-in slide-in-from-top-1 duration-200"
+                    >
+                      <TableCell className="whitespace-nowrap text-muted-foreground">
+                        {formatDateTime(entry.createdAt)}
                       </TableCell>
+                      <TableCell className="font-medium text-foreground">
+                        <span className="flex items-center gap-2">
+                          {entry.actorName}
+                          <Badge variant="outline" className="text-xs">
+                            {entry.actorType === "teacher" ? "Professor" : "Aluno"}
+                          </Badge>
+                        </span>
+                      </TableCell>
+                      <TableCell>{entry.description}</TableCell>
                     </TableRow>
-                  ) : (
-                    actions.map((entry) => (
-                      <TableRow key={entry.id}>
-                        <TableCell className="whitespace-nowrap text-muted-foreground">
-                          {formatDateTime(entry.createdAt)}
-                        </TableCell>
-                        <TableCell className="font-medium text-foreground">
-                          <span className="flex items-center gap-2">
-                            {entry.actorName}
-                            <Badge variant="outline" className="text-xs">
-                              {entry.actorType === "teacher" ? "Professor" : "Aluno"}
-                            </Badge>
-                          </span>
-                        </TableCell>
-                        <TableCell>{entry.description}</TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-              {actions.length === 500 ? (
-                <p className="border-t border-border/70 bg-muted/30 px-4 py-2 text-xs text-muted-foreground">
-                  Mostrando as 500 ações mais recentes — use os filtros de data pra refinar.
-                </p>
-              ) : null}
-            </div>
-          )}
+                  ))
+                )}
+              </TableBody>
+            </Table>
+            {actions && actions.length === 500 ? (
+              <p className="border-t border-border/70 bg-muted/30 px-4 py-2 text-xs text-muted-foreground">
+                Mostrando as 500 ações mais recentes — use os filtros de data pra refinar.
+              </p>
+            ) : null}
+          </div>
         </TabsContent>
       </Tabs>
     </PainelShell>

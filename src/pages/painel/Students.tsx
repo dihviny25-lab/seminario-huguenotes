@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import {
   GraduationCap,
   KeyRound,
+  Loader2,
   Pencil,
   Plus,
   ShieldOff,
@@ -53,6 +54,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TableSkeletonRows } from "@/components/TableSkeletonRows";
 import { PainelShell } from "@/components/painel/PainelShell";
 import { getCurrentTeacherFn } from "@/functions/auth";
 import {
@@ -176,7 +178,11 @@ export function Students() {
               onClick={() => fileInputRef.current?.click()}
               disabled={importMutation.isPending}
             >
-              <Upload className="size-4" aria-hidden />
+              {importMutation.isPending ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden />
+              ) : (
+                <Upload className="size-4" aria-hidden />
+              )}
               {importMutation.isPending ? "Importando…" : "Importar planilha"}
             </Button>
             <Button onClick={() => setCreateOpen(true)}>
@@ -205,14 +211,13 @@ export function Students() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={6} className="py-6 text-center text-muted-foreground">
-                  Carregando…
-                </TableCell>
-              </TableRow>
+              <TableSkeletonRows columns={6} />
             ) : students && students.length > 0 ? (
               students.map((student) => (
-                <TableRow key={student.id} className="even:bg-muted/30">
+                <TableRow
+                  key={student.id}
+                  className="animate-in fade-in slide-in-from-top-1 even:bg-muted/30 duration-200"
+                >
                   <TableCell className="font-medium text-foreground">{student.name}</TableCell>
                   <TableCell className="text-muted-foreground">{student.email ?? "—"}</TableCell>
                   <TableCell>
@@ -347,6 +352,9 @@ export function Students() {
               onClick={() => deleting && deleteMutation.mutate(deleting.id)}
               disabled={deleteMutation.isPending}
             >
+              {deleteMutation.isPending ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden />
+              ) : null}
               Excluir
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -431,6 +439,9 @@ function CreateStudentDialog({
             />
             <DialogFooter>
               <Button type="submit" disabled={mutation.isPending}>
+                {mutation.isPending ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                ) : null}
                 Cadastrar
               </Button>
             </DialogFooter>
@@ -505,6 +516,9 @@ function EditStudentDialog({
             />
             <DialogFooter>
               <Button type="submit" disabled={mutation.isPending}>
+                {mutation.isPending ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                ) : null}
                 Salvar
               </Button>
             </DialogFooter>
@@ -597,6 +611,9 @@ function SetStudentPasswordDialog({
               />
               <DialogFooter>
                 <Button type="submit" disabled={mutation.isPending}>
+                  {mutation.isPending ? (
+                    <Loader2 className="size-4 animate-spin" aria-hidden />
+                  ) : null}
                   Salvar
                 </Button>
               </DialogFooter>
@@ -654,6 +671,7 @@ function SetScholarshipDialog({
         </div>
         <DialogFooter>
           <Button type="button" onClick={() => mutation.mutate()} disabled={mutation.isPending}>
+            {mutation.isPending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
             {mutation.isPending ? "Salvando…" : "Salvar"}
           </Button>
         </DialogFooter>
