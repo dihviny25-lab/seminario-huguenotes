@@ -316,12 +316,12 @@ function CreateMaterialDialog({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="material-file">Arquivo (PDF, Word ou imagem)</Label>
+            <Label htmlFor="material-file">Arquivo (PDF, Word, PowerPoint ou imagem)</Label>
             <Input
               id="material-file"
               type="file"
               ref={fileInputRef}
-              accept=".pdf,.doc,.docx,image/png,image/jpeg"
+              accept=".pdf,.doc,.docx,.ppt,.pptx,image/png,image/jpeg"
               onChange={(event) => setFile(event.target.files?.[0] ?? null)}
               required
             />
