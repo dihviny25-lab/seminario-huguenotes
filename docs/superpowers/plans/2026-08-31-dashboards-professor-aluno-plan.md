@@ -479,3 +479,740 @@ git commit -m "docs: fecha o relatório da auditoria dos fluxos críticos"
 ```
 
 ---
+
+## Fase 2 — Dashboard do aluno
+
+Completa `/portal/` (`src/pages/portal/PortalHome.tsx`) com os três avisos que hoje ficam
+escondidos em subpáginas: cobrança pendente/vencida, próxima aula e vídeo-aulas novas.
+Depende da Fase 1 já estar mergeada — reaproveita `pickNextLesson` de `src/lib/dashboard.ts`,
+criado lá.
+
+### Tarefa 2.1 — Lógica pura: alerta de cobrança
+
+**Arquivos:**
+- Criar (ou complementar, se a Fase 1 já criou o arquivo com `pickNextLesson` e outros
+  helpers): `src/lib/dashboard.ts`
+- Ler: `src/lib/payments.ts` (estilo de função pura + `computeCurrentAmount`), `src/functions/payments.ts`
+  (`Charge`, `listMyChargesFn`, `todayIso()` local)
+
+**Interfaces:**
+- Consome: nada (função pura, recebe linhas já carregadas).
+- Produz: `CHARGE_DUE_SOON_WINDOW_DAYS`, `classifyCharge(charge, todayIso)` e
+  `buildChargeAlert(charges, todayIso)`, usados pela Tarefa 2.4.
+
+- [ ] **Passo 1: Escrever `classifyCharge` e a janela de "vence em breve"**
+
+```ts
+/** Janela de "vence em breve" pro alerta de cobrança do topo do portal do aluno. */
+export const CHARGE_DUE_SOON_WINDOW_DAYS = 7;
+
+export type ChargeUrgency = "overdue" | "due-soon" | "ok";
+
+export type ChargeUrgencyInput = {
+  status: "pending" | "paid" | "canceled";
+  /** ISO "YYYY-MM-DD". */
+  dueDate: string;
+};
+
+/**
+ * Urgência de uma cobrança pro alerta do portal. Só `pending` pode ser
+ * "overdue"/"due-soon" — `paid` e `canceled` são sempre "ok" (nenhum
+ * alerta). Comparação por string ISO, nunca `Date` local — mesmo padrão de
+ * `computeCurrentAmount` (`src/lib/payments.ts`).
+ */
+export function classifyCharge(charge: ChargeUrgencyInput, todayIso: string): ChargeUrgency {
+  if (charge.status !== "pending") return "ok";
+  if (charge.dueDate < todayIso) return "overdue";
+  const daysUntilDue = Math.round(
+    (Date.parse(charge.dueDate) - Date.parse(todayIso)) / (1000 * 60 * 60 * 24),
+  );
+  return daysUntilDue <= CHARGE_DUE_SOON_WINDOW_DAYS ? "due-soon" : "ok";
+}
+```
+
+- [ ] **Passo 2: Escrever `buildChargeAlert`, que escolhe a cobrança em destaque**
+
+```ts
+export type ChargeAlertItem = {
+  chargeId: string;
+  description: string;
+  /** String, igual ao `Charge.currentAmount` de `src/functions/payments.ts`. */
+  currentAmount: string;
+  dueDate: string;
+};
+
+export type ChargeAlertInput = ChargeAlertItem & ChargeUrgencyInput;
+
+export type ChargeAlert = { level: "overdue" | "due-soon"; featured: ChargeAlertItem } | null;
+
+/**
+ * Alerta de cobrança pro topo do portal: olha as cobranças `pending`,
+ * classifica cada uma com `classifyCharge` e escolhe a mais urgente pra
+ * destacar. "Vencida" tem prioridade sobre "vence em breve"; dentro do
+ * mesmo nível, a de vencimento mais antigo vence a disputa. `null` quando
+ * não há nada a dizer (nenhuma pendente, ou todas ainda longe do vencimento).
+ */
+export function buildChargeAlert(
+  charges: Array<ChargeAlertInput>,
+  todayIso: string,
+): ChargeAlert {
+  const urgent = charges
+    .map((charge) => ({ charge, urgency: classifyCharge(charge, todayIso) }))
+    .filter((c): c is { charge: ChargeAlertInput; urgency: "overdue" | "due-soon" } =>
+      c.urgency !== "ok",
+    );
+
+  if (urgent.length === 0) return null;
+
+  const overdue = urgent.filter((c) => c.urgency === "overdue");
+  const pool = overdue.length > 0 ? overdue : urgent;
+  const featured = pool.reduce((oldest, c) =>
+    c.charge.dueDate < oldest.charge.dueDate ? c : oldest,
+  );
+
+  return {
+    level: overdue.length > 0 ? "overdue" : "due-soon",
+    featured: {
+      chargeId: featured.charge.chargeId,
+      description: featured.charge.description,
+      currentAmount: featured.charge.currentAmount,
+      dueDate: featured.charge.dueDate,
+    },
+  };
+}
+```
+
+- [ ] **Passo 3: Checar o arquivo**
+
+Run: `npx eslint src/lib/dashboard.ts && npx tsc --noEmit`
+Expected: PASS, sem erros.
+
+- [ ] **Passo 4: Commit**
+
+```bash
+git add src/lib/dashboard.ts
+git commit -m "feat: adiciona classificação e alerta de cobrança em src/lib/dashboard.ts"
+```
+
+### Tarefa 2.2 — Lógica pura: próxima aula do aluno
+
+Reaproveita `pickNextLesson` da Fase 1 — o aluno pertence a todas as disciplinas (decisão
+transversal 1), então a "próxima aula" do portal é a mesma função aplicada sobre **todas**
+as aulas do currículo de uma vez, não por disciplina.
+
+**Arquivos:**
+- Ler: `src/lib/dashboard.ts` (deve já ter `pickNextLesson`, criada na Fase 1)
+- Modificar `src/lib/dashboard.ts` **só se** o Passo 1 não encontrar a função (esta fase
+  sendo executada antes do merge da Fase 1)
+
+**Interfaces:**
+- Consome: nada novo.
+- Produz: garante `pickNextLesson<T extends { id: string; disciplineId: string; date: string | null }>(lessons: Array<T>, todayIso: string): T | null`
+  disponível pra Tarefa 2.4.
+
+- [ ] **Passo 1: Conferir se a função já existe**
+
+Run: `rg "export function pickNextLesson" src/lib/dashboard.ts`
+Expected: uma linha encontrada. Se encontrou, **pule pro Passo 3** — nada a fazer aqui além
+de conferir a assinatura acima bate com o uso da Tarefa 2.4.
+
+- [ ] **Passo 2: Implementar (só se o Passo 1 não encontrou nada)**
+
+```ts
+export type LessonForNextPick = {
+  id: string;
+  disciplineId: string;
+  /** ISO "YYYY-MM-DD" ou nula (aula sem data marcada ainda). */
+  date: string | null;
+};
+
+/**
+ * A aula futura mais próxima (`date >= hoje`), ignorando aulas com `date`
+ * nula. A aula de hoje ainda conta como "próxima" — a sobreposição com
+ * "aula que já aconteceu" (`date <= hoje`, usada na frequência) é
+ * deliberada (Global Constraint 8).
+ */
+export function pickNextLesson<T extends LessonForNextPick>(
+  lessons: Array<T>,
+  todayIso: string,
+): T | null {
+  const upcoming = lessons.filter(
+    (lesson): lesson is T & { date: string } => lesson.date !== null && lesson.date >= todayIso,
+  );
+  if (upcoming.length === 0) return null;
+  return upcoming.reduce((closest, lesson) => (lesson.date < closest.date ? lesson : closest));
+}
+```
+
+- [ ] **Passo 3: Checar o arquivo**
+
+Run: `npx eslint src/lib/dashboard.ts && npx tsc --noEmit`
+Expected: PASS.
+
+- [ ] **Passo 4: Commit (só se o Passo 2 alterou o arquivo)**
+
+```bash
+git add src/lib/dashboard.ts
+git commit -m "feat: garante pickNextLesson disponível pro portal do aluno"
+```
+
+### Tarefa 2.3 — Lógica pura: vídeo-aulas novas não assistidas
+
+**Arquivos:**
+- Modificar: `src/lib/dashboard.ts`
+- Ler: `src/server/db/schema.ts` (`videoLessons`, `videoWatches`), `src/functions/videoLessons.ts`
+  (`listMyWatchedVideosFn`, `VideoLesson` — note que esse tipo **não** expõe `createdAt`,
+  por isso a Tarefa 2.4 consulta `videoLessons` direto em vez de reaproveitar
+  `listAllVideoLessonsFn`)
+
+**Interfaces:**
+- Consome: nada novo.
+- Produz: `selectUnwatchedVideos(videos, watchedVideoLessonIds, limit?)`, usada pela
+  Tarefa 2.4.
+
+- [ ] **Passo 1: Escrever a função**
+
+```ts
+export type VideoLessonForPortal = {
+  id: string;
+  disciplineId: string;
+  title: string;
+  /** ISO, `videoLessons.createdAt` — usado só pra ordenar, não exibido. */
+  createdAt: string;
+};
+
+/**
+ * Vídeo-aulas que o aluno ainda não concluiu, mais recentes primeiro,
+ * limitadas a `limit`. `watchedVideoLessonIds` vem das linhas de
+ * `video_watches` do próprio aluno (mesmo dado de `listMyWatchedVideosFn`).
+ */
+export function selectUnwatchedVideos<T extends VideoLessonForPortal>(
+  videos: Array<T>,
+  watchedVideoLessonIds: Array<string>,
+  limit = 5,
+): Array<T> {
+  const watched = new Set(watchedVideoLessonIds);
+  return videos
+    .filter((video) => !watched.has(video.id))
+    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
+    .slice(0, limit);
+}
+```
+
+- [ ] **Passo 2: Checar o arquivo**
+
+Run: `npx eslint src/lib/dashboard.ts && npx tsc --noEmit`
+Expected: PASS.
+
+- [ ] **Passo 3: Commit**
+
+```bash
+git add src/lib/dashboard.ts
+git commit -m "feat: adiciona seleção de vídeo-aulas novas em src/lib/dashboard.ts"
+```
+
+### Tarefa 2.4 — Server function: `getStudentDashboardFn`
+
+**Arquivos:**
+- Criar (ou complementar, se a Fase 1 já criou o arquivo com `getTeacherDashboardFn` /
+  `getAdminDashboardFn`): `src/functions/dashboard.ts`
+- Ler: `src/functions/payments.ts` (`listMyChargesFn`, tipo `Charge`), `src/functions/videoLessons.ts`
+  (`listMyWatchedVideosFn`), `src/server/auth/guard.ts` (`requireStudentId`),
+  `src/server/db/schema.ts` (`lessons`, `disciplines`, `videoLessons`, `videoWatches`),
+  `src/lib/dashboard.ts` (Tarefas 2.1–2.3)
+
+**Interfaces:**
+- Consome: `buildChargeAlert`, `pickNextLesson`, `selectUnwatchedVideos` de
+  `src/lib/dashboard.ts`; `listMyChargesFn` de `src/functions/payments.ts`.
+- Produz: `getStudentDashboardFn` — `requireStudentId()`, devolve
+  `{ chargeAlert, nextLesson, unwatchedVideos }`, consumido pela Tarefa 2.5.
+
+- [ ] **Passo 1: Escrever a server function**
+
+Reaproveita `listMyChargesFn()` direto (já resolve `currentAmount` com desconto/vencimento —
+reimplementar essa conta aqui duplicaria `computeCurrentAmount`). Aulas e vídeos são
+consultados direto: aulas porque não existe hoje uma função "todas as aulas do currículo", e
+vídeos porque `listAllVideoLessonsFn` não expõe `createdAt` (Tarefa 2.3). Sem `disciplineId`
+pra filtrar — todo aluno ativo pertence a todas as disciplinas (decisão transversal 1), então
+as tabelas são lidas por inteiro, do mesmo jeito que `reportData.ts` já faz.
+
+```ts
+import { createServerFn } from "@tanstack/react-start";
+import { eq } from "drizzle-orm";
+
+import { buildChargeAlert, pickNextLesson, selectUnwatchedVideos } from "@/lib/dashboard";
+import type { ChargeAlert } from "@/lib/dashboard";
+import { listMyChargesFn } from "@/functions/payments";
+import { listMyWatchedVideosFn } from "@/functions/videoLessons";
+import { requireStudentId } from "@/server/auth/guard";
+import { db } from "@/server/db/client";
+import { disciplines, lessons, videoLessons } from "@/server/db/schema";
+
+function todayIso(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+export type StudentNextLesson = {
+  id: string;
+  disciplineId: string;
+  disciplineName: string;
+  date: string;
+};
+
+export type StudentUnwatchedVideo = {
+  id: string;
+  disciplineId: string;
+  disciplineName: string;
+  title: string;
+};
+
+export type StudentDashboard = {
+  chargeAlert: ChargeAlert;
+  nextLesson: StudentNextLesson | null;
+  unwatchedVideos: Array<StudentUnwatchedVideo>;
+};
+
+/** Avisos do topo do portal do aluno: cobrança, próxima aula, vídeos novos. */
+export const getStudentDashboardFn = createServerFn({ method: "GET" }).handler(
+  async (): Promise<StudentDashboard> => {
+    const studentId = await requireStudentId();
+    const today = todayIso();
+
+    const [myCharges, watchedIds, lessonRows, videoRows] = await Promise.all([
+      listMyChargesFn(),
+      listMyWatchedVideosFn(),
+      db
+        .select({
+          id: lessons.id,
+          disciplineId: lessons.disciplineId,
+          disciplineName: disciplines.discipline,
+          date: lessons.date,
+        })
+        .from(lessons)
+        .innerJoin(disciplines, eq(disciplines.id, lessons.disciplineId)),
+      db
+        .select({
+          id: videoLessons.id,
+          disciplineId: videoLessons.disciplineId,
+          disciplineName: disciplines.discipline,
+          title: videoLessons.title,
+          createdAt: videoLessons.createdAt,
+        })
+        .from(videoLessons)
+        .innerJoin(disciplines, eq(disciplines.id, videoLessons.disciplineId)),
+    ]);
+
+    const chargeAlert = buildChargeAlert(
+      myCharges.map((c) => ({
+        chargeId: c.id,
+        description: c.description,
+        currentAmount: c.currentAmount,
+        dueDate: c.dueDate,
+        status: c.status,
+      })),
+      today,
+    );
+
+    const next = pickNextLesson(lessonRows, today);
+    const nextLesson: StudentNextLesson | null = next
+      ? {
+          id: next.id,
+          disciplineId: next.disciplineId,
+          disciplineName: next.disciplineName,
+          date: next.date!,
+        }
+      : null;
+
+    const unwatchedVideos = selectUnwatchedVideos(
+      videoRows.map((v) => ({ ...v, createdAt: v.createdAt.toISOString() })),
+      watchedIds,
+    ).map(({ id, disciplineId, disciplineName, title }) => ({
+      id,
+      disciplineId,
+      disciplineName,
+      title,
+    }));
+
+    return { chargeAlert, nextLesson, unwatchedVideos };
+  },
+);
+```
+
+- [ ] **Passo 2: Checar o arquivo**
+
+Run: `npx eslint src/functions/dashboard.ts && npx tsc --noEmit`
+Expected: PASS.
+
+- [ ] **Passo 3: Commit**
+
+```bash
+git add src/functions/dashboard.ts
+git commit -m "feat: adiciona getStudentDashboardFn"
+```
+
+### Tarefa 2.5 — Integrar os três avisos em `PortalHome.tsx`
+
+**Arquivos:**
+- Modificar: `src/pages/portal/PortalHome.tsx`
+- Ler: `src/components/ui/alert.tsx` (`Alert`/`AlertTitle`/`AlertDescription` — só tem
+  variantes `default`/`destructive`; "vence em breve" usa classe própria, não há variante
+  âmbar pronta), `src/pages/portal/PortalPayments.tsx:21` (`formatAmount`, padrão de
+  formatação de moeda a repetir aqui)
+
+**Interfaces:**
+- Consome: `getStudentDashboardFn` da Tarefa 2.4.
+- Produz: nada (fim da fase — UI consumindo o dado agregado).
+
+- [ ] **Passo 1: Query nova, sem tocar nas existentes**
+
+Em `PortalHome.tsx`, adicionar ao lado das outras `useQuery`:
+
+```tsx
+import { getStudentDashboardFn } from "@/functions/dashboard";
+// ...
+const { data: dashboard } = useQuery({
+  queryKey: ["student-dashboard"],
+  queryFn: () => getStudentDashboardFn(),
+});
+```
+
+- [ ] **Passo 2: Alerta de cobrança, acima do grid de média/frequência/faltas**
+
+Adicionar `formatAmount`/`formatDate` locais (mesmo padrão de `PortalPayments.tsx`) e o
+bloco condicional logo no início do `<PortalShell>`, antes do `{loadingReport ? ... }`:
+
+```tsx
+{dashboard?.chargeAlert ? (
+  <Alert
+    variant={dashboard.chargeAlert.level === "overdue" ? "destructive" : "default"}
+    className={cn(
+      "mb-6 animate-in fade-in slide-in-from-top-1 duration-200",
+      dashboard.chargeAlert.level === "due-soon" &&
+        "border-amber-500/50 text-amber-700 dark:border-amber-500 dark:text-amber-400 [&>svg]:text-amber-600",
+    )}
+  >
+    <AlertTriangle className="size-4" aria-hidden />
+    <AlertTitle>
+      {dashboard.chargeAlert.level === "overdue" ? "Cobrança vencida" : "Cobrança vence em breve"}
+    </AlertTitle>
+    <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
+      <span>
+        {dashboard.chargeAlert.featured.description} —{" "}
+        {formatAmount(dashboard.chargeAlert.featured.currentAmount)}, vencimento{" "}
+        {formatDate(dashboard.chargeAlert.featured.dueDate)}
+      </span>
+      <Button asChild size="sm">
+        <Link to="/portal/pagamentos">Pagar</Link>
+      </Button>
+    </AlertDescription>
+  </Alert>
+) : null}
+```
+
+Import `Alert, AlertTitle, AlertDescription` de `@/components/ui/alert` e `Button` de
+`@/components/ui/button`.
+
+- [ ] **Passo 3: Cards de "Próxima aula" e "Vídeo-aulas novas"**
+
+Entram no mesmo grid `lg:grid-cols-3`, depois do card "Provas agendadas" e antes de "Fórum
+em atividade" (a grid já quebra linha sozinha com 5 itens). Reaproveita o componente
+`DashboardCard` já existente no arquivo:
+
+```tsx
+<DashboardCard
+  title="Próxima aula"
+  icon={CalendarClock}
+  viewAllTo="/portal/disciplinas"
+  loading={!dashboard}
+  emptyLabel="Nenhuma aula agendada no momento."
+>
+  {dashboard?.nextLesson ? (
+    <Link
+      to="/portal/disciplinas/$disciplineId"
+      params={{ disciplineId: dashboard.nextLesson.disciplineId }}
+      className="flex animate-in items-start gap-2.5 rounded-md border border-border/70 bg-card/70 p-3 shadow-soft fade-in slide-in-from-top-1 duration-200 transition-colors hover:border-primary/50"
+    >
+      <CalendarClock className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden />
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-medium text-foreground">
+          {dashboard.nextLesson.disciplineName}
+        </span>
+        <span className="block text-xs text-muted-foreground">
+          {formatDate(dashboard.nextLesson.date)}
+        </span>
+      </span>
+    </Link>
+  ) : null}
+</DashboardCard>
+
+<DashboardCard
+  title="Vídeo-aulas novas"
+  icon={Video}
+  viewAllTo="/portal/videos"
+  loading={!dashboard}
+  emptyLabel="Nenhuma vídeo-aula nova."
+>
+  {(dashboard?.unwatchedVideos ?? []).map((video) => (
+    <Link
+      key={video.id}
+      to="/portal/videos"
+      className="flex animate-in items-start gap-2.5 rounded-md border border-border/70 bg-card/70 p-3 shadow-soft fade-in slide-in-from-top-1 duration-200 transition-colors hover:border-primary/50"
+    >
+      <Video className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden />
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-medium text-foreground">{video.title}</span>
+        <span className="block text-xs text-muted-foreground">{video.disciplineName}</span>
+      </span>
+    </Link>
+  ))}
+</DashboardCard>
+```
+
+Import `Video` de `lucide-react` (já importa `CalendarClock`). "Card vazio some" (Global
+Constraint 10) já é garantido pelo próprio `DashboardCard` — não é preciso lógica extra.
+
+- [ ] **Passo 4: Checar o arquivo e o roteiro manual**
+
+Run: `npx eslint src/pages/portal/PortalHome.tsx && npx tsc --noEmit`
+Expected: PASS.
+
+Rodar `npm run dev`, logar como aluno em dia (nenhum alerta), depois como aluno com cobrança
+vencida e com cobrança vencendo em 3 dias (alerta vermelho e âmbar, respectivamente,
+botão "Pagar" funcionando); conferir "Próxima aula" e "Vídeo-aulas novas" aparecendo e
+sumindo conforme o estado, sem quebrar quando tudo está vazio.
+
+- [ ] **Passo 5: Build final da fase**
+
+Run: `npm run build`
+Expected: PASS.
+
+- [ ] **Passo 6: Commit**
+
+```bash
+git add src/pages/portal/PortalHome.tsx
+git commit -m "feat: mostra cobrança, próxima aula e vídeos novos na home do portal"
+```
+
+---
+
+## Fase 3 — Aluno apaga o próprio tópico sem respostas
+
+Fecha uma lacuna de simetria no fórum: o aluno já pode apagar a própria mensagem
+(`deletePostFn`), mas não o próprio tópico criado por engano. `deleteThreadFn`
+(`src/functions/forum.ts:274`) hoje só permite ao professor dono da disciplina (moderação).
+
+### Tarefa 3.1 — Permissão de exclusão (função pura + servidor)
+
+**Arquivos:**
+- Criar: `src/lib/forumPermissions.ts`
+- Modificar: `src/functions/forum.ts` (`deleteThreadFn`, `getThreadFn`, `ForumThreadDetail`)
+- Ler: `src/server/db/schema.ts` (`forumThreads`, `forumPosts`, `disciplines`),
+  `src/server/auth/guard.ts` (`requireAnyIdentity`)
+
+**Interfaces:**
+- Consome: nada externo.
+- Produz: `canDeleteThread({ isModerator, isAuthor, postCount })`, reaproveitada pela
+  Tarefa 3.2 na UI (e, mais adiante, pela Fase 6 no fórum interno — por isso a assinatura é
+  genérica, sem falar de disciplina); `ForumThreadDetail.mine`, novo campo consumido pela
+  Tarefa 3.2.
+
+- [ ] **Passo 1: Escrever a função pura**
+
+```ts
+export type CanDeleteThreadInput = {
+  /** Professor dono da disciplina do tópico (moderação) — ou, no fórum interno da Fase 6, admin. */
+  isModerator: boolean;
+  /** Quem pede a exclusão é o autor do tópico. */
+  isAuthor: boolean;
+  /** Respostas no tópico, sem contar a mensagem inicial (que sempre existe). */
+  postCount: number;
+};
+
+/**
+ * Quem pode apagar um tópico de fórum. Moderador sempre pode; o próprio
+ * autor só pode se ainda não houver nenhuma resposta — apagar um tópico
+ * criado por engano não deve depender de moderação, mas uma discussão já
+ * em andamento não pode sumir por decisão unilateral do autor.
+ */
+export function canDeleteThread({
+  isModerator,
+  isAuthor,
+  postCount,
+}: CanDeleteThreadInput): boolean {
+  if (isModerator) return true;
+  return isAuthor && postCount === 0;
+}
+```
+
+- [ ] **Passo 2: Trocar a permissão de `deleteThreadFn`**
+
+Hoje o schema recebe `disciplineId` só pra alimentar `requireOwnDiscipline` — mas nada
+confere que aquele tópico é mesmo daquela disciplina. Trocar por buscar o tópico (e a
+disciplina dele) a partir do `threadId`, no mesmo padrão de `deletePostFn`, que já não
+depende de o cliente informar a disciplina:
+
+```ts
+import { canDeleteThread } from "@/lib/forumPermissions";
+// ...
+const deleteThreadSchema = z.object({ threadId: z.string().uuid() });
+
+/**
+ * Apaga um tópico: o professor dono da disciplina sempre pode (moderação);
+ * o autor (professor ou aluno) só pode se ainda não houver nenhuma
+ * resposta. A contagem de posts é feita imediatamente antes do delete,
+ * aceitando a corrida rara em que uma resposta chega no meio do caminho —
+ * o custo de apagar um tópico com uma resposta recém-criada é baixo.
+ */
+export const deleteThreadFn = createServerFn({ method: "POST" })
+  .validator(deleteThreadSchema)
+  .handler(async ({ data }) => {
+    const identity = await requireAnyIdentity();
+
+    const [thread] = await db
+      .select()
+      .from(forumThreads)
+      .where(eq(forumThreads.id, data.threadId))
+      .limit(1);
+    if (!thread) throw new Error("Tópico não encontrado.");
+
+    const [discipline] = await db
+      .select({ teacherId: disciplines.teacherId })
+      .from(disciplines)
+      .where(eq(disciplines.id, thread.disciplineId))
+      .limit(1);
+    const isModerator = identity.role === "teacher" && discipline?.teacherId === identity.id;
+    const isAuthor =
+      (identity.role === "teacher" && thread.authorTeacherId === identity.id) ||
+      (identity.role === "student" && thread.authorStudentId === identity.id);
+
+    const postRows = await db
+      .select({ id: forumPosts.id })
+      .from(forumPosts)
+      .where(eq(forumPosts.threadId, data.threadId));
+    // A mensagem inicial do tópico também é uma linha de forumPosts — só
+    // conta como "resposta" o que vier depois dela.
+    const postCount = Math.max(0, postRows.length - 1);
+
+    if (!canDeleteThread({ isModerator, isAuthor, postCount })) {
+      throw new Error("Só é possível apagar um tópico que ainda não tem respostas.");
+    }
+
+    await db.delete(forumThreads).where(eq(forumThreads.id, data.threadId));
+
+    // Auditoria só quando é o professor moderando — o aluno apagando o
+    // próprio tópico vazio é correção trivial, não polui o log administrativo.
+    if (isModerator) {
+      await logAudit("forum.apagar_topico", `Apagou o tópico "${thread.title}" do fórum.`);
+    }
+  });
+```
+
+Não precisa mais importar `requireOwnDiscipline` neste arquivo, a menos que outra função no
+mesmo arquivo ainda o use (`deletePostFn` usa — manter o import).
+
+- [ ] **Passo 3: Expor `mine` em `getThreadFn`**
+
+`ForumThreadDetail` ganha o campo, calculado com a mesma lógica já usada pra `post.mine`:
+
+```ts
+export type ForumThreadDetail = {
+  id: string;
+  disciplineId: string;
+  title: string;
+  /** O tópico foi criado por quem está logado agora. */
+  mine: boolean;
+  posts: Array<ForumPost>;
+};
+```
+
+E no handler de `getThreadFn`, no `return`:
+
+```ts
+return {
+  id: thread.id,
+  disciplineId: thread.disciplineId,
+  title: thread.title,
+  mine:
+    (identity.role === "teacher" && thread.authorTeacherId === identity.id) ||
+    (identity.role === "student" && thread.authorStudentId === identity.id),
+  posts: postRows.map((post) => ({ /* ...like antes... */ })),
+};
+```
+
+- [ ] **Passo 4: Checar o arquivo**
+
+Run: `npx eslint src/lib/forumPermissions.ts src/functions/forum.ts && npx tsc --noEmit`
+Expected: PASS.
+
+- [ ] **Passo 5: Commit**
+
+```bash
+git add src/lib/forumPermissions.ts src/functions/forum.ts
+git commit -m "feat: aluno pode apagar o próprio tópico do fórum sem respostas"
+```
+
+### Tarefa 3.2 — Botão de apagar no `ForumThreadView`
+
+`ForumThreadView` (`src/components/forum/ForumThreadView.tsx`) já é compartilhado entre
+`src/pages/painel/ForumThread.tsx` (`canModerateThread` sempre `true`) e
+`src/pages/portal/PortalForumThread.tsx` (`canModerateThread` sempre `false`, porque aluno
+nunca modera). Não é preciso mexer nessas duas páginas — só no componente compartilhado, que
+passa a decidir a visibilidade do botão com a mesma regra do servidor.
+
+**Arquivos:**
+- Modificar: `src/components/forum/ForumThreadView.tsx`
+- Ler: `src/pages/portal/PortalForumThread.tsx`, `src/pages/painel/ForumThread.tsx` (conferir
+  que nenhum dos dois precisa mudar)
+
+**Interfaces:**
+- Consome: `canDeleteThread` (Tarefa 3.1), `ForumThreadDetail.mine` (Tarefa 3.1).
+- Produz: nada (fim da fase).
+
+- [ ] **Passo 1: Calcular `canDelete` e trocar a condição do botão**
+
+```tsx
+import { canDeleteThread } from "@/lib/forumPermissions";
+// ...
+const canDelete =
+  thread !== undefined &&
+  canDeleteThread({
+    isModerator: canModerateThread,
+    isAuthor: thread.mine,
+    postCount: Math.max(0, thread.posts.length - 1),
+  });
+```
+
+Trocar a condição do botão de `{canModerateThread ? (...) : null}` para `{canDelete ? (...) : null}`.
+
+- [ ] **Passo 2: Ajustar a mutation — o schema não pede mais `disciplineId`**
+
+```tsx
+const deleteThreadMutation = useMutation({
+  mutationFn: () => deleteThreadFn({ data: { threadId } }),
+  // ...resto igual
+});
+```
+
+- [ ] **Passo 3: Checar o arquivo**
+
+Run: `npx eslint src/components/forum/ForumThreadView.tsx && npx tsc --noEmit`
+Expected: PASS.
+
+- [ ] **Passo 4: Roteiro manual e build final da fase**
+
+Como professor: continuar conseguindo apagar qualquer tópico da própria disciplina, mesmo
+com respostas (moderação preservada). Como aluno: criar um tópico, ver o botão "Apagar
+tópico", apagar com sucesso; responder ao próprio tópico (ou receber uma resposta) e conferir
+que o botão some.
+
+Run: `npm run build`
+Expected: PASS.
+
+- [ ] **Passo 5: Commit**
+
+```bash
+git add src/components/forum/ForumThreadView.tsx
+git commit -m "feat: mostra o botão de apagar tópico pro aluno dono sem respostas"
+```
+
+---
