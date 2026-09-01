@@ -5,7 +5,10 @@ import { BookOpen, GraduationCap, Users } from "lucide-react";
 import { NotificationToggle } from "@/components/NotificationToggle";
 import { PainelShell } from "@/components/painel/PainelShell";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getTeacherDashboardFn } from "@/functions/teacherDashboard";
 import { listMyDisciplinesFn } from "@/functions/disciplines";
+import { DashboardCards } from "@/pages/painel/dashboard/cards";
+import { KpiStrip } from "@/pages/painel/dashboard/KpiStrip";
 
 const shortcuts = [
   {
@@ -22,23 +25,66 @@ const shortcuts = [
   },
 ] as const;
 
-/** Landing do painel interno — atalhos + disciplinas do professor logado. */
+/** Landing do painel interno — dashboard de pendências + atalhos + disciplinas do professor. */
 export function PainelHome() {
+  const { data: dashboard, isLoading: loadingDashboard } = useQuery({
+    queryKey: ["teacher-dashboard"],
+    queryFn: () => getTeacherDashboardFn(),
+  });
   const { data: disciplines, isLoading } = useQuery({
     queryKey: ["my-disciplines"],
     queryFn: () => listMyDisciplinesFn(),
   });
 
+  const allClear =
+    !loadingDashboard &&
+    dashboard !== undefined &&
+    dashboard.counts.pendingGrading === 0 &&
+    dashboard.counts.endingDisciplines === 0 &&
+    dashboard.counts.atRiskStudents === 0 &&
+    dashboard.counts.lessonsWithoutAttendance === 0 &&
+    dashboard.materialGaps.length === 0 &&
+    dashboard.pendingGrading.length === 0 &&
+    dashboard.missingGrades.length === 0 &&
+    dashboard.missingAttendance.length === 0 &&
+    dashboard.endingDisciplines.length === 0 &&
+    dashboard.forum.length === 0 &&
+    dashboard.upcomingLessons.length === 0 &&
+    dashboard.atRiskStudents.length === 0;
+
   return (
     <PainelShell
       title="Painel do professor"
-      description="Área interna para lançar notas, faltas e administrar contas de acesso."
+      description="O que precisa da sua atenção agora: correções, notas, chamada, materiais e fórum."
     >
       <div className="mb-4">
         <NotificationToggle />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <KpiStrip
+        scope={dashboard?.scope ?? "minhas"}
+        counts={
+          dashboard?.counts ?? {
+            pendingGrading: 0,
+            endingDisciplines: 0,
+            atRiskStudents: 0,
+            lessonsWithoutAttendance: 0,
+          }
+        }
+        isLoading={loadingDashboard}
+      />
+
+      {allClear ? (
+        <p className="mt-8 rounded-md border border-t-2 border-border/70 border-t-accent bg-card/70 p-6 text-center text-sm text-muted-foreground shadow-soft">
+          Nenhuma pendência — tudo em dia.
+        </p>
+      ) : (
+        <div className="mt-8 grid gap-4 lg:grid-cols-3">
+          <DashboardCards data={dashboard} isLoading={loadingDashboard} />
+        </div>
+      )}
+
+      <div className="mt-10 grid gap-4 sm:grid-cols-2">
         {shortcuts.map((item) => (
           <Link
             key={item.to}
