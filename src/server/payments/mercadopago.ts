@@ -72,10 +72,12 @@ export async function createPreference(
 }
 
 export type MercadoPagoPayment = {
+  id: string;
   status: string;
   externalReference: string | null;
-  /** Valor efetivamente pago, segundo o Mercado Pago. */
   transactionAmount: number;
+  currencyId: string | null;
+  approvedAt: string | null;
 };
 
 /** Busca o status oficial de um pagamento — nunca confiar só no corpo do webhook. */
@@ -90,22 +92,26 @@ export async function getPayment(paymentId: string): Promise<MercadoPagoPayment>
   }
 
   const data = (await response.json()) as {
+    id: number | string;
     status: string;
     external_reference: string | null;
     transaction_amount: number;
+    currency_id?: string | null;
+    date_approved?: string | null;
   };
   return {
+    id: String(data.id),
     status: data.status,
     externalReference: data.external_reference ?? null,
     transactionAmount: data.transaction_amount,
+    currencyId: data.currency_id ?? null,
+    approvedAt: data.date_approved ?? null,
   };
 }
 
 /**
  * Manifest usado na verificação HMAC do header `x-signature` dos webhooks do
- * Mercado Pago. Formato conforme a doc oficial (`id:<data.id>;request-id:<x-request-id>;ts:<ts>;`)
- * — confirmar contra o botão "Simular notificação" do painel do Mercado Pago
- * antes de confiar nisso em produção, já que a doc pública não deixa 100% claro.
+ * Mercado Pago. Formato conforme a doc oficial (`id:<data.id>;request-id:<x-request-id>;ts:<ts>;`).
  */
 export function buildSignatureManifest(input: {
   dataId: string;
@@ -153,7 +159,6 @@ export async function verifyWebhookSignature(input: {
   const signatureBits = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(manifest));
   const computed = toHex(new Uint8Array(signatureBits));
 
-  // Comparação em tempo constante — mesmo padrão de password.ts.
   if (computed.length !== parsed.v1.length) return false;
   let diff = 0;
   for (let i = 0; i < computed.length; i++)

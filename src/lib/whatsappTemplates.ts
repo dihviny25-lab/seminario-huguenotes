@@ -31,10 +31,7 @@ function money(value: number): string {
  * Texto pré-preenchido para a conversa. `generic` retorna undefined (sem texto).
  * Os demais retornam um texto curto e cordial com o primeiro nome do aluno.
  */
-export function messageFor(
-  context: WhatsappContext,
-  studentFullName: string,
-): string | undefined {
+export function messageFor(context: WhatsappContext, studentFullName: string): string | undefined {
   const nome = firstName(studentFullName);
 
   switch (context.kind) {

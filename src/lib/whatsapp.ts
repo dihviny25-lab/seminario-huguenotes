@@ -6,10 +6,7 @@
  * A normalização só acontece aqui — o número é guardado no banco como o usuário
  * digitou.
  */
-export function toWhatsappLink(
-  phone: string | null | undefined,
-  message?: string,
-): string | null {
+export function toWhatsappLink(phone: string | null | undefined, message?: string): string | null {
   let digits = String(phone ?? "").replace(/\D/g, "");
   if (digits.startsWith("0")) digits = digits.slice(1);
 
