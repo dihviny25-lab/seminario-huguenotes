@@ -4179,3 +4179,1135 @@ git commit -m "feat: adiciona o link do fórum interno na navegação do painel"
 ```
 
 ---
+
+## Fase 7 — Compartilhamento de apostilas entre professores
+
+Professor pode compartilhar sua apostila (`readingMaterials`, `src/functions/readingMaterials.ts`
+— materiais de leitura por disciplina, **não** `courseMaterials`, que é catálogo cobrável do aluno
+e não tem conteúdo pra compartilhar) com professores específicos, e discutir o conteúdo com eles.
+Compartilhamento é **explícito e nominal** (o dono escolhe com quem, não existe "visível pra
+todos") e dá acesso só de **leitura e comentário** — nunca de edição, que continua exclusiva do
+dono da disciplina.
+
+**Descobertas de leitura do código real que mudam/confirmam o que o spec havia previsto:**
+- `readingMaterials` não tem `teacherId` próprio — o dono de uma apostila é sempre o professor
+  dono da disciplina (`disciplines.teacherId`), resolvido via `readingMaterials.disciplineId`.
+  Toda função de escrita desta fase (compartilhar, descompartilhar, listar quem já tem acesso)
+  resolve a disciplina a partir do material e chama `requireOwnDiscipline`, no mesmo padrão de
+  `updateMaterialFn`/`deleteMaterialFn` (`src/functions/readingMaterials.ts:87-117`).
+- **Inconsistência encontrada no spec, corrigida aqui:** o spec (seção "Funções e UI" da Fase 7)
+  propunha colocar a seção "Apostilas compartilhadas comigo" em `src/pages/painel/Materials.tsx`
+  — mas esse arquivo é a tela `/painel/materiais` do catálogo **cobrável** (`courseMaterials`,
+  só admin, rota em `adminOnlyNavItems`), sem nenhuma relação com apostilas de leitura. Colocar a
+  seção lá misturaria dois domínios completamente diferentes atrás do mesmo nome. **Decisão desta
+  fase:** a seção nova ganha página e rota próprias — `src/pages/painel/SharedMaterials.tsx` em
+  `/painel/apostilas-compartilhadas`, acessível a todo professor (não só admin), no mesmo padrão
+  usado pela Fase 6 para o fórum interno (página + rota dedicadas + item em `painelNavItems`).
+- `ReadingMaterialsTab.tsx` já lista os materiais da disciplina com botões de ação por linha
+  (editar, excluir) — a ação "Compartilhar" entra como um terceiro botão na mesma linha, seguindo
+  exatamente o padrão visual já existente (`EditMaterialDialog`/`CreateMaterialDialog` no mesmo
+  arquivo).
+- `reflectionComments` (`src/server/db/schema.ts:443-452`) e o CRUD em `src/functions/reflections.ts`
+  são o padrão de "conteúdo + comentários" a copiar: `teacherId` anulável, `authorName`
+  desnormalizado, sem `updatedAt`/edição de comentário. A UI de comentário-por-item em
+  `src/pages/painel/reports/StudentReport.tsx:340-395` (lista de comentários + `Textarea` +
+  botão "Responder" por item) é o padrão visual a espelhar para o painel de comentários da
+  apostila compartilhada.
+- `listTeacherAccountsFn` (`src/functions/teacherAccounts.ts:28`) já usa só `requireTeacherId()`
+  e devolve `{ id, name, email, hasLogin, role }` de **todos** os professores — é a fonte pronta
+  pra popular a lista de "com quem compartilhar", sem precisar de função nova.
+
+### Tarefa 7.1 — Schema: compartilhamento e comentários de apostila
+
+**Arquivos:**
+- Modificar: `src/server/db/schema.ts`
+- Ler: `readingMaterials` (linhas 350-361) e `reflectionComments`/`spiritualReflections`
+  (linhas 432-452) no mesmo arquivo — os dois padrões de coluna a copiar
+
+**Interfaces:**
+- Consome: nada.
+- Produz: `readingMaterialShares`, `readingMaterialComments` — usadas por todas as tarefas
+  seguintes desta fase.
+
+- [ ] **Passo 1: Adicionar as duas tabelas, logo depois de `readingMaterials` (antes de
+      `assignments`)**
+
+```ts
+// Compartilhamento explícito e nominal de uma apostila com outro professor —
+// dá acesso de leitura e comentário, nunca de edição (só o dono da
+// disciplina edita). sharedById é quem fez o compartilhamento (sempre o
+// dono, na prática, já que só ele pode chamar shareMaterialFn) — snapshot
+// anulável pra sobreviver à exclusão da conta de quem compartilhou.
+export const readingMaterialShares = pgTable(
+  "reading_material_shares",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    readingMaterialId: uuid("reading_material_id")
+      .notNull()
+      .references(() => readingMaterials.id, { onDelete: "cascade" }),
+    teacherId: uuid("teacher_id")
+      .notNull()
+      .references(() => teachers.id, { onDelete: "cascade" }),
+    sharedById: uuid("shared_by_id").references(() => teachers.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [unique().on(table.readingMaterialId, table.teacherId)],
+);
+
+// Discussão sobre uma apostila entre o dono e os professores com quem ela
+// foi compartilhada. Mesmo formato de reflectionComments: teacherId
+// anulável + authorName desnormalizado, pro histórico sobreviver à exclusão
+// da conta.
+export const readingMaterialComments = pgTable("reading_material_comments", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  readingMaterialId: uuid("reading_material_id")
+    .notNull()
+    .references(() => readingMaterials.id, { onDelete: "cascade" }),
+  teacherId: uuid("teacher_id").references(() => teachers.id, { onDelete: "set null" }),
+  authorName: text("author_name").notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+```
+
+Nenhuma coluna nova em tabela existente — as duas tabelas são inteiramente novas, então não há
+necessidade de `default` para compatibilidade com linhas antigas (Global Constraint 11 só se
+aplica a coluna nova em tabela já existente).
+
+- [ ] **Passo 2: Checar o arquivo**
+
+Run: `npx eslint src/server/db/schema.ts && npx tsc --noEmit`
+Expected: PASS, sem erros.
+
+- [ ] **Passo 3: Aplicar o schema no banco**
+
+Run: `npm run db:push`
+Expected: o `drizzle-kit push` lista a criação das duas tabelas novas e aplica sem pedir
+confirmação destrutiva — é tudo aditivo (nenhuma tabela nem coluna existente é tocada). Se o
+terminal pedir confirmação, responder afirmativamente.
+
+- [ ] **Passo 4: Commit**
+
+```bash
+git add src/server/db/schema.ts
+git commit -m "feat: adiciona schema de compartilhamento e comentários de apostila"
+```
+
+### Tarefa 7.2 — Lógica pura: predicado de acesso à apostila compartilhada
+
+**Arquivos:**
+- Criar: `src/lib/materialAccess.ts`
+
+**Interfaces:**
+- Consome: nada (função pura).
+- Produz: `canAccessMaterial({ isOwner, isSharedWithMe })`, consumida pela Tarefa 7.4.
+
+- [ ] **Passo 1: Escrever a função**
+
+```ts
+export type MaterialAccessInput = {
+  /** Quem pede é o professor dono da disciplina da apostila. */
+  isOwner: boolean;
+  /** Existe uma linha em reading_material_shares pra esse professor+apostila. */
+  isSharedWithMe: boolean;
+};
+
+/**
+ * Quem pode ler e comentar uma apostila: o dono (professor da disciplina) ou
+ * um professor com quem ela foi explicitamente compartilhada. Não decide
+ * edição — editar a apostila em si continua sendo sempre `requireOwnDiscipline`
+ * puro, sem passar por este predicado (compartilhamento nunca dá acesso de
+ * escrita ao conteúdo, só a leitura e comentário).
+ */
+export function canAccessMaterial({ isOwner, isSharedWithMe }: MaterialAccessInput): boolean {
+  return isOwner || isSharedWithMe;
+}
+```
+
+- [ ] **Passo 2: Checar o arquivo**
+
+Run: `npx eslint src/lib/materialAccess.ts && npx tsc --noEmit`
+Expected: PASS, sem erros.
+
+- [ ] **Passo 3: Commit**
+
+```bash
+git add src/lib/materialAccess.ts
+git commit -m "feat: adiciona predicado de acesso à apostila compartilhada"
+```
+
+### Tarefa 7.3 — Server functions: compartilhar, descompartilhar e listar compartilhamentos
+
+**Arquivos:**
+- Criar: `src/functions/materialSharing.ts`
+- Ler: `src/functions/readingMaterials.ts` inteiro (`updateMaterialFn`/`deleteMaterialFn` — o
+  padrão de resolver a disciplina a partir do material e chamar `requireOwnDiscipline`),
+  `src/server/auth/guard.ts` (`requireOwnDiscipline`, `requireTeacherId`)
+
+**Interfaces:**
+- Consome: `readingMaterials`, `readingMaterialShares`, `teachers` de `src/server/db/schema.ts`
+  (Tarefa 7.1).
+- Produz: `shareMaterialFn`, `unshareMaterialFn`, `listMaterialSharesFn` — consumidas pela
+  Tarefa 7.5.
+
+- [ ] **Passo 1: Helper de acesso do dono, reaproveitado pelas três funções**
+
+```ts
+import { createServerFn } from "@tanstack/react-start";
+import { and, asc, eq } from "drizzle-orm";
+import { z } from "zod";
+
+import { logAudit } from "@/server/audit";
+import { requireOwnDiscipline, requireTeacherId } from "@/server/auth/guard";
+import { db } from "@/server/db/client";
+import { readingMaterialShares, readingMaterials, teachers } from "@/server/db/schema";
+
+/**
+ * Resolve o material e confirma que quem pede é o dono da disciplina dele —
+ * mesmo padrão de updateMaterialFn/deleteMaterialFn
+ * (src/functions/readingMaterials.ts), reaproveitado aqui porque
+ * readingMaterials não tem teacherId próprio: o dono é sempre o professor
+ * dono da disciplina.
+ */
+async function requireOwnMaterial(materialId: string) {
+  const [material] = await db
+    .select()
+    .from(readingMaterials)
+    .where(eq(readingMaterials.id, materialId))
+    .limit(1);
+  if (!material) throw new Error("Material não encontrado.");
+  const discipline = await requireOwnDiscipline(material.disciplineId);
+  return { material, discipline };
+}
+```
+
+- [ ] **Passo 2: `shareMaterialFn` e `unshareMaterialFn`**
+
+```ts
+const shareSchema = z.object({ materialId: z.string().uuid(), teacherId: z.string().uuid() });
+
+/** Compartilha a apostila com um professor específico — leitura e comentário, nunca edição. */
+export const shareMaterialFn = createServerFn({ method: "POST" })
+  .validator(shareSchema)
+  .handler(async ({ data }) => {
+    const { material, discipline } = await requireOwnMaterial(data.materialId);
+    if (data.teacherId === discipline.teacherId) {
+      throw new Error("Você já é o dono deste material.");
+    }
+
+    await db
+      .insert(readingMaterialShares)
+      .values({
+        readingMaterialId: data.materialId,
+        teacherId: data.teacherId,
+        sharedById: discipline.teacherId,
+      })
+      .onConflictDoNothing({
+        target: [readingMaterialShares.readingMaterialId, readingMaterialShares.teacherId],
+      });
+
+    await logAudit(
+      "apostila.compartilhar",
+      `Compartilhou o material "${material.title}" com outro professor.`,
+    );
+  });
+
+/** Remove o compartilhamento — o professor perde o acesso de leitura/comentário na hora. */
+export const unshareMaterialFn = createServerFn({ method: "POST" })
+  .validator(shareSchema)
+  .handler(async ({ data }) => {
+    const { material } = await requireOwnMaterial(data.materialId);
+
+    await db
+      .delete(readingMaterialShares)
+      .where(
+        and(
+          eq(readingMaterialShares.readingMaterialId, data.materialId),
+          eq(readingMaterialShares.teacherId, data.teacherId),
+        ),
+      );
+
+    await logAudit(
+      "apostila.descompartilhar",
+      `Removeu o compartilhamento do material "${material.title}" com um professor.`,
+    );
+  });
+```
+
+- [ ] **Passo 3: `listMaterialSharesFn` — só o dono vê com quem já compartilhou**
+
+```ts
+export type MaterialShare = { teacherId: string; teacherName: string };
+
+const materialIdSchema = z.object({ materialId: z.string().uuid() });
+
+/** Professores com quem esta apostila já foi compartilhada — pro diálogo de compartilhar. */
+export const listMaterialSharesFn = createServerFn({ method: "GET" })
+  .validator(materialIdSchema)
+  .handler(async ({ data }): Promise<Array<MaterialShare>> => {
+    await requireOwnMaterial(data.materialId);
+
+    return db
+      .select({ teacherId: readingMaterialShares.teacherId, teacherName: teachers.name })
+      .from(readingMaterialShares)
+      .innerJoin(teachers, eq(teachers.id, readingMaterialShares.teacherId))
+      .where(eq(readingMaterialShares.readingMaterialId, data.materialId))
+      .orderBy(asc(teachers.name));
+  });
+```
+
+`asc` já vem importado de `"drizzle-orm"` no Passo 1 — não duplicar o import.
+
+- [ ] **Passo 4: Checar o arquivo**
+
+Run: `npx eslint src/functions/materialSharing.ts && npx tsc --noEmit`
+Expected: PASS.
+
+- [ ] **Passo 5: Commit**
+
+```bash
+git add src/functions/materialSharing.ts
+git commit -m "feat: adiciona compartilhar, descompartilhar e listar compartilhamentos de apostila"
+```
+
+### Tarefa 7.4 — Server functions: apostilas compartilhadas comigo e comentários
+
+**Arquivos:**
+- Modificar: `src/functions/materialSharing.ts`
+- Ler: `src/functions/reflections.ts` inteiro (`buildReflections`, `addReflectionCommentFn` — o
+  padrão de comentário a espelhar), `src/lib/materialAccess.ts` (`canAccessMaterial`, Tarefa 7.2)
+
+**Interfaces:**
+- Consome: `canAccessMaterial` de `src/lib/materialAccess.ts` (Tarefa 7.2);
+  `readingMaterialComments`, `disciplines` de `src/server/db/schema.ts` (Tarefa 7.1 + já
+  existente).
+- Produz: `listSharedWithMeFn`, `listMaterialCommentsFn`, `createMaterialCommentFn`,
+  `deleteMaterialCommentFn` — consumidas pelas Tarefas 7.6 e 7.7.
+
+- [ ] **Passo 1: Helpers de dono e de acesso, reaproveitados pelas quatro funções**
+
+Acrescentar aos imports do topo do arquivo (`disciplines`, `readingMaterialComments` em
+`@/server/db/schema`; `inArray` em `"drizzle-orm"`; `canAccessMaterial` de
+`@/lib/materialAccess`):
+
+```ts
+import { canAccessMaterial } from "@/lib/materialAccess";
+// ...
+import { disciplines, readingMaterialComments } from "@/server/db/schema";
+
+/** Dono de uma apostila = dono da disciplina dela. Nulo se a disciplina ficou sem professor. */
+async function getMaterialOwnerId(materialId: string): Promise<string | null> {
+  const [row] = await db
+    .select({ teacherId: disciplines.teacherId })
+    .from(readingMaterials)
+    .innerJoin(disciplines, eq(disciplines.id, readingMaterials.disciplineId))
+    .where(eq(readingMaterials.id, materialId))
+    .limit(1);
+  return row?.teacherId ?? null;
+}
+
+async function resolveMaterialAccess(materialId: string, teacherId: string) {
+  const [ownerId, shareRows] = await Promise.all([
+    getMaterialOwnerId(materialId),
+    db
+      .select({ id: readingMaterialShares.id })
+      .from(readingMaterialShares)
+      .where(
+        and(
+          eq(readingMaterialShares.readingMaterialId, materialId),
+          eq(readingMaterialShares.teacherId, teacherId),
+        ),
+      )
+      .limit(1),
+  ]);
+  return { isOwner: ownerId === teacherId, isSharedWithMe: shareRows.length > 0 };
+}
+```
+
+- [ ] **Passo 2: `listSharedWithMeFn`**
+
+Agregação em memória sobre poucas queries amplas (Global Constraint 6): uma pra achar quais
+apostilas foram compartilhadas comigo, outra pra buscar os dados delas, outra pros nomes de quem
+compartilhou — sem `inArray` com lista vazia (guardado nos dois últimos casos).
+
+```ts
+export type SharedMaterial = {
+  id: string;
+  disciplineId: string;
+  disciplineName: string;
+  title: string;
+  description: string | null;
+  fileUrl: string;
+  fileName: string;
+  sharedByName: string;
+  /** Quando o compartilhamento foi feito (não a criação da apostila). */
+  sharedAt: string;
+};
+
+/** Apostilas que outros professores compartilharam comigo — leitura e comentário. */
+export const listSharedWithMeFn = createServerFn({ method: "GET" }).handler(
+  async (): Promise<Array<SharedMaterial>> => {
+    const teacherId = await requireTeacherId();
+
+    const shareRows = await db
+      .select({
+        materialId: readingMaterialShares.readingMaterialId,
+        sharedById: readingMaterialShares.sharedById,
+        createdAt: readingMaterialShares.createdAt,
+      })
+      .from(readingMaterialShares)
+      .where(eq(readingMaterialShares.teacherId, teacherId));
+    if (shareRows.length === 0) return [];
+
+    const materialIds = shareRows.map((s) => s.materialId);
+    const sharedByIds = shareRows
+      .map((s) => s.sharedById)
+      .filter((id): id is string => id !== null);
+
+    const [materialRows, sharedByRows] = await Promise.all([
+      db
+        .select({
+          id: readingMaterials.id,
+          disciplineId: readingMaterials.disciplineId,
+          disciplineName: disciplines.discipline,
+          title: readingMaterials.title,
+          description: readingMaterials.description,
+          fileUrl: readingMaterials.fileUrl,
+          fileName: readingMaterials.fileName,
+        })
+        .from(readingMaterials)
+        .innerJoin(disciplines, eq(disciplines.id, readingMaterials.disciplineId))
+        .where(inArray(readingMaterials.id, materialIds)),
+      sharedByIds.length === 0
+        ? []
+        : db
+            .select({ id: teachers.id, name: teachers.name })
+            .from(teachers)
+            .where(inArray(teachers.id, sharedByIds)),
+    ]);
+
+    return shareRows.map((share) => {
+      const material = materialRows.find((m) => m.id === share.materialId);
+      const sharedBy = sharedByRows.find((t) => t.id === share.sharedById);
+      return {
+        id: share.materialId,
+        disciplineId: material?.disciplineId ?? "",
+        disciplineName: material?.disciplineName ?? "",
+        title: material?.title ?? "",
+        description: material?.description ?? null,
+        fileUrl: material?.fileUrl ?? "",
+        fileName: material?.fileName ?? "",
+        sharedByName: sharedBy?.name ?? "Professor",
+        sharedAt: share.createdAt.toISOString(),
+      };
+    });
+  },
+);
+```
+
+`material` nunca fica de fato ausente aqui — `readingMaterialId` tem `onDelete: "cascade"`, então
+apagar a apostila apaga o compartilhamento junto. Os `?? ""` são só defesa, mesmo estilo de
+`material?.title ?? data.materialId` em `deleteMaterialFn`.
+
+- [ ] **Passo 3: `listMaterialCommentsFn` e `createMaterialCommentFn`**
+
+```ts
+export type MaterialComment = {
+  id: string;
+  authorName: string;
+  content: string;
+  createdAt: string;
+  mine: boolean;
+};
+
+/** Comentários da apostila — só quem tem acesso (dono ou compartilhado) pode ver. */
+export const listMaterialCommentsFn = createServerFn({ method: "GET" })
+  .validator(materialIdSchema)
+  .handler(async ({ data }): Promise<Array<MaterialComment>> => {
+    const teacherId = await requireTeacherId();
+    const access = await resolveMaterialAccess(data.materialId, teacherId);
+    if (!canAccessMaterial(access)) {
+      throw new Error("Você não tem acesso a este material.");
+    }
+
+    const rows = await db
+      .select()
+      .from(readingMaterialComments)
+      .where(eq(readingMaterialComments.readingMaterialId, data.materialId))
+      .orderBy(asc(readingMaterialComments.createdAt));
+
+    return rows.map((row) => ({
+      id: row.id,
+      authorName: row.authorName,
+      content: row.content,
+      createdAt: row.createdAt.toISOString(),
+      mine: row.teacherId === teacherId,
+    }));
+  });
+
+const createCommentSchema = z.object({
+  materialId: z.string().uuid(),
+  content: z.string().trim().min(1, "Escreva um comentário."),
+});
+
+/** Comenta a apostila — só quem tem acesso (dono ou compartilhado) pode comentar. */
+export const createMaterialCommentFn = createServerFn({ method: "POST" })
+  .validator(createCommentSchema)
+  .handler(async ({ data }) => {
+    const teacherId = await requireTeacherId();
+    const access = await resolveMaterialAccess(data.materialId, teacherId);
+    if (!canAccessMaterial(access)) {
+      throw new Error("Você não tem acesso a este material.");
+    }
+
+    const [teacher] = await db
+      .select({ name: teachers.name })
+      .from(teachers)
+      .where(eq(teachers.id, teacherId))
+      .limit(1);
+
+    await db.insert(readingMaterialComments).values({
+      readingMaterialId: data.materialId,
+      teacherId,
+      authorName: teacher?.name ?? "Professor",
+      content: data.content,
+    });
+  });
+```
+
+- [ ] **Passo 4: `deleteMaterialCommentFn` — o autor apaga o próprio, o dono apaga qualquer um**
+
+**Decisão** (o spec não detalha a regra de exclusão de comentário): o autor sempre pode apagar o
+próprio comentário; o dono da apostila também pode apagar qualquer comentário nela, como
+moderação do próprio conteúdo — mesma ideia de `canDeleteThread`/`deleteTeacherPostFn` (Tarefas
+3.1 e 6.3), sem reaproveitar a função em si porque aqui não há noção de "tópico sem resposta", só
+autor-ou-dono.
+
+```ts
+const deleteCommentSchema = z.object({ commentId: z.string().uuid() });
+
+export const deleteMaterialCommentFn = createServerFn({ method: "POST" })
+  .validator(deleteCommentSchema)
+  .handler(async ({ data }) => {
+    const teacherId = await requireTeacherId();
+
+    const [comment] = await db
+      .select()
+      .from(readingMaterialComments)
+      .where(eq(readingMaterialComments.id, data.commentId))
+      .limit(1);
+    if (!comment) return;
+
+    const isAuthor = comment.teacherId === teacherId;
+    if (!isAuthor) {
+      const ownerId = await getMaterialOwnerId(comment.readingMaterialId);
+      if (ownerId !== teacherId) {
+        throw new Error("Você só pode apagar o próprio comentário.");
+      }
+    }
+
+    await db.delete(readingMaterialComments).where(eq(readingMaterialComments.id, data.commentId));
+  });
+```
+
+- [ ] **Passo 5: Checar o arquivo**
+
+Run: `npx eslint src/functions/materialSharing.ts && npx tsc --noEmit`
+Expected: PASS.
+
+- [ ] **Passo 6: Commit**
+
+```bash
+git add src/functions/materialSharing.ts
+git commit -m "feat: adiciona listagem de apostilas compartilhadas e comentários"
+```
+
+### Tarefa 7.5 — UI: botão "Compartilhar" em `ReadingMaterialsTab.tsx`
+
+**Arquivos:**
+- Modificar: `src/pages/painel/ReadingMaterialsTab.tsx`
+- Ler: `src/functions/teacherAccounts.ts` (`listTeacherAccountsFn`, `TeacherAccount`),
+  `src/functions/auth.ts` (`getCurrentTeacherFn` — pra excluir o próprio professor logado da
+  lista de "com quem compartilhar"), `src/components/ui/switch.tsx` (já usado em
+  `Materials.tsx` no mesmo padrão de alternância)
+
+**Interfaces:**
+- Consome: `shareMaterialFn`, `unshareMaterialFn`, `listMaterialSharesFn` (Tarefa 7.3);
+  `listTeacherAccountsFn` (já existente).
+- Produz: nada (fim da UI do dono).
+
+- [ ] **Passo 1: Novo botão na linha do material, ao lado de "Editar"/"Excluir"**
+
+```tsx
+import { BookOpen, Download, Loader2, Pencil, Plus, Share2, Trash2 } from "lucide-react";
+// ...
+import {
+  listMaterialSharesFn,
+  shareMaterialFn,
+  unshareMaterialFn,
+} from "@/functions/materialSharing";
+import { getCurrentTeacherFn } from "@/functions/auth";
+import { listTeacherAccountsFn } from "@/functions/teacherAccounts";
+import { Switch } from "@/components/ui/switch";
+
+// ...dentro de ReadingMaterialsTab, junto de editMaterial:
+const [shareMaterial, setShareMaterial] = useState<ReadingMaterial | null>(null);
+```
+
+No bloco de ações de cada material (antes do botão "Excluir"):
+
+```tsx
+<Button
+  variant="ghost"
+  size="icon"
+  title="Compartilhar"
+  onClick={() => setShareMaterial(material)}
+>
+  <Share2 className="size-4" aria-hidden />
+</Button>
+```
+
+E, junto de `<EditMaterialDialog ... />` no fim do componente:
+
+```tsx
+<ShareMaterialDialog
+  material={shareMaterial}
+  onOpenChange={(open) => !open && setShareMaterial(null)}
+/>
+```
+
+- [ ] **Passo 2: `ShareMaterialDialog` — lista de professores com alternância por linha**
+
+```tsx
+function ShareMaterialDialog({
+  material,
+  onOpenChange,
+}: {
+  material: ReadingMaterial | null;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const queryClient = useQueryClient();
+  const { data: me } = useQuery({
+    queryKey: ["current-teacher"],
+    queryFn: () => getCurrentTeacherFn(),
+  });
+  const { data: teacherAccounts } = useQuery({
+    queryKey: ["teacher-accounts"],
+    queryFn: () => listTeacherAccountsFn(),
+  });
+  const sharesKey = ["material-shares", material?.id] as const;
+  const { data: shares, isLoading } = useQuery({
+    queryKey: sharesKey,
+    queryFn: () => listMaterialSharesFn({ data: { materialId: material!.id } }),
+    enabled: material !== null,
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: ({ teacherId, shared }: { teacherId: string; shared: boolean }) =>
+      shared
+        ? unshareMaterialFn({ data: { materialId: material!.id, teacherId } })
+        : shareMaterialFn({ data: { materialId: material!.id, teacherId } }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: sharesKey }),
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Não foi possível atualizar."),
+  });
+
+  const sharedIds = new Set((shares ?? []).map((s) => s.teacherId));
+  const otherTeachers = (teacherAccounts ?? []).filter((t) => t.id !== me?.id);
+
+  return (
+    <Dialog open={material !== null} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Compartilhar "{material?.title}"</DialogTitle>
+        </DialogHeader>
+        <div className="grid max-h-80 gap-1.5 overflow-y-auto">
+          {isLoading ? (
+            <>
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+            </>
+          ) : otherTeachers.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhum outro professor cadastrado.</p>
+          ) : (
+            otherTeachers.map((teacher) => {
+              const shared = sharedIds.has(teacher.id);
+              return (
+                <div
+                  key={teacher.id}
+                  className="flex items-center justify-between rounded-md border border-border/70 p-3"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-foreground">{teacher.name}</p>
+                    <p className="truncate text-xs text-muted-foreground">{teacher.email}</p>
+                  </div>
+                  <Switch
+                    checked={shared}
+                    disabled={toggleMutation.isPending}
+                    onCheckedChange={() => toggleMutation.mutate({ teacherId: teacher.id, shared })}
+                  />
+                </div>
+              );
+            })
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+```
+
+`useQuery`/`useMutation`/`useQueryClient` já vêm importados no topo do arquivo (mesmo import de
+`"@tanstack/react-query"` usado por `ReadingMaterialsTab`) — só acrescentar os símbolos novos aos
+imports já existentes de `@/functions/*`, `lucide-react` e `sonner`, sem duplicar.
+
+- [ ] **Passo 3: Checar o arquivo**
+
+Run: `npx eslint src/pages/painel/ReadingMaterialsTab.tsx && npx tsc --noEmit`
+Expected: PASS.
+
+- [ ] **Passo 4: Commit**
+
+```bash
+git add src/pages/painel/ReadingMaterialsTab.tsx
+git commit -m "feat: adiciona o botão de compartilhar apostila com outros professores"
+```
+
+### Tarefa 7.6 — UI: lista "Apostilas compartilhadas comigo" (`/painel/apostilas-compartilhadas`)
+
+**Arquivos:**
+- Criar: `src/pages/painel/SharedMaterials.tsx`, `src/routes/painel/apostilas-compartilhadas/index.tsx`
+- Ler: `src/pages/painel/TeacherForumHome.tsx` (Tarefa 6.4 — o padrão visual de lista + `PainelShell`
+  + `Skeleton` a espelhar, sem o diálogo de criação, que não existe aqui: quem lista não cria
+  nada, só recebe compartilhamento)
+
+**Interfaces:**
+- Consome: `listSharedWithMeFn` de `src/functions/materialSharing.ts` (Tarefa 7.4).
+- Produz: rota `/painel/apostilas-compartilhadas`, consumida pela Tarefa 7.7 (link "ver
+  comentários") e pela Tarefa 7.7 (link de navegação).
+
+- [ ] **Passo 1: Criar `SharedMaterials.tsx`**
+
+```tsx
+import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
+import { BookOpen } from "lucide-react";
+
+import { PainelShell } from "@/components/painel/PainelShell";
+import { Skeleton } from "@/components/ui/skeleton";
+import { listSharedWithMeFn } from "@/functions/materialSharing";
+
+/** Apostilas que outros professores compartilharam comigo — só leitura e comentário. */
+export function SharedMaterials() {
+  const { data: materials, isLoading } = useQuery({
+    queryKey: ["shared-materials"],
+    queryFn: () => listSharedWithMeFn(),
+  });
+
+  return (
+    <PainelShell
+      title="Apostilas compartilhadas"
+      description="Materiais que outros professores compartilharam com você — leitura e comentário."
+    >
+      {isLoading || !materials ? (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <Skeleton key={index} className="h-20 w-full" />
+          ))}
+        </div>
+      ) : materials.length === 0 ? (
+        <p className="rounded-md border border-border/70 bg-card/70 p-6 text-center text-muted-foreground shadow-soft">
+          Nenhuma apostila compartilhada com você ainda.
+        </p>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {materials.map((material) => (
+            <Link
+              key={material.id}
+              to="/painel/apostilas-compartilhadas/$materialId"
+              params={{ materialId: material.id }}
+              className="animate-in flex items-start gap-3 rounded-md border border-t-2 border-border/70 border-t-accent bg-card/70 p-4 shadow-soft fade-in slide-in-from-top-1 duration-200 transition-colors hover:border-primary/50"
+            >
+              <BookOpen className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-medium text-foreground">{material.title}</span>
+                <span className="block text-xs text-muted-foreground">
+                  {material.disciplineName} · compartilhado por {material.sharedByName}
+                </span>
+              </span>
+            </Link>
+          ))}
+        </div>
+      )}
+    </PainelShell>
+  );
+}
+```
+
+- [ ] **Passo 2: Criar a rota**
+
+```tsx
+import { createFileRoute } from "@tanstack/react-router";
+
+import { SharedMaterials } from "@/pages/painel/SharedMaterials";
+
+export const Route = createFileRoute("/painel/apostilas-compartilhadas/")({
+  component: SharedMaterials,
+});
+```
+
+`src/routeTree.gen.ts` é gerado automaticamente pelo plugin do TanStack Router — não editar à
+mão; `npm run dev` ou `npm run build` regeneram a árvore assim que os dois arquivos de rota desta
+fase existirem (este e o da Tarefa 7.7).
+
+- [ ] **Passo 3: Checar os arquivos**
+
+Run: `npx eslint src/pages/painel/SharedMaterials.tsx src/routes/painel/apostilas-compartilhadas/index.tsx && npx tsc --noEmit`
+Expected: PASS. Se o `tsc` reclamar de `"/painel/apostilas-compartilhadas/$materialId"` não
+existir ainda como rota válida, é porque a Tarefa 7.7 (que cria esse arquivo de rota) ainda não
+rodou nesta sessão — normal neste ponto, resolve sozinho ao terminar a Tarefa 7.7.
+
+- [ ] **Passo 4: Commit**
+
+```bash
+git add src/pages/painel/SharedMaterials.tsx src/routes/painel/apostilas-compartilhadas/index.tsx
+git commit -m "feat: adiciona a lista de apostilas compartilhadas comigo"
+```
+
+### Tarefa 7.7 — UI: leitor + comentários, link de navegação, roteiro manual e build final
+
+**Arquivos:**
+- Criar: `src/pages/painel/SharedMaterialReader.tsx`,
+  `src/routes/painel/apostilas-compartilhadas/$materialId.tsx`
+- Modificar: `src/components/painel/PainelShell.tsx`
+- Ler: `src/pages/portal/PortalMaterialReader.tsx` inteiro (o `<iframe>` do PDF, sem toolbar —
+  padrão a espelhar pro leitor), `src/pages/painel/reports/StudentReport.tsx:305-399` (o painel
+  de comentários — lista + `Textarea` + botão "Responder" por item — padrão visual a espelhar
+  para a discussão da apostila)
+
+**Interfaces:**
+- Consome: `listSharedWithMeFn` (Tarefa 7.6, pra achar o material pelo id — mesma técnica de
+  `PortalMaterialReader.tsx`, que também resolve o item a partir da lista já carregada em vez de
+  criar uma segunda função "buscar um só"), `listMaterialCommentsFn`, `createMaterialCommentFn`,
+  `deleteMaterialCommentFn` (Tarefa 7.4).
+- Produz: rota `/painel/apostilas-compartilhadas/$materialId`; item de navegação no painel — fim
+  da fase.
+
+- [ ] **Passo 1: Criar `SharedMaterialReader.tsx`, leitor + painel de comentários lado a lado**
+
+```tsx
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
+import { ArrowLeft, Loader2, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+
+import { PainelShell } from "@/components/painel/PainelShell";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
+import { getCurrentTeacherFn } from "@/functions/auth";
+import {
+  createMaterialCommentFn,
+  deleteMaterialCommentFn,
+  listMaterialCommentsFn,
+  listSharedWithMeFn,
+} from "@/functions/materialSharing";
+
+function commentsKey(materialId: string) {
+  return ["material-comments", materialId] as const;
+}
+
+export function SharedMaterialReader({ materialId }: { materialId: string }) {
+  const queryClient = useQueryClient();
+  const { data: materials, isLoading: loadingMaterial } = useQuery({
+    queryKey: ["shared-materials"],
+    queryFn: () => listSharedWithMeFn(),
+  });
+  const material = materials?.find((m) => m.id === materialId);
+
+  const { data: me } = useQuery({
+    queryKey: ["current-teacher"],
+    queryFn: () => getCurrentTeacherFn(),
+  });
+  const { data: comments, isLoading: loadingComments } = useQuery({
+    queryKey: commentsKey(materialId),
+    queryFn: () => listMaterialCommentsFn({ data: { materialId } }),
+  });
+  const [draft, setDraft] = useState("");
+
+  function invalidateComments() {
+    return queryClient.invalidateQueries({ queryKey: commentsKey(materialId) });
+  }
+
+  const commentMutation = useMutation({
+    mutationFn: () => createMaterialCommentFn({ data: { materialId, content: draft } }),
+    onSuccess: async () => {
+      setDraft("");
+      await invalidateComments();
+    },
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Não foi possível comentar."),
+  });
+
+  const deleteCommentMutation = useMutation({
+    mutationFn: (commentId: string) => deleteMaterialCommentFn({ data: { commentId } }),
+    onSuccess: () => invalidateComments(),
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Não foi possível apagar."),
+  });
+
+  return (
+    <PainelShell title={material?.title ?? (loadingMaterial ? "Carregando…" : "Apostila")} fullWidth>
+      <Link
+        to="/painel/apostilas-compartilhadas"
+        className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-accent"
+      >
+        <ArrowLeft className="size-4 shrink-0" aria-hidden />
+        Voltar pras apostilas compartilhadas
+      </Link>
+
+      {loadingMaterial || !material ? (
+        <Skeleton className="h-[70vh] w-full" />
+      ) : (
+        <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
+          <div className="overflow-hidden rounded-md border border-border/70 bg-card/70 shadow-soft">
+            <iframe
+              src={`${material.fileUrl}#toolbar=0&navpanes=0`}
+              title={material.title}
+              className="h-[70vh] w-full"
+            />
+          </div>
+
+          <div className="flex flex-col rounded-md border border-border/70 bg-card/70 p-4 shadow-soft">
+            <h2 className="font-display text-sm font-semibold text-foreground">Comentários</h2>
+            <div className="mt-3 flex-1 space-y-2 overflow-y-auto">
+              {loadingComments ? (
+                <>
+                  <Skeleton className="h-16 w-full" />
+                  <Skeleton className="h-16 w-full" />
+                </>
+              ) : comments && comments.length > 0 ? (
+                comments.map((comment) => (
+                  <div
+                    key={comment.id}
+                    className="animate-in rounded-md bg-muted/40 p-3 fade-in slide-in-from-top-1 duration-200"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-xs font-medium text-foreground">{comment.authorName}</p>
+                      {comment.mine ? (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-6 shrink-0 text-muted-foreground hover:text-destructive"
+                          onClick={() => deleteCommentMutation.mutate(comment.id)}
+                        >
+                          <Trash2 className="size-3.5" aria-hidden />
+                          <span className="sr-only">Apagar comentário</span>
+                        </Button>
+                      ) : null}
+                    </div>
+                    <p className="mt-1 whitespace-pre-wrap text-sm text-foreground">
+                      {comment.content}
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground">Nenhum comentário ainda.</p>
+              )}
+            </div>
+
+            <form
+              className="mt-3 flex gap-2"
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (draft.trim().length === 0) return;
+                commentMutation.mutate();
+              }}
+            >
+              <Textarea
+                placeholder="Comentar…"
+                rows={2}
+                value={draft}
+                onChange={(event) => setDraft(event.target.value)}
+              />
+              <Button type="submit" size="sm" disabled={commentMutation.isPending}>
+                {commentMutation.isPending ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                ) : null}
+                Enviar
+              </Button>
+            </form>
+          </div>
+        </div>
+      )}
+    </PainelShell>
+  );
+}
+```
+
+`me` é buscado só pra deixar explícito que a UI não decide exclusão sozinha — quem decide é o
+servidor (`deleteMaterialCommentFn`); o botão de apagar aparece com base em `comment.mine`, já
+calculado por `listMaterialCommentsFn`, e falha com toast se o servidor recusar (ex.: o dono
+tentando apagar via um `comment.mine` desatualizado em cache — caso raro, tratado pelo
+`onError` já existente).
+
+- [ ] **Passo 2: Criar a rota**
+
+```tsx
+import { createFileRoute } from "@tanstack/react-router";
+
+import { SharedMaterialReader } from "@/pages/painel/SharedMaterialReader";
+
+export const Route = createFileRoute("/painel/apostilas-compartilhadas/$materialId")({
+  component: RouteComponent,
+});
+
+function RouteComponent() {
+  const { materialId } = Route.useParams();
+  return <SharedMaterialReader materialId={materialId} />;
+}
+```
+
+- [ ] **Passo 3: Link na navegação do painel, visível a todo professor**
+
+Igual à Tarefa 6.6: professor comum também acessa apostilas compartilhadas (o compartilhamento
+não é privilégio de admin), então o item entra em `painelNavItems`, não em `adminOnlyNavItems`,
+logo depois de "Biblioteca virtual":
+
+```ts
+import { Share2 } from "lucide-react";
+// ...(mantém os demais ícones já importados)
+
+const painelNavItems = [
+  { to: "/painel", label: "Painel", icon: LayoutGrid },
+  { to: "/painel/agenda", label: "Agenda", icon: CalendarRange },
+  { to: "/painel/professores", label: "Contas de professores", icon: Users },
+  { to: "/painel/alunos", label: "Alunos", icon: GraduationCap },
+  { to: "/painel/provas", label: "Provas", icon: ClipboardList },
+  { to: "/painel/tarefas", label: "Tarefas", icon: ListChecks },
+  { to: "/painel/forum", label: "Fórum", icon: MessageCircle },
+  { to: "/painel/biblioteca", label: "Biblioteca virtual", icon: Library },
+  { to: "/painel/apostilas-compartilhadas", label: "Apostilas compartilhadas", icon: Share2 },
+  { to: "/painel/relatorio", label: "Boletim do aluno", icon: FileText },
+  { to: "/painel/relatorio-modulo", label: "Relatório por módulo", icon: Layers },
+  { to: "/painel/pagamentos", label: "Pagamentos", icon: Wallet },
+] as const;
+```
+
+Se a Fase 6 já estiver mergeada, `painelNavItems` também já tem a entrada `/painel/forum-interno`
+— manter, só acrescentar a linha nova depois de "Biblioteca virtual" como acima.
+
+- [ ] **Passo 4: Checar os arquivos**
+
+Run: `npx eslint src/pages/painel/SharedMaterialReader.tsx src/routes/painel/apostilas-compartilhadas/'$materialId.tsx' src/components/painel/PainelShell.tsx && npx tsc --noEmit`
+Expected: PASS.
+
+- [ ] **Passo 5: Roteiro manual completo da fase**
+
+Rodar `npm run dev`. Como professor A, numa disciplina com pelo menos uma apostila: abrir
+"Apostila", clicar em "Compartilhar" num material, ligar o `Switch` do professor B, fechar o
+diálogo. Como professor B: ver o link "Apostilas compartilhadas" na navegação, entrar, ver o
+material de A na lista com o nome da disciplina e "compartilhado por A", abrir, ler o PDF
+embutido, escrever um comentário, ver o comentário aparecer com o próprio nome e botão de apagar.
+Como professor A: abrir o mesmo material pela própria aba "Apostila" da disciplina (ele não passa
+pela lista de compartilhadas, é o dono) — não é preciso testar o leitor daqui, só confirmar que
+comentar via `createMaterialCommentFn` funcionaria se A tivesse a mesma tela (a regra de acesso
+já cobre dono). Como professor C, sem nenhum compartilhamento: entrar em "Apostilas
+compartilhadas" e ver a lista vazia. Voltar como A: desligar o `Switch` do professor B e conferir
+que B, ao recarregar, não vê mais o material na lista nem consegue reabrir a URL antiga do
+leitor (a chamada a `listMaterialCommentsFn`/`listSharedWithMeFn` deve devolver vazio/erro de
+acesso).
+
+- [ ] **Passo 6: Build final da fase**
+
+Run: `npm run build`
+Expected: PASS.
+
+- [ ] **Passo 7: Commit**
+
+```bash
+git add src/pages/painel/SharedMaterialReader.tsx src/routes/painel/apostilas-compartilhadas/'$materialId.tsx' src/components/painel/PainelShell.tsx
+git commit -m "feat: adiciona leitor com comentários e navegação das apostilas compartilhadas"
+```
+
+---
+
+## Roteiro manual
+
+Checklist rápido de verificação manual, uma vez por fase, executado com `npm run dev` antes de
+abrir o PR (Global Constraint 16). Cada tarefa já traz seu próprio passo "Roteiro manual" — esta
+seção só consolida, fase a fase, o mínimo a conferir antes de considerar o PR pronto. A Fase 0
+não entra aqui (é auditoria + correção pontual, verificada por `npm run test`/`npm run lint`, sem
+roteiro de tela) e a Fase 1 já foi implementada e revisada em PR próprio, fora deste plano.
+
+### Fase 2 — Dashboard do aluno
+
+- [ ] Aluno em dia entra em `/portal/`: nenhum alerta de cobrança aparece.
+- [ ] Aluno com cobrança vencida vê o alerta vermelho, com o botão "Pagar" levando a
+      `/portal/pagamentos`.
+- [ ] Aluno com cobrança vencendo em até 7 dias vê o alerta âmbar (não vermelho).
+- [ ] "Próxima aula" mostra a aula futura mais próxima entre todas as disciplinas, e some quando
+      não há nenhuma.
+- [ ] "Vídeo-aulas novas" mostra só o que o aluno não assistiu, mais recente primeiro, e some
+      quando não há nenhuma.
+- [ ] Aluno sem nenhuma pendência: a tela não fica com caixas vazias.
+
+### Fase 3 — Aluno apaga o próprio tópico sem respostas
+
+- [ ] Professor continua apagando qualquer tópico da própria disciplina, mesmo com respostas.
+- [ ] Aluno cria um tópico, vê o botão "Apagar tópico" e consegue apagar (sem resposta ainda).
+- [ ] Depois de uma resposta (própria ou de outra pessoa) no tópico, o botão some para o aluno.
+
+### Fase 4 — Painel de acompanhamento por disciplina
+
+- [ ] A aba "Acompanhamento" abre primeiro ao entrar numa disciplina.
+- [ ] Os números de nota/frequência/tarefas/provas/vídeos de dois ou três alunos batem com o que
+      `GradesTab`/`AttendanceTab`/`VideoLessonsTab` já mostram para os mesmos alunos.
+- [ ] Aluno abaixo de `PASSING_AVERAGE` ou de `MINIMUM_ATTENDANCE_RATIO` aparece destacado.
+- [ ] Clicar em "Média" e em "Frequência" reordena a tabela com o pior caso no topo.
+- [ ] Disciplina sem tarefa/prova/vídeo mostra "0/0" sem quebrar; sem nenhuma aula lançada mostra
+      "—" na frequência (nunca "100%").
+
+### Fase 5 — Tarefas de múltipla escolha
+
+- [ ] `npm run db:push` aplica o schema novo sem pedir confirmação destrutiva.
+- [ ] Uma prova existente, respondida como antes, dá exatamente a mesma nota de antes da
+      refatoração de `finalizeExamAttempt` (regressão do motor de correção).
+- [ ] Professor cria uma tarefa "Múltipla escolha": nota máxima fica escondida no formulário,
+      sobe sozinha conforme perguntas são cadastradas.
+- [ ] Adicionar pergunta trava depois que algum aluno já entregou a tarefa.
+- [ ] Aluno responde a tarefa objetiva, vê a nota sair na hora, e ela aparece tanto no boletim
+      (`/portal/notas`) quanto na aba Notas do professor, sem correção manual.
+- [ ] Reabrir a mesma tarefa depois de entregue mostra só o resultado, sem opção de reenviar.
+- [ ] Uma tarefa "Texto/arquivo" continua funcionando exatamente como antes (correção manual
+      intacta).
+
+### Fase 6 — Fórum interno de professores
+
+- [ ] `npm run db:push` aplica as duas tabelas novas sem pedir confirmação destrutiva.
+- [ ] Professor comum vê o link "Fórum interno", cria tópico, responde, apaga a própria
+      mensagem, apaga o próprio tópico sem resposta.
+- [ ] Professor comum falha ao tentar apagar um tópico alheio com resposta (mensagem de erro
+      clara).
+- [ ] Admin apaga qualquer tópico/mensagem alheios, e a ação aparece em Auditoria.
+- [ ] Aluno logado no portal não vê o link e recebe `UNAUTHORIZED` ao chamar qualquer função de
+      `src/functions/teacherForum.ts` (console do navegador) ou ao acessar a URL direto.
+
+### Fase 7 — Compartilhamento de apostilas entre professores
+
+- [ ] `npm run db:push` aplica as duas tabelas novas sem pedir confirmação destrutiva.
+- [ ] Professor A compartilha uma apostila com o professor B pelo botão "Compartilhar" na aba
+      Apostila da disciplina.
+- [ ] Professor B vê o material em "Apostilas compartilhadas", lê o PDF embutido e comenta.
+- [ ] Professor C, sem compartilhamento nenhum, vê a lista vazia.
+- [ ] Professor A desliga o compartilhamento com B: B deixa de ver o material na lista e a
+      função de comentários passa a recusar acesso.
+- [ ] Aluno no portal não tem nenhuma tela ou link equivalente (compartilhamento é só entre
+      professores).
+
+### Portões finais, todas as fases
+
+`npm run test`, `npm run lint` e `npm run build` verdes antes de qualquer PR (Global
+Constraint 16). A partir da Fase 2, sem Vitest novo (Global Constraint 13 atualizada) — o portão
+`npm run test` continua verde porque nada nele muda, só não cresce.
