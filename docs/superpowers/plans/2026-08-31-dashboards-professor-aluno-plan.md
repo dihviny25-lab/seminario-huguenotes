@@ -3185,3 +3185,997 @@ git commit -m "feat: aluno responde tarefa de múltipla escolha com correção n
 ```
 
 ---
+
+## Fase 6 — Fórum interno de professores
+
+Espaço de dúvidas e coordenação visível só para professores e admins — análogo ao fórum por
+disciplina (`forumThreads`/`forumPosts`, `src/functions/forum.ts`), mas com tabelas próprias
+(`teacher_forum_threads`/`teacher_forum_posts`, sem `disciplineId`) e guarda de acesso via
+**apenas** `requireTeacherId()` — nunca `requireAnyIdentity()`, que deixaria aluno entrar.
+
+**Descobertas de leitura do código real que precisam do desenho do spec:**
+- `requireTeacherId()` (`src/server/auth/guard.ts:11`) devolve só o `teacherId` — nome e `role`
+  não vêm junto. Toda função nova que precisa do nome (pra `authorName`, desnormalizado como já
+  é em `forumThreads`/`forumPosts`) ou do papel (pra saber se é admin, decisão de moderação) faz
+  sua própria consulta a `teachers` logo depois do guard — mesmo estilo de `requireAnyIdentity`
+  em `guard.ts:90-123`, que já resolve nome assim para o fórum de disciplina.
+- `canDeleteThread({ isModerator, isAuthor, postCount })` já existe em
+  `src/lib/forumPermissions.ts` (Tarefa 3.1) e foi desenhada **de propósito** sem referência a
+  disciplina — esta fase só passa `isModerator: <professor logado é admin>` em vez de
+  `isModerator: <dono da disciplina>`. Nenhuma função nova de permissão é necessária.
+- `sendPushToOwner` (`src/server/push.ts:32`) já nunca lança (tem seu próprio try/catch
+  interno) — o `Promise.all` dos envios em `replyToThreadFn` (`src/functions/forum.ts:257-265`)
+  já é seguro por causa disso, apesar do achado da Tarefa 0.6 ter sugerido `allSettled`. Esta
+  fase, sendo código novo, usa `Promise.all` mesmo — comportamento idêntico ao do fórum de
+  disciplina, sem introduzir uma variação sem necessidade.
+- `getCurrentTeacherFn` (`src/functions/auth.ts:47`, já consumida por `PainelShell.tsx:36`) já
+  devolve `{ id, name, email, role, mustChangePassword }` do professor logado — a UI reaproveita
+  essa query (mesma `queryKey: ["current-teacher"]`, já em cache) pra saber se deve mostrar o
+  botão de apagar tópico/mensagem alheios, em vez de inventar uma consulta nova.
+
+### Tarefa 6.1 — Schema: tabelas do fórum interno
+
+**Arquivos:**
+- Modificar: `src/server/db/schema.ts`
+- Ler: `forumThreads`/`forumPosts` (linhas 398-430 do arquivo atual) — o padrão de colunas a
+  copiar, removendo `disciplineId`, `authorRole` e `authorStudentId` (só professor participa)
+
+**Interfaces:**
+- Consome: nada.
+- Produz: `teacherForumThreads`, `teacherForumPosts` — usadas por todas as tarefas seguintes
+  desta fase.
+
+- [ ] **Passo 1: Adicionar as duas tabelas, logo depois de `forumPosts` (antes de
+      `spiritualReflections`)**
+
+```ts
+// Fórum interno do corpo docente — dúvidas e coordenação entre professores,
+// sem disciplina associada (o assunto é o próprio funcionamento do
+// seminário) e sem aluno participando. `authorName` é desnormalizado, como
+// em forumThreads/forumPosts, pra o histórico sobreviver à exclusão da conta.
+export const teacherForumThreads = pgTable("teacher_forum_threads", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  authorTeacherId: uuid("author_teacher_id").references(() => teachers.id, {
+    onDelete: "set null",
+  }),
+  authorName: text("author_name").notNull(),
+  title: text("title").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const teacherForumPosts = pgTable("teacher_forum_posts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  threadId: uuid("thread_id")
+    .notNull()
+    .references(() => teacherForumThreads.id, { onDelete: "cascade" }),
+  authorTeacherId: uuid("author_teacher_id").references(() => teachers.id, {
+    onDelete: "set null",
+  }),
+  authorName: text("author_name").notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+```
+
+Nenhuma coluna nova em tabela existente — as duas tabelas são inteiramente novas, então não há
+necessidade de `default` para compatibilidade com linhas antigas (Global Constraint 11 só se
+aplica a coluna nova em tabela já existente).
+
+- [ ] **Passo 2: Checar o arquivo**
+
+Run: `npx eslint src/server/db/schema.ts && npx tsc --noEmit`
+Expected: PASS, sem erros.
+
+- [ ] **Passo 3: Aplicar o schema no banco**
+
+Run: `npm run db:push`
+Expected: o `drizzle-kit push` lista a criação das duas tabelas novas e aplica sem pedir
+confirmação destrutiva — é tudo aditivo (nenhuma tabela nem coluna existente é tocada). Se o
+terminal pedir confirmação, responder afirmativamente.
+
+- [ ] **Passo 4: Commit**
+
+```bash
+git add src/server/db/schema.ts
+git commit -m "feat: adiciona schema do fórum interno de professores"
+```
+
+### Tarefa 6.2 — Server functions: listar, criar e ler tópico
+
+**Arquivos:**
+- Criar: `src/functions/teacherForum.ts`
+- Ler: `src/functions/forum.ts` inteiro (`listDisciplineThreadsFn`, `createThreadFn`,
+  `getThreadFn` — o padrão de CRUD a espelhar, trocando `requireAnyIdentity()` por
+  `requireTeacherId()` e removendo `authorRole`/`disciplineId`), `src/server/auth/guard.ts`
+  (`requireTeacherId`)
+
+**Interfaces:**
+- Consome: `teacherForumThreads`, `teacherForumPosts` de `src/server/db/schema.ts` (Tarefa 6.1).
+- Produz: `listTeacherThreadsFn`, `createTeacherThreadFn`, `getTeacherThreadFn` — consumidas
+  pelas Tarefas 6.4 e 6.5.
+
+- [ ] **Passo 1: Escrever o arquivo com as três funções de leitura/criação**
+
+```ts
+import { createServerFn } from "@tanstack/react-start";
+import { asc, desc, eq, inArray } from "drizzle-orm";
+import { z } from "zod";
+
+import { logAudit } from "@/server/audit";
+import { requireTeacherId } from "@/server/auth/guard";
+import { db } from "@/server/db/client";
+import { teachers, teacherForumPosts, teacherForumThreads } from "@/server/db/schema";
+
+export type TeacherForumThreadSummary = {
+  id: string;
+  title: string;
+  authorName: string;
+  createdAt: string;
+  postCount: number;
+};
+
+/** Todos os tópicos do fórum interno, mais recentes primeiro. Só professor/admin. */
+export const listTeacherThreadsFn = createServerFn({ method: "GET" }).handler(
+  async (): Promise<Array<TeacherForumThreadSummary>> => {
+    await requireTeacherId();
+
+    const threadRows = await db
+      .select()
+      .from(teacherForumThreads)
+      .orderBy(desc(teacherForumThreads.createdAt));
+    const threadIds = threadRows.map((t) => t.id);
+
+    const postRows =
+      threadIds.length === 0
+        ? []
+        : await db
+            .select({ threadId: teacherForumPosts.threadId })
+            .from(teacherForumPosts)
+            .where(inArray(teacherForumPosts.threadId, threadIds));
+
+    return threadRows.map((thread) => ({
+      id: thread.id,
+      title: thread.title,
+      authorName: thread.authorName,
+      createdAt: thread.createdAt.toISOString(),
+      postCount: postRows.filter((p) => p.threadId === thread.id).length,
+    }));
+  },
+);
+
+const createTeacherThreadSchema = z.object({
+  title: z.string().trim().min(1, "Informe um título."),
+  content: z.string().trim().min(1, "Escreva a mensagem inicial."),
+});
+
+/** Cria o tópico do fórum interno já com a primeira mensagem. */
+export const createTeacherThreadFn = createServerFn({ method: "POST" })
+  .validator(createTeacherThreadSchema)
+  .handler(async ({ data }) => {
+    const teacherId = await requireTeacherId();
+    const [teacher] = await db
+      .select({ name: teachers.name })
+      .from(teachers)
+      .where(eq(teachers.id, teacherId))
+      .limit(1);
+    const authorName = teacher?.name ?? "Professor";
+
+    const [thread] = await db
+      .insert(teacherForumThreads)
+      .values({ authorTeacherId: teacherId, authorName, title: data.title })
+      .returning({ id: teacherForumThreads.id });
+
+    await db.insert(teacherForumPosts).values({
+      threadId: thread.id,
+      authorTeacherId: teacherId,
+      authorName,
+      content: data.content,
+    });
+
+    await logAudit(
+      "forum_interno.criar_topico",
+      `Criou o tópico "${data.title}" no fórum interno.`,
+    );
+    return { threadId: thread.id };
+  });
+
+const teacherThreadIdSchema = z.object({ threadId: z.string().uuid() });
+
+export type TeacherForumPost = {
+  id: string;
+  authorName: string;
+  content: string;
+  createdAt: string;
+  mine: boolean;
+};
+
+export type TeacherForumThreadDetail = {
+  id: string;
+  title: string;
+  /** O tópico foi criado por quem está logado agora — mesma ideia de ForumThreadDetail.mine. */
+  mine: boolean;
+  posts: Array<TeacherForumPost>;
+};
+
+/** Tópico do fórum interno + todas as mensagens, em ordem cronológica. */
+export const getTeacherThreadFn = createServerFn({ method: "GET" })
+  .validator(teacherThreadIdSchema)
+  .handler(async ({ data }): Promise<TeacherForumThreadDetail> => {
+    const teacherId = await requireTeacherId();
+
+    const [thread] = await db
+      .select()
+      .from(teacherForumThreads)
+      .where(eq(teacherForumThreads.id, data.threadId))
+      .limit(1);
+    if (!thread) throw new Error("Tópico não encontrado.");
+
+    const postRows = await db
+      .select()
+      .from(teacherForumPosts)
+      .where(eq(teacherForumPosts.threadId, data.threadId))
+      .orderBy(asc(teacherForumPosts.createdAt));
+
+    return {
+      id: thread.id,
+      title: thread.title,
+      mine: thread.authorTeacherId === teacherId,
+      posts: postRows.map((post) => ({
+        id: post.id,
+        authorName: post.authorName,
+        content: post.content,
+        createdAt: post.createdAt.toISOString(),
+        mine: post.authorTeacherId === teacherId,
+      })),
+    };
+  });
+```
+
+- [ ] **Passo 2: Checar o arquivo**
+
+Run: `npx eslint src/functions/teacherForum.ts && npx tsc --noEmit`
+Expected: PASS.
+
+- [ ] **Passo 3: Commit**
+
+```bash
+git add src/functions/teacherForum.ts
+git commit -m "feat: adiciona listagem, criação e leitura de tópicos do fórum interno"
+```
+
+### Tarefa 6.3 — Server functions: responder, apagar e notificar
+
+**Arquivos:**
+- Modificar: `src/functions/teacherForum.ts`
+- Ler: `src/functions/forum.ts` (`replyToThreadFn`, `deleteThreadFn`, `deletePostFn` — o padrão
+  de escrita a espelhar), `src/lib/forumPermissions.ts` (`canDeleteThread`, criada na Tarefa 3.1
+  — se esta fase for executada antes da Fase 3 estar mergeada, criar o arquivo primeiro com o
+  conteúdo já descrito na Tarefa 3.1 do plano)
+
+**Interfaces:**
+- Consome: `canDeleteThread` de `src/lib/forumPermissions.ts` (Tarefa 3.1); `sendPushToOwner` de
+  `src/server/push.ts`.
+- Produz: `createTeacherPostFn`, `deleteTeacherThreadFn`, `deleteTeacherPostFn` — consumidas
+  pela Tarefa 6.5.
+
+- [ ] **Passo 1: `createTeacherPostFn` — responde e notifica por push quem já participou**
+
+```ts
+import { canDeleteThread } from "@/lib/forumPermissions";
+import { sendPushToOwner } from "@/server/push";
+// ...(mantém os imports já existentes do Passo 1 da Tarefa 6.2)
+
+const replyTeacherThreadSchema = z.object({
+  threadId: z.string().uuid(),
+  content: z.string().trim().min(1, "Escreva uma resposta."),
+});
+
+/** Responde no tópico do fórum interno e avisa por push quem já participou (menos quem respondeu). */
+export const createTeacherPostFn = createServerFn({ method: "POST" })
+  .validator(replyTeacherThreadSchema)
+  .handler(async ({ data }) => {
+    const teacherId = await requireTeacherId();
+    const [teacher] = await db
+      .select({ name: teachers.name })
+      .from(teachers)
+      .where(eq(teachers.id, teacherId))
+      .limit(1);
+    const authorName = teacher?.name ?? "Professor";
+
+    // Pega quem já participou ANTES de inserir a resposta nova, pra poder
+    // avisar todo mundo menos quem acabou de responder (mesmo padrão de
+    // replyToThreadFn, src/functions/forum.ts:220-230).
+    const previousPosts = await db
+      .select({ authorTeacherId: teacherForumPosts.authorTeacherId })
+      .from(teacherForumPosts)
+      .where(eq(teacherForumPosts.threadId, data.threadId));
+
+    await db.insert(teacherForumPosts).values({
+      threadId: data.threadId,
+      authorTeacherId: teacherId,
+      authorName,
+      content: data.content,
+    });
+
+    const [thread] = await db
+      .select({ title: teacherForumThreads.title })
+      .from(teacherForumThreads)
+      .where(eq(teacherForumThreads.id, data.threadId))
+      .limit(1);
+    await logAudit(
+      "forum_interno.responder",
+      `Respondeu no tópico "${thread?.title ?? data.threadId}" do fórum interno.`,
+    );
+
+    const participantIds = new Set(
+      previousPosts
+        .map((post) => post.authorTeacherId)
+        .filter((id): id is string => id !== null && id !== teacherId),
+    );
+    await Promise.all(
+      [...participantIds].map((id) =>
+        sendPushToOwner("teacher", id, {
+          title: `Nova resposta: ${thread?.title ?? "Fórum interno"}`,
+          body: `${authorName}: ${data.content.slice(0, 120)}`,
+          url: "/painel/forum-interno",
+        }),
+      ),
+    );
+  });
+```
+
+- [ ] **Passo 2: `deleteTeacherThreadFn` — reusa `canDeleteThread`, admin como moderador**
+
+```ts
+/**
+ * Apaga um tópico do fórum interno: admin sempre pode (moderação); o autor
+ * só pode se ainda não houver nenhuma resposta — mesma regra de
+ * canDeleteThread (Tarefa 3.1), só que "isModerator" aqui é "é admin" em vez
+ * de "é dono da disciplina", porque o fórum interno não tem disciplina.
+ */
+export const deleteTeacherThreadFn = createServerFn({ method: "POST" })
+  .validator(teacherThreadIdSchema)
+  .handler(async ({ data }) => {
+    const teacherId = await requireTeacherId();
+    const [teacher] = await db
+      .select({ role: teachers.role })
+      .from(teachers)
+      .where(eq(teachers.id, teacherId))
+      .limit(1);
+    const isModerator = teacher?.role === "admin";
+
+    const [thread] = await db
+      .select()
+      .from(teacherForumThreads)
+      .where(eq(teacherForumThreads.id, data.threadId))
+      .limit(1);
+    if (!thread) throw new Error("Tópico não encontrado.");
+    const isAuthor = thread.authorTeacherId === teacherId;
+
+    const postRows = await db
+      .select({ id: teacherForumPosts.id })
+      .from(teacherForumPosts)
+      .where(eq(teacherForumPosts.threadId, data.threadId));
+    // A mensagem inicial também é uma linha de teacherForumPosts — só conta
+    // como "resposta" o que vier depois dela (mesma conta da Tarefa 3.1).
+    const postCount = Math.max(0, postRows.length - 1);
+
+    if (!canDeleteThread({ isModerator, isAuthor, postCount })) {
+      throw new Error("Só é possível apagar um tópico que ainda não tem respostas.");
+    }
+
+    await db.delete(teacherForumThreads).where(eq(teacherForumThreads.id, data.threadId));
+
+    // Auditoria só quando é admin moderando — o próprio autor apagando o
+    // tópico vazio é correção trivial (mesma decisão da Tarefa 3.1).
+    if (isModerator) {
+      await logAudit(
+        "forum_interno.apagar_topico",
+        `Apagou o tópico "${thread.title}" do fórum interno.`,
+      );
+    }
+  });
+```
+
+- [ ] **Passo 3: `deleteTeacherPostFn` — o autor apaga a própria mensagem, admin apaga qualquer uma**
+
+```ts
+const deleteTeacherPostSchema = z.object({ postId: z.string().uuid() });
+
+/** Apaga a própria mensagem, ou qualquer uma se for admin. */
+export const deleteTeacherPostFn = createServerFn({ method: "POST" })
+  .validator(deleteTeacherPostSchema)
+  .handler(async ({ data }) => {
+    const teacherId = await requireTeacherId();
+
+    const [post] = await db
+      .select()
+      .from(teacherForumPosts)
+      .where(eq(teacherForumPosts.id, data.postId))
+      .limit(1);
+    if (!post) return;
+
+    const isAuthor = post.authorTeacherId === teacherId;
+    if (!isAuthor) {
+      const [teacher] = await db
+        .select({ role: teachers.role })
+        .from(teachers)
+        .where(eq(teachers.id, teacherId))
+        .limit(1);
+      if (teacher?.role !== "admin") {
+        throw new Error("Você só pode apagar a própria mensagem.");
+      }
+    }
+
+    await db.delete(teacherForumPosts).where(eq(teacherForumPosts.id, data.postId));
+  });
+```
+
+- [ ] **Passo 4: Checar o arquivo**
+
+Run: `npx eslint src/functions/teacherForum.ts && npx tsc --noEmit`
+Expected: PASS.
+
+- [ ] **Passo 5: Roteiro manual de permissão (sem Vitest novo, conforme Global Constraint 13)**
+
+Rodar `npm run dev`, logar como professor comum A: criar um tópico, responder num tópico de
+outro professor (conferir push, se houver inscrição ativa), tentar apagar um tópico alheio com
+resposta (deve falhar com a mensagem de erro), apagar a própria mensagem (deve funcionar). Logar
+como aluno no portal e chamar as funções do módulo pelo console do navegador (ou tentar acessar
+a URL da rota, feita na Tarefa 6.4) — todas devem devolver `UNAUTHORIZED`. Logar como admin:
+apagar um tópico alheio com resposta (deve funcionar e aparecer em Auditoria).
+
+- [ ] **Passo 6: Commit**
+
+```bash
+git add src/functions/teacherForum.ts
+git commit -m "feat: adiciona resposta, exclusão e notificação do fórum interno"
+```
+
+### Tarefa 6.4 — Rota e UI: lista de tópicos (`/painel/forum-interno`)
+
+Sem etapa de "escolher disciplina" — o fórum interno é uma lista só, direto.
+
+**Arquivos:**
+- Criar: `src/pages/painel/TeacherForumHome.tsx`, `src/routes/painel/forum-interno/index.tsx`
+- Ler: `src/pages/painel/ForumHome.tsx` inteiro (`ForumThreadList`, `CreateThreadDialog` — o
+  padrão visual a espelhar, removendo o passo de escolher disciplina),
+  `src/routes/painel/forum/index.tsx` (padrão de rota)
+
+**Interfaces:**
+- Consome: `listTeacherThreadsFn`, `createTeacherThreadFn` de `src/functions/teacherForum.ts`
+  (Tarefa 6.2).
+- Produz: rota `/painel/forum-interno`, consumida pela Tarefa 6.6 (link de navegação).
+
+- [ ] **Passo 1: Criar `TeacherForumHome.tsx`, no mesmo formato de `ForumThreadList` +
+      `CreateThreadDialog` de `ForumHome.tsx`, sem o seletor de disciplina**
+
+```tsx
+import { useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { useForm } from "react-hook-form";
+import { Loader2, MessagesSquare, Plus } from "lucide-react";
+import { toast } from "sonner";
+import { z } from "zod";
+
+import { PainelShell } from "@/components/painel/PainelShell";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
+import { createTeacherThreadFn, listTeacherThreadsFn } from "@/functions/teacherForum";
+
+export const teacherThreadsKey = ["teacher-forum-threads"] as const;
+
+/** Fórum interno — só professores e admins veem esta tela e o link na navegação. */
+export function TeacherForumHome() {
+  const { data: threads, isLoading } = useQuery({
+    queryKey: teacherThreadsKey,
+    queryFn: () => listTeacherThreadsFn(),
+  });
+  const [createOpen, setCreateOpen] = useState(false);
+
+  return (
+    <PainelShell
+      title="Fórum interno"
+      description="Espaço de dúvidas e coordenação só entre professores — alunos não têm acesso."
+    >
+      {isLoading || !threads ? (
+        <div className="grid gap-3">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <Skeleton key={index} className="h-16 w-full" />
+          ))}
+        </div>
+      ) : (
+        <div>
+          <div className="mb-4 flex justify-end">
+            <Button onClick={() => setCreateOpen(true)}>
+              <Plus className="size-4" aria-hidden />
+              Novo tópico
+            </Button>
+          </div>
+
+          {threads.length === 0 ? (
+            <p className="rounded-md border border-border/70 bg-card/70 p-6 text-center text-muted-foreground shadow-soft">
+              Nenhum tópico ainda.
+            </p>
+          ) : (
+            <div className="grid gap-3">
+              {threads.map((thread) => (
+                <Link
+                  key={thread.id}
+                  to="/painel/forum-interno/$threadId"
+                  params={{ threadId: thread.id }}
+                  className="flex animate-in items-start gap-3 rounded-md border border-t-2 border-border/70 border-t-accent bg-card/70 p-4 shadow-soft fade-in slide-in-from-top-1 duration-200 transition-colors hover:border-primary/50"
+                >
+                  <MessagesSquare className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden />
+                  <span className="min-w-0">
+                    <span className="block truncate font-medium text-foreground">
+                      {thread.title}
+                    </span>
+                    <span className="block text-xs text-muted-foreground">
+                      {thread.authorName} · {thread.postCount}{" "}
+                      {thread.postCount === 1 ? "mensagem" : "mensagens"}
+                    </span>
+                  </span>
+                </Link>
+              ))}
+            </div>
+          )}
+
+          <CreateTeacherThreadDialog open={createOpen} onOpenChange={setCreateOpen} />
+        </div>
+      )}
+    </PainelShell>
+  );
+}
+
+const threadSchema = z.object({
+  title: z.string().trim().min(1, "Informe um título."),
+  content: z.string().trim().min(1, "Escreva a mensagem inicial."),
+});
+
+function CreateTeacherThreadDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const form = useForm<z.infer<typeof threadSchema>>({
+    resolver: zodResolver(threadSchema),
+    defaultValues: { title: "", content: "" },
+  });
+
+  const mutation = useMutation({
+    mutationFn: (values: z.infer<typeof threadSchema>) => createTeacherThreadFn({ data: values }),
+    onSuccess: async (result) => {
+      toast.success("Tópico criado.");
+      form.reset();
+      onOpenChange(false);
+      await queryClient.invalidateQueries({ queryKey: teacherThreadsKey });
+      await navigate({
+        to: "/painel/forum-interno/$threadId",
+        params: { threadId: result.threadId },
+      });
+    },
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Não foi possível criar o tópico."),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Novo tópico</DialogTitle>
+        </DialogHeader>
+        <Form {...form}>
+          <form
+            className="space-y-4"
+            onSubmit={form.handleSubmit((values) => mutation.mutate(values))}
+          >
+            <FormField
+              control={form.control}
+              name="title"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Título</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Combinado de datas de prova" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="content"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Mensagem</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Escreva aqui…" rows={4} {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <DialogFooter>
+              <Button type="submit" disabled={mutation.isPending}>
+                {mutation.isPending ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                ) : null}
+                Criar tópico
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+```
+
+- [ ] **Passo 2: Criar a rota**
+
+```tsx
+import { createFileRoute } from "@tanstack/react-router";
+
+import { TeacherForumHome } from "@/pages/painel/TeacherForumHome";
+
+export const Route = createFileRoute("/painel/forum-interno/")({
+  component: TeacherForumHome,
+});
+```
+
+`src/routeTree.gen.ts` é gerado automaticamente pelo plugin do TanStack Router — não editar à
+mão; `npm run dev` ou `npm run build` regeneram a árvore de rotas assim que os dois arquivos de
+rota desta fase existirem (este e o da Tarefa 6.5).
+
+- [ ] **Passo 3: Checar os arquivos**
+
+Run: `npx eslint src/pages/painel/TeacherForumHome.tsx src/routes/painel/forum-interno/index.tsx && npx tsc --noEmit`
+Expected: PASS. Se o `tsc` reclamar de `"/painel/forum-interno/$threadId"` não existir ainda
+como rota válida, é porque a Tarefa 6.5 (que cria esse arquivo de rota) ainda não rodou nesta
+sessão — normal neste ponto, resolve sozinho ao terminar a Tarefa 6.5.
+
+- [ ] **Passo 4: Commit**
+
+```bash
+git add src/pages/painel/TeacherForumHome.tsx src/routes/painel/forum-interno/index.tsx
+git commit -m "feat: adiciona a lista de tópicos do fórum interno"
+```
+
+### Tarefa 6.5 — UI: tópico individual com respostas (`/painel/forum-interno/$threadId`)
+
+Componente próprio (não reaproveita `ForumThreadView`, que é específico do fórum por disciplina
+— espera `disciplineId` e `authorRole` em cada post, campos que o fórum interno não tem).
+
+**Arquivos:**
+- Criar: `src/pages/painel/TeacherForumThread.tsx`, `src/routes/painel/forum-interno/$threadId.tsx`
+- Ler: `src/components/forum/ForumThreadView.tsx` inteiro (o padrão visual a espelhar: cabeçalho
+  com "voltar" + "apagar tópico", lista de mensagens com botão de apagar por mensagem, formulário
+  de resposta, diálogo de confirmação de exclusão de tópico), `src/pages/painel/ForumThread.tsx`
+  (padrão de página fina em volta do componente), `src/lib/forumPermissions.ts` (`canDeleteThread`)
+
+**Interfaces:**
+- Consome: `getTeacherThreadFn`, `createTeacherPostFn`, `deleteTeacherThreadFn`,
+  `deleteTeacherPostFn` de `src/functions/teacherForum.ts` (Tarefas 6.2-6.3); `canDeleteThread`
+  de `src/lib/forumPermissions.ts`; `getCurrentTeacherFn` de `src/functions/auth.ts` (pra saber
+  se quem está logado é admin, sem precisar de uma consulta nova).
+- Produz: nada (fim da UI do fórum interno).
+
+- [ ] **Passo 1: Criar `TeacherForumThread.tsx`**
+
+```tsx
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { ArrowLeft, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+
+import { PainelShell } from "@/components/painel/PainelShell";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
+import { getCurrentTeacherFn } from "@/functions/auth";
+import {
+  createTeacherPostFn,
+  deleteTeacherPostFn,
+  deleteTeacherThreadFn,
+  getTeacherThreadFn,
+} from "@/functions/teacherForum";
+import { canDeleteThread } from "@/lib/forumPermissions";
+
+import { teacherThreadsKey } from "./TeacherForumHome";
+
+function teacherThreadKey(threadId: string) {
+  return ["teacher-forum-thread", threadId] as const;
+}
+
+export function TeacherForumThread({ threadId }: { threadId: string }) {
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const { data: me } = useQuery({
+    queryKey: ["current-teacher"],
+    queryFn: () => getCurrentTeacherFn(),
+  });
+  const { data: thread, isLoading } = useQuery({
+    queryKey: teacherThreadKey(threadId),
+    queryFn: () => getTeacherThreadFn({ data: { threadId } }),
+  });
+  const [reply, setReply] = useState("");
+  const [deleteThreadOpen, setDeleteThreadOpen] = useState(false);
+
+  function invalidate() {
+    return queryClient.invalidateQueries({ queryKey: teacherThreadKey(threadId) });
+  }
+
+  const replyMutation = useMutation({
+    mutationFn: () => createTeacherPostFn({ data: { threadId, content: reply } }),
+    onSuccess: async () => {
+      setReply("");
+      await invalidate();
+    },
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Não foi possível responder."),
+  });
+
+  const deletePostMutation = useMutation({
+    mutationFn: (postId: string) => deleteTeacherPostFn({ data: { postId } }),
+    onSuccess: () => invalidate(),
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Não foi possível apagar."),
+  });
+
+  const deleteThreadMutation = useMutation({
+    mutationFn: () => deleteTeacherThreadFn({ data: { threadId } }),
+    onSuccess: async () => {
+      toast.success("Tópico apagado.");
+      await queryClient.invalidateQueries({ queryKey: teacherThreadsKey });
+      await navigate({ to: "/painel/forum-interno" });
+    },
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Não foi possível apagar o tópico."),
+  });
+
+  const isModerator = me?.role === "admin";
+  const canDelete =
+    thread !== undefined &&
+    canDeleteThread({
+      isModerator,
+      isAuthor: thread.mine,
+      postCount: Math.max(0, thread.posts.length - 1),
+    });
+
+  return (
+    <PainelShell title={thread?.title ?? "Carregando…"}>
+      {isLoading || !thread ? (
+        <div className="space-y-3">
+          <Skeleton className="h-16 w-full" />
+          <Skeleton className="h-16 w-full" />
+        </div>
+      ) : (
+        <div>
+          <div className="mb-6 flex items-center justify-between">
+            <Link
+              to="/painel/forum-interno"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-accent"
+            >
+              <ArrowLeft className="size-4 shrink-0" aria-hidden />
+              Voltar para o fórum interno
+            </Link>
+            {canDelete ? (
+              <Button variant="ghost" size="sm" onClick={() => setDeleteThreadOpen(true)}>
+                <Trash2 className="size-4" aria-hidden />
+                Apagar tópico
+              </Button>
+            ) : null}
+          </div>
+
+          <div className="grid gap-3">
+            {thread.posts.map((post) => (
+              <div
+                key={post.id}
+                className="rounded-md border border-border/70 bg-card/70 p-4 shadow-soft"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{post.authorName}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(post.createdAt).toLocaleString("pt-BR", {
+                        dateStyle: "short",
+                        timeStyle: "short",
+                      })}
+                    </p>
+                  </div>
+                  {post.mine || isModerator ? (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-8 shrink-0 text-muted-foreground hover:text-destructive"
+                      onClick={() => deletePostMutation.mutate(post.id)}
+                    >
+                      <Trash2 className="size-4" aria-hidden />
+                      <span className="sr-only">Apagar mensagem</span>
+                    </Button>
+                  ) : null}
+                </div>
+                <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">{post.content}</p>
+              </div>
+            ))}
+          </div>
+
+          <form
+            className="mt-4 flex flex-col gap-3"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (reply.trim().length === 0) return;
+              replyMutation.mutate();
+            }}
+          >
+            <Textarea
+              placeholder="Escreva uma resposta…"
+              value={reply}
+              onChange={(event) => setReply(event.target.value)}
+              rows={3}
+            />
+            <Button type="submit" disabled={replyMutation.isPending} className="self-end">
+              Responder
+            </Button>
+          </form>
+
+          <AlertDialog open={deleteThreadOpen} onOpenChange={setDeleteThreadOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Apagar tópico?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Todas as mensagens desse tópico serão apagadas. Essa ação não pode ser
+                  desfeita.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={() => deleteThreadMutation.mutate()}>
+                  Apagar
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      )}
+    </PainelShell>
+  );
+}
+```
+
+`teacherThreadsKey` precisa ser exportado de `TeacherForumHome.tsx` (Tarefa 6.4) — conferir que
+o export já está lá (`export const teacherThreadsKey = [...] as const;`).
+
+- [ ] **Passo 2: Criar a rota**
+
+```tsx
+import { createFileRoute } from "@tanstack/react-router";
+
+import { TeacherForumThread } from "@/pages/painel/TeacherForumThread";
+
+export const Route = createFileRoute("/painel/forum-interno/$threadId")({
+  component: RouteComponent,
+});
+
+function RouteComponent() {
+  const { threadId } = Route.useParams();
+  return <TeacherForumThread threadId={threadId} />;
+}
+```
+
+- [ ] **Passo 3: Checar os arquivos**
+
+Run: `npx eslint src/pages/painel/TeacherForumThread.tsx src/routes/painel/forum-interno/'$threadId.tsx' && npx tsc --noEmit`
+Expected: PASS.
+
+- [ ] **Passo 4: Commit**
+
+```bash
+git add src/pages/painel/TeacherForumThread.tsx "src/routes/painel/forum-interno/\$threadId.tsx"
+git commit -m "feat: adiciona a tela de tópico do fórum interno"
+```
+
+### Tarefa 6.6 — Link na navegação do painel + roteiro manual + build final da fase
+
+**Arquivos:**
+- Modificar: `src/components/painel/PainelShell.tsx`
+- Ler: `src/components/painel/PainelShell.tsx` inteiro (`painelNavItems`, linhas 38-50 — todo
+  professor vê; `adminOnlyNavItems`, linhas 52-57 — só admin)
+
+**Interfaces:**
+- Consome: rota `/painel/forum-interno` (Tarefas 6.4-6.5).
+- Produz: nada (fim da fase).
+
+- [ ] **Passo 1: Adicionar o item em `painelNavItems`, não em `adminOnlyNavItems`**
+
+Professor comum também acessa o fórum interno (critério de pronto do spec: "professor comum e
+admin acessam `/painel/forum-interno`") — por isso o link entra na lista que todo professor vê,
+logo depois de "Fórum":
+
+```ts
+import { MessagesSquare } from "lucide-react";
+// ...(mantém os demais ícones já importados)
+
+const painelNavItems = [
+  { to: "/painel", label: "Painel", icon: LayoutGrid },
+  { to: "/painel/agenda", label: "Agenda", icon: CalendarRange },
+  { to: "/painel/professores", label: "Contas de professores", icon: Users },
+  { to: "/painel/alunos", label: "Alunos", icon: GraduationCap },
+  { to: "/painel/provas", label: "Provas", icon: ClipboardList },
+  { to: "/painel/tarefas", label: "Tarefas", icon: ListChecks },
+  { to: "/painel/forum", label: "Fórum", icon: MessageCircle },
+  { to: "/painel/forum-interno", label: "Fórum interno", icon: MessagesSquare },
+  { to: "/painel/biblioteca", label: "Biblioteca virtual", icon: Library },
+  { to: "/painel/relatorio", label: "Boletim do aluno", icon: FileText },
+  { to: "/painel/relatorio-modulo", label: "Relatório por módulo", icon: Layers },
+  { to: "/painel/pagamentos", label: "Pagamentos", icon: Wallet },
+] as const;
+```
+
+O destaque do item ativo (`isActive`, linhas 98-101 do arquivo) já funciona sem mudança —
+`/painel/forum-interno` não é prefixo de `/painel/forum` nem o contrário, então não há conflito
+de destaque entre os dois links.
+
+- [ ] **Passo 2: Checar o arquivo**
+
+Run: `npx eslint src/components/painel/PainelShell.tsx && npx tsc --noEmit`
+Expected: PASS.
+
+- [ ] **Passo 3: Roteiro manual completo da fase**
+
+Rodar `npm run dev`. Como professor comum: ver o link "Fórum interno" na navegação, entrar,
+criar um tópico, responder, apagar a própria mensagem, apagar o próprio tópico sem resposta,
+tentar apagar um tópico alheio com resposta (deve falhar). Como admin: ver o mesmo link, apagar
+qualquer tópico/mensagem (deve funcionar e registrar em Auditoria quando for tópico alheio). Como
+aluno, no portal: confirmar que não existe link equivalente e que a URL
+`/painel/forum-interno` não é acessível (redireciona pro login do painel, mesmo comportamento de
+qualquer outra rota de `/painel/*`).
+
+- [ ] **Passo 4: Build final da fase**
+
+Run: `npm run build`
+Expected: PASS.
+
+- [ ] **Passo 5: Commit**
+
+```bash
+git add src/components/painel/PainelShell.tsx
+git commit -m "feat: adiciona o link do fórum interno na navegação do painel"
+```
+
+---
