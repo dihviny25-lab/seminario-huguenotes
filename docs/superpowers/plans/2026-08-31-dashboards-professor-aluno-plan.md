@@ -107,10 +107,16 @@ implicitamente.
 12. **Idioma.** UI, mensagens de erro e comentários de código em **português**. Descrições de
     teste (`describe`/`it`) em **inglês**, seguindo o padrão dos testes existentes
     (`src/lib/attendance.test.ts`, `src/lib/payments.test.ts`, `src/server/auth/password.test.ts`).
-13. **Testes.** Vitest, arquivo `.test.ts` ao lado do arquivo testado, importando pelo alias
-    `@/…`. Rodar um arquivo só: `npx vitest run src/lib/dashboard.test.ts`. Casos de borda
-    obrigatórios em toda função pura: lista vazia, `date` nula, disciplina sem aulas passadas,
-    peso total zero, valor exatamente no limiar.
+13. **Testes — só na Fase 0.** Vitest, arquivo `.test.ts` ao lado do arquivo testado, importando
+    pelo alias `@/…`. Rodar um arquivo só: `npx vitest run src/lib/dashboard.test.ts`. Casos de
+    borda obrigatórios em toda função pura: lista vazia, `date` nula, disciplina sem aulas
+    passadas, peso total zero, valor exatamente no limiar.
+    > **Atualizado em 2026-09-01:** a partir da Fase 2, o usuário pediu para **não** escrever
+    > testes automatizados sem pedir explicitamente — foco em implementação funcionando primeiro.
+    > As tarefas da Fase 2 em diante NÃO incluem passo de escrever `.test.ts`; verificação é via
+    > `npm run lint` + `npm run build` + roteiro manual. A estrutura de função pura em `src/lib/`
+    > continua (item 3) — só fica testável depois, se/quando pedido. A Fase 0 (já escrita) e a
+    > Fase 1 (já implementada em PR separado) mantêm os testes que já têm.
 14. **`src/lib/` nunca importa `src/server/`.** O `importProtection` do `vite.config.ts` quebra o
     build do cliente se um arquivo de client importar `**/server/**`. Funções puras recebem dados
     por parâmetro, sempre.
