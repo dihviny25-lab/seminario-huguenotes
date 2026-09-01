@@ -17,6 +17,7 @@ export type AttendanceBoard = {
     sequence: number;
     checkInOpen: boolean;
     checkInToken: string | null;
+    givenAt: string | null;
   }>;
   attendance: Array<{ lessonId: string; studentId: string; present: boolean }>;
 };
@@ -40,6 +41,7 @@ export const getAttendanceBoardFn = createServerFn({ method: "GET" })
           sequence: lessons.sequence,
           checkInOpen: lessons.checkInOpen,
           checkInToken: lessons.checkInToken,
+          givenAt: lessons.givenAt,
         })
         .from(lessons)
         .where(eq(lessons.disciplineId, data.disciplineId))
@@ -59,7 +61,14 @@ export const getAttendanceBoardFn = createServerFn({ method: "GET" })
             .from(attendance)
             .where(inArray(attendance.lessonId, lessonIds));
 
-    return { students: studentRows, lessons: lessonRows, attendance: attendanceRows };
+    return {
+      students: studentRows,
+      lessons: lessonRows.map((lesson) => ({
+        ...lesson,
+        givenAt: lesson.givenAt ? lesson.givenAt.toISOString() : null,
+      })),
+      attendance: attendanceRows,
+    };
   });
 
 const createLessonSchema = z.object({
@@ -152,6 +161,31 @@ export const setLessonAttendanceAllFn = createServerFn({ method: "POST" })
     );
   });
 
+const launchLessonAttendanceSchema = z.object({
+  disciplineId: z.string().uuid(),
+  lessonId: z.string().uuid(),
+});
+
+/** Lança a chamada como realizada — só a partir daqui a aula conta pra frequência/relatórios. */
+export const launchLessonAttendanceFn = createServerFn({ method: "POST" })
+  .validator(launchLessonAttendanceSchema)
+  .handler(async ({ data }) => {
+    const discipline = await requireOwnDiscipline(data.disciplineId);
+    await db.update(lessons).set({ givenAt: new Date() }).where(eq(lessons.id, data.lessonId));
+    await logAudit(
+      "frequencia.lancar",
+      `Lançou a chamada de uma aula de ${discipline.discipline} como realizada.`,
+    );
+  });
+
+/** Desfaz o lançamento (engano) — a aula volta a ser rascunho e sai da contagem de frequência. */
+export const reopenLessonAttendanceFn = createServerFn({ method: "POST" })
+  .validator(launchLessonAttendanceSchema)
+  .handler(async ({ data }) => {
+    await requireOwnDiscipline(data.disciplineId);
+    await db.update(lessons).set({ givenAt: null }).where(eq(lessons.id, data.lessonId));
+  });
+
 const lessonCheckInSchema = z.object({
   disciplineId: z.string().uuid(),
   lessonId: z.string().uuid(),
@@ -170,13 +204,23 @@ export const openLessonCheckInFn = createServerFn({ method: "POST" })
     return { token };
   });
 
+/** Encerrar a chamada por QR code já lança a aula como realizada. */
 export const closeLessonCheckInFn = createServerFn({ method: "POST" })
   .validator(lessonCheckInSchema)
   .handler(async ({ data }) => {
     await requireOwnDiscipline(data.disciplineId);
+    const [current] = await db
+      .select({ givenAt: lessons.givenAt })
+      .from(lessons)
+      .where(eq(lessons.id, data.lessonId))
+      .limit(1);
     await db
       .update(lessons)
-      .set({ checkInOpen: false, checkInToken: null })
+      .set({
+        checkInOpen: false,
+        checkInToken: null,
+        givenAt: current?.givenAt ?? new Date(),
+      })
       .where(eq(lessons.id, data.lessonId));
   });
 

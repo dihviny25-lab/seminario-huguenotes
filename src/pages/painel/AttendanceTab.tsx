@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Plus, QrCode, Trash2 } from "lucide-react";
+import { CheckCircle2, Loader2, Plus, QrCode, RotateCcw, Trash2 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
 
@@ -22,7 +22,9 @@ import {
   createLessonFn,
   deleteLessonFn,
   getAttendanceBoardFn,
+  launchLessonAttendanceFn,
   openLessonCheckInFn,
+  reopenLessonAttendanceFn,
   setAttendanceFn,
   setLessonAttendanceAllFn,
   type AttendanceBoard,
@@ -36,6 +38,15 @@ function formatLessonLabel(lesson: { date: string | null; sequence: number }): s
   if (!lesson.date) return `Aula ${lesson.sequence}`;
   const [year, month, day] = lesson.date.split("-");
   return `${day}/${month}`;
+}
+
+function formatGivenAt(givenAt: string): string {
+  return new Date(givenAt).toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 export function AttendanceTab({ disciplineId }: { disciplineId: string }) {
@@ -98,6 +109,26 @@ export function AttendanceTab({ disciplineId }: { disciplineId: string }) {
     onError: () => toast.error("Não foi possível atualizar a presença de todos."),
   });
 
+  const launchMutation = useMutation({
+    mutationFn: (lessonId: string) =>
+      launchLessonAttendanceFn({ data: { disciplineId, lessonId } }),
+    onSuccess: async () => {
+      toast.success("Chamada lançada como realizada.");
+      await invalidate();
+    },
+    onError: () => toast.error("Não foi possível lançar a chamada."),
+  });
+
+  const reopenMutation = useMutation({
+    mutationFn: (lessonId: string) =>
+      reopenLessonAttendanceFn({ data: { disciplineId, lessonId } }),
+    onSuccess: async () => {
+      toast.success("Lançamento desfeito — aula voltou a ser rascunho.");
+      await invalidate();
+    },
+    onError: () => toast.error("Não foi possível reabrir a chamada."),
+  });
+
   if (isLoading || !data) {
     return (
       <div className="overflow-hidden rounded-md border border-border/70 bg-card/70 shadow-soft">
@@ -121,6 +152,8 @@ export function AttendanceTab({ disciplineId }: { disciplineId: string }) {
   const presentByKey = new Map(
     data.attendance.map((a) => [`${a.lessonId}:${a.studentId}`, a.present]),
   );
+  // Só aula lançada conta pra frequência — mesma regra do boletim.
+  const givenLessons = data.lessons.filter((lesson) => lesson.givenAt !== null);
 
   return (
     <div>
@@ -173,36 +206,62 @@ export function AttendanceTab({ disciplineId }: { disciplineId: string }) {
                 const nonePresent = presentCount === 0;
                 return (
                   <TableHead key={lesson.id} className="text-center">
-                    <div className="flex items-center justify-center gap-1">
-                      <Checkbox
-                        checked={allPresent ? true : nonePresent ? false : "indeterminate"}
-                        title={allPresent ? "Desmarcar todos" : "Marcar todos presentes"}
-                        onCheckedChange={() =>
-                          attendanceAllMutation.mutate({
-                            lessonId: lesson.id,
-                            present: !allPresent,
-                          })
-                        }
-                      />
-                      <span>{formatLessonLabel(lesson)}</span>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-6"
-                        title="Chamada por QR code"
-                        onClick={() => setCheckInDialogLessonId(lesson.id)}
-                      >
-                        <QrCode className="size-3.5" aria-hidden />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-6"
-                        title="Remover aula"
-                        onClick={() => deleteLessonMutation.mutate(lesson.id)}
-                      >
-                        <Trash2 className="size-3.5" aria-hidden />
-                      </Button>
+                    <div className="flex flex-col items-center gap-1 py-1">
+                      <div className="flex items-center justify-center gap-1">
+                        <Checkbox
+                          checked={allPresent ? true : nonePresent ? false : "indeterminate"}
+                          title={allPresent ? "Desmarcar todos" : "Marcar todos presentes"}
+                          onCheckedChange={() =>
+                            attendanceAllMutation.mutate({
+                              lessonId: lesson.id,
+                              present: !allPresent,
+                            })
+                          }
+                        />
+                        <span>{formatLessonLabel(lesson)}</span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-6"
+                          title="Chamada por QR code"
+                          onClick={() => setCheckInDialogLessonId(lesson.id)}
+                        >
+                          <QrCode className="size-3.5" aria-hidden />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-6"
+                          title="Remover aula"
+                          onClick={() => deleteLessonMutation.mutate(lesson.id)}
+                        >
+                          <Trash2 className="size-3.5" aria-hidden />
+                        </Button>
+                      </div>
+                      {lesson.givenAt ? (
+                        <button
+                          type="button"
+                          className="flex items-center gap-1 text-[11px] font-normal text-emerald-600 hover:underline"
+                          title={`Lançada em ${formatGivenAt(lesson.givenAt)} — clique pra reabrir como rascunho`}
+                          onClick={() => reopenMutation.mutate(lesson.id)}
+                          disabled={reopenMutation.isPending}
+                        >
+                          <CheckCircle2 className="size-3" aria-hidden />
+                          Lançada
+                          <RotateCcw className="size-3" aria-hidden />
+                        </button>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-5 px-1.5 text-[11px] font-normal text-muted-foreground"
+                          onClick={() => launchMutation.mutate(lesson.id)}
+                          disabled={launchMutation.isPending}
+                          title="Só depois de lançada a aula conta pra frequência"
+                        >
+                          Lançar chamada
+                        </Button>
+                      )}
                     </div>
                   </TableHead>
                 );
@@ -222,7 +281,7 @@ export function AttendanceTab({ disciplineId }: { disciplineId: string }) {
               </TableRow>
             ) : (
               data.students.map((student) => {
-                const totalFaltas = data.lessons.filter(
+                const totalFaltas = givenLessons.filter(
                   (lesson) => presentByKey.get(`${lesson.id}:${student.id}`) === false,
                 ).length;
 

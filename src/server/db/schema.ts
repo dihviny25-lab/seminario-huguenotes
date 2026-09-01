@@ -139,6 +139,10 @@ export const lessons = pgTable("lessons", {
   // confirma a presença do próprio aluno logado automaticamente.
   checkInOpen: boolean("check_in_open").notNull().default(false),
   checkInToken: text("check_in_token"),
+  // Nulo = aula agendada, chamada ainda em rascunho (não conta pra frequência).
+  // Preenchido = professor lançou a chamada como realizada — só a partir daí
+  // as presenças/faltas dessa aula entram no boletim.
+  givenAt: timestamp("given_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
