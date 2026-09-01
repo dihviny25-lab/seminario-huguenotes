@@ -1,15 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import { db } from "@/server/db/client";
 import { charges } from "@/server/db/schema";
 import { getPayment, verifyWebhookSignature } from "@/server/payments/mercadopago";
+import { decidePaymentWebhook } from "@/server/payments/webhookValidation";
 
 /**
- * Notificação de pagamento do Mercado Pago — endpoint público de propósito
- * (quem autentica é a assinatura HMAC do header `x-signature`, não sessão de
- * login). Fica fora de `src/routes/painel` e `src/routes/portal`, então
- * nenhum guard de sessão se aplica aqui.
+ * Notificação de pagamento do Mercado Pago. O endpoint é público, mas exige
+ * assinatura HMAC válida e consulta o pagamento diretamente na API do MP.
  */
 export const Route = createFileRoute("/api/mercadopago/webhook")({
   server: {
@@ -39,17 +38,50 @@ export const Route = createFileRoute("/api/mercadopago/webhook")({
         }
 
         const payment = await getPayment(dataId);
-        if (payment.status === "approved" && payment.externalReference) {
+        if (!payment.externalReference) {
+          return Response.json({ received: true });
+        }
+
+        const [charge] = await db
+          .select({
+            status: charges.status,
+            fullAmount: charges.fullAmount,
+            discountPercent: charges.discountPercent,
+            dueDate: charges.dueDate,
+            mpPaymentId: charges.mpPaymentId,
+          })
+          .from(charges)
+          .where(eq(charges.id, payment.externalReference))
+          .limit(1);
+
+        if (!charge) {
+          console.warn(`Webhook MP: cobrança ${payment.externalReference} não encontrada.`);
+          return Response.json({ received: true });
+        }
+
+        const decision = decidePaymentWebhook(charge, {
+          id: payment.id,
+          status: payment.status,
+          transactionAmount: payment.transactionAmount,
+          currencyId: payment.currencyId,
+          approvedAt: payment.approvedAt,
+        });
+
+        if (decision.action === "mark-paid") {
+          // O status pendente também faz parte do WHERE para impedir duas
+          // notificações concorrentes de aplicarem a mesma baixa duas vezes.
           await db
             .update(charges)
             .set({
               status: "paid",
-              mpPaymentId: dataId,
-              paidAt: new Date(),
-              paidAmount: String(payment.transactionAmount),
+              mpPaymentId: payment.id,
+              paidAt: payment.approvedAt ? new Date(payment.approvedAt) : new Date(),
+              paidAmount: String(decision.paidAmount),
               paidManually: false,
             })
-            .where(eq(charges.id, payment.externalReference));
+            .where(and(eq(charges.id, payment.externalReference), eq(charges.status, "pending")));
+        } else if (decision.action === "ignore") {
+          console.warn(`Webhook MP ignorado para ${payment.externalReference}: ${decision.reason}`);
         }
 
         return Response.json({ received: true });
