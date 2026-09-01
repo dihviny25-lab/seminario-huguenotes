@@ -67,14 +67,13 @@ export async function getClassReportData(disciplineId: string): Promise<ClassRep
       .where(eq(assessments.disciplineId, disciplineId))
       .orderBy(asc(assessments.createdAt)),
     db
-      .select({ id: lessons.id, date: lessons.date })
+      .select({ id: lessons.id, givenAt: lessons.givenAt })
       .from(lessons)
       .where(eq(lessons.disciplineId, disciplineId)),
   ]);
 
-  // Mesma regra do boletim individual: só conta aula que já aconteceu.
-  const todayIso = new Date().toISOString().slice(0, 10);
-  const pastLessonRows = lessonRows.filter((l) => l.date !== null && l.date <= todayIso);
+  // Mesma regra do boletim individual: só conta aula com chamada lançada.
+  const pastLessonRows = lessonRows.filter((l) => l.givenAt !== null);
 
   const assessmentIds = assessmentRows.map((a) => a.id);
   const lessonIds = pastLessonRows.map((l) => l.id);
@@ -221,15 +220,14 @@ export async function getStudentReportData(studentId: string): Promise<StudentRe
       .where(inArray(assessments.disciplineId, disciplineIds))
       .orderBy(asc(assessments.createdAt)),
     db
-      .select({ id: lessons.id, disciplineId: lessons.disciplineId, date: lessons.date })
+      .select({ id: lessons.id, disciplineId: lessons.disciplineId, givenAt: lessons.givenAt })
       .from(lessons)
       .where(inArray(lessons.disciplineId, disciplineIds)),
   ]);
 
-  // Só conta aula que já aconteceu — sem isso, disciplinas futuras (cujas datas já
+  // Só conta aula com chamada lançada — sem isso, disciplinas futuras (cujas datas já
   // foram todas cadastradas de uma vez) apareciam com 100% de frequência antes mesmo de começar.
-  const todayIso = new Date().toISOString().slice(0, 10);
-  const pastLessonRows = lessonRows.filter((l) => l.date !== null && l.date <= todayIso);
+  const pastLessonRows = lessonRows.filter((l) => l.givenAt !== null);
 
   const assessmentIds = assessmentRows.map((a) => a.id);
   const lessonIds = pastLessonRows.map((l) => l.id);
