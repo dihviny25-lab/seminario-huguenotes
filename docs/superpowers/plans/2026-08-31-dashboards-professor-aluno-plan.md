@@ -1852,3 +1852,1336 @@ git commit -m "feat: adiciona aba de acompanhamento por disciplina"
 ```
 
 ---
+
+## Fase 5 — Tarefas de múltipla escolha com correção automática
+
+Espelha, em `assignments`/`assignmentSubmissions`, o mecanismo de correção automática que
+`exams`/`examQuestions`/`examOptions`/`examAttempts`/`examAnswers` já têm
+(`src/server/exams/scoring.ts`). Tarefa continua podendo ser texto/arquivo (`kind = "open"`,
+comportamento atual, inalterado) ou de múltipla escolha (`kind = "multiple_choice"`, nova): o
+professor cadastra perguntas com alternativas (uma correta cada, mesma regra das provas), o aluno
+responde de uma vez só — sem cronômetro nem janela de abertura, ao contrário de prova — e a nota
+sai na hora, gravada em `grades` pelo mesmo `assignments.assessmentId` que a correção manual já
+usa.
+
+**Descobertas de leitura do código real que confirmam o desenho do spec:**
+- `finalizeExamAttempt` (`src/server/exams/scoring.ts:19-64`) já faz exatamente o que a Fase 5
+  precisa generalizar: soma pontos das opções corretas selecionadas, grava `submittedAt`+`score`
+  na tentativa e faz upsert em `grades`. A soma (linhas 41-50) é a parte pura a extrair.
+- `addExamQuestionFn`/`deleteExamQuestionFn` (`src/functions/exams.ts:291-360`) já implementam o
+  padrão "trava quando alguém já respondeu" (via `hasAttempts`) e "uma opção correta por
+  pergunta" (`assertExactlyOneCorrect`) — Tarefa 5.3 espelha os dois, trocando `examAttempts` por
+  `assignmentSubmissions` como sinal de travamento.
+- `assignments.assessmentId` já é `notNull().unique()` (`schema.ts:368-371`) — toda tarefa já tem
+  avaliação vinculada, então a gravação da nota reaproveita o caminho existente
+  (`grades.assessmentId`/`grades.studentId`, `onConflictDoUpdate`) sem mudança nenhuma nele.
+- `submitAssignmentFn` (`src/functions/assignmentSubmissions.ts:251-291`) só bloqueia reenvio
+  quando já existe nota em `grades` — não existe hoje um "envio único" explícito. Como a tarefa
+  objetiva grava a nota no mesmo golpe do envio, o bloqueio de reenvio já nasce pronto sem
+  precisar de lógica nova: a Tarefa 5.4 cria uma função de envio separada
+  (`submitAssignmentAnswersFn`) que primeiro confere se já existe entrega.
+
+### Tarefa 5.1 — Schema: tipo de tarefa, perguntas, opções e respostas objetivas
+
+**Arquivos:**
+- Modificar: `src/server/db/schema.ts`
+- Ler: as tabelas `exams`/`examQuestions`/`examOptions`/`examAnswers` (linhas 195-271) e
+  `assignments`/`assignmentSubmissions` (linhas 363-396) no mesmo arquivo — o padrão de colunas a
+  copiar
+
+**Interfaces:**
+- Consome: nada.
+- Produz: enum `assignmentKind`, coluna `assignments.kind`, tabelas `assignmentQuestions`,
+  `assignmentOptions`, `assignmentAnswers` — usadas por todas as tarefas seguintes desta fase.
+
+- [ ] **Passo 1: Adicionar o enum `assignmentKind`, junto dos outros enums do topo do arquivo**
+
+```ts
+export const assignmentKind = pgEnum("assignment_kind", ["open", "multiple_choice"]);
+```
+
+Colocar logo depois de `export const pushOwnerType = pgEnum(...)` (linha 35).
+
+- [ ] **Passo 2: Adicionar a coluna `kind` em `assignments`**
+
+Na definição de `assignments` (linhas 363-376), adicionar a coluna logo depois de `assessmentId`:
+
+```ts
+export const assignments = pgTable("assignments", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  disciplineId: uuid("discipline_id")
+    .notNull()
+    .references(() => disciplines.id, { onDelete: "cascade" }),
+  assessmentId: uuid("assessment_id")
+    .notNull()
+    .unique()
+    .references(() => assessments.id, { onDelete: "cascade" }),
+  // "open" (texto/arquivo, como sempre foi) ou "multiple_choice" (corrigida
+  // sozinha, igual prova). Imutável depois de criada — trocar o tipo
+  // significa apagar e recriar a tarefa.
+  kind: assignmentKind("kind").notNull().default("open"),
+  title: text("title").notNull(),
+  instructions: text("instructions"),
+  dueAt: timestamp("due_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+```
+
+O `default("open")` é o que faz o `db:push` ser não destrutivo (Global Constraint 11) — toda
+tarefa já existente vira `"open"` automaticamente, sem migração de dados.
+
+- [ ] **Passo 3: Adicionar as três tabelas novas, logo depois de `assignmentSubmissions`**
+
+Espelham exatamente `examQuestions`/`examOptions`/`examAnswers`, trocando a origem
+(`assignmentId` em vez de `examId`) e o destino da resposta (`submissionId` de
+`assignmentSubmissions`, que já existe e continua sendo o registro central da entrega — não se
+cria um equivalente de `examAttempts`, porque tarefa não tem cronômetro nem `opensAt`):
+
+```ts
+export const assignmentQuestions = pgTable("assignment_questions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  assignmentId: uuid("assignment_id")
+    .notNull()
+    .references(() => assignments.id, { onDelete: "cascade" }),
+  text: text("text").notNull(),
+  points: numeric("points", { precision: 5, scale: 2 }).notNull().default("1"),
+  sequence: integer("sequence").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const assignmentOptions = pgTable("assignment_options", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  questionId: uuid("question_id")
+    .notNull()
+    .references(() => assignmentQuestions.id, { onDelete: "cascade" }),
+  text: text("text").notNull(),
+  isCorrect: boolean("is_correct").notNull().default(false),
+  sequence: integer("sequence").notNull(),
+});
+
+export const assignmentAnswers = pgTable(
+  "assignment_answers",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    submissionId: uuid("submission_id")
+      .notNull()
+      .references(() => assignmentSubmissions.id, { onDelete: "cascade" }),
+    questionId: uuid("question_id")
+      .notNull()
+      .references(() => assignmentQuestions.id, { onDelete: "cascade" }),
+    optionId: uuid("option_id").references(() => assignmentOptions.id, { onDelete: "set null" }),
+    answeredAt: timestamp("answered_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [unique().on(table.submissionId, table.questionId)],
+);
+```
+
+- [ ] **Passo 4: Checar o arquivo**
+
+Run: `npx eslint src/server/db/schema.ts && npx tsc --noEmit`
+Expected: PASS, sem erros.
+
+- [ ] **Passo 5: Aplicar o schema no banco**
+
+Run: `npm run db:push`
+Expected: o `drizzle-kit push` lista as mudanças (1 enum novo, 1 coluna nova em `assignments`
+com default, 3 tabelas novas) e aplica sem pedir nenhuma confirmação destrutiva — é tudo
+aditivo. Se o terminal pedir confirmação, responder afirmativamente ("Yes, I want to execute
+all statements" / criar tabela). Conferir depois, com um cliente Postgres ou `psql`, que uma
+linha de `assignments` já existente ganhou `kind = 'open'`.
+
+- [ ] **Passo 6: Commit**
+
+```bash
+git add src/server/db/schema.ts
+git commit -m "feat: adiciona schema de tarefas de múltipla escolha"
+```
+
+### Tarefa 5.2 — Lógica pura: generalizar a soma de pontos da correção automática
+
+Extrai a parte pura de `finalizeExamAttempt` para `src/lib/scoring.ts`, sem mudar nenhum
+comportamento — é a primeira coisa validada no PR, porque mexe no motor que já está em produção
+(maior risco da fase, conforme o spec).
+
+**Arquivos:**
+- Criar: `src/lib/scoring.ts`
+- Modificar: `src/server/exams/scoring.ts` (`finalizeExamAttempt`)
+- Ler: `src/server/exams/scoring.ts` inteiro (lógica atual a extrair)
+
+**Interfaces:**
+- Consome: nada (função pura).
+- Produz: `sumCorrectPoints(selectedOptionIds, options, questions)`, consumida por
+  `finalizeExamAttempt` (já existente, refatorado aqui) e por `finalizeAssignmentSubmission`
+  (Tarefa 5.4, nova).
+
+- [ ] **Passo 1: Escrever `sumCorrectPoints` em `src/lib/scoring.ts`**
+
+```ts
+export type ScoringOption = { id: string; questionId: string; isCorrect: boolean };
+export type ScoringQuestion = { id: string; points: number };
+
+/**
+ * Soma os pontos de cada pergunta cuja opção selecionada é a correta.
+ * Função pura reaproveitada pela correção de provas (`finalizeExamAttempt`,
+ * `src/server/exams/scoring.ts`) e de tarefas objetivas
+ * (`finalizeAssignmentSubmission`, `src/server/assignments/scoring.ts`) —
+ * as duas têm exatamente a mesma regra: uma opção correta por pergunta, nota
+ * é a soma dos pontos das perguntas acertadas. Pergunta sem resposta ou
+ * resposta errada simplesmente não soma nada — não há desconto.
+ */
+export function sumCorrectPoints(
+  selectedOptionIds: Array<string>,
+  options: Array<ScoringOption>,
+  questions: Array<ScoringQuestion>,
+): number {
+  const selected = new Set(selectedOptionIds);
+  return options
+    .filter((option) => option.isCorrect && selected.has(option.id))
+    .reduce((sum, option) => {
+      const question = questions.find((q) => q.id === option.questionId);
+      return sum + (question?.points ?? 0);
+    }, 0);
+}
+```
+
+- [ ] **Passo 2: Refatorar `finalizeExamAttempt` para usar a função pura**
+
+Troca a query que já filtrava `isCorrect = true AND id IN (...)` diretamente no banco por duas
+queries mais largas (todas as opções/perguntas da prova) seguidas da soma em memória — mesmo
+estilo de agregação do resto do projeto (Global Constraint 6), e o que torna a função
+reaproveitável: o resultado final é idêntico, só muda onde o filtro acontece.
+
+```ts
+import { eq, inArray } from "drizzle-orm";
+
+import { sumCorrectPoints } from "@/lib/scoring";
+import { db } from "@/server/db/client";
+import {
+  examAnswers,
+  examAttempts,
+  examOptions,
+  examQuestions,
+  exams,
+  grades,
+} from "@/server/db/schema";
+
+/**
+ * Soma os pontos das respostas corretas de uma tentativa (via
+ * `sumCorrectPoints`, `src/lib/scoring.ts`), grava o resultado e escreve a
+ * nota em `grades` — mesmo alvo de conflito que `setGradeFn` já usa hoje,
+ * por isso a nota aparece sozinha na aba Notas existente. Idempotente: se a
+ * tentativa já foi enviada, não recalcula nada.
+ */
+export async function finalizeExamAttempt(
+  attemptId: string,
+  options: { autoSubmitted: boolean },
+): Promise<void> {
+  const [attempt] = await db
+    .select()
+    .from(examAttempts)
+    .where(eq(examAttempts.id, attemptId))
+    .limit(1);
+  if (!attempt || attempt.submittedAt) return;
+
+  const [exam] = await db.select().from(exams).where(eq(exams.id, attempt.examId)).limit(1);
+  if (!exam) return;
+
+  const [answerRows, questionRows] = await Promise.all([
+    db
+      .select({ optionId: examAnswers.optionId })
+      .from(examAnswers)
+      .where(eq(examAnswers.attemptId, attemptId)),
+    db
+      .select({ id: examQuestions.id, points: examQuestions.points })
+      .from(examQuestions)
+      .where(eq(examQuestions.examId, exam.id)),
+  ]);
+  const selectedOptionIds = answerRows
+    .map((a) => a.optionId)
+    .filter((id): id is string => id !== null);
+  const questionIds = questionRows.map((q) => q.id);
+
+  const optionRows =
+    questionIds.length === 0
+      ? []
+      : await db
+          .select({ id: examOptions.id, questionId: examOptions.questionId, isCorrect: examOptions.isCorrect })
+          .from(examOptions)
+          .where(inArray(examOptions.questionId, questionIds));
+
+  const score = sumCorrectPoints(
+    selectedOptionIds,
+    optionRows,
+    questionRows.map((q) => ({ id: q.id, points: Number(q.points) })),
+  );
+
+  await db
+    .update(examAttempts)
+    .set({ submittedAt: new Date(), score: String(score), autoSubmitted: options.autoSubmitted })
+    .where(eq(examAttempts.id, attemptId));
+
+  await db
+    .insert(grades)
+    .values({ assessmentId: exam.assessmentId, studentId: attempt.studentId, score: String(score) })
+    .onConflictDoUpdate({
+      target: [grades.assessmentId, grades.studentId],
+      set: { score: String(score), updatedAt: new Date() },
+    });
+}
+```
+
+Note que `and` deixa de ser usado neste arquivo (a query de opções não filtra mais por
+`isCorrect`/`inArray` combinados) — remover do import se o linter acusar.
+
+- [ ] **Passo 3: Checar os arquivos**
+
+Run: `npx eslint src/lib/scoring.ts src/server/exams/scoring.ts && npx tsc --noEmit`
+Expected: PASS.
+
+- [ ] **Passo 4: Roteiro manual de regressão (sem Vitest novo, conforme Global Constraint 13)**
+
+Rodar `npm run dev`, fazer uma prova existente como aluno (acertando algumas perguntas e errando
+outras) e conferir que a nota final bate exatamente com o que batia antes da refatoração —
+comparar com o valor que já está lançado em Notas para outro aluno que já tinha feito a mesma
+prova antes deste PR.
+
+- [ ] **Passo 5: Commit**
+
+```bash
+git add src/lib/scoring.ts src/server/exams/scoring.ts
+git commit -m "refactor: extrai sumCorrectPoints de finalizeExamAttempt para src/lib/scoring.ts"
+```
+
+### Tarefa 5.3 — Server functions: perguntas e opções da tarefa objetiva (professor)
+
+**Arquivos:**
+- Modificar: `src/functions/assignments.ts`
+- Ler: `src/functions/exams.ts` (`recomputeMaxScore`, `assertExactlyOneCorrect`,
+  `addExamQuestionFn`, `deleteExamQuestionFn`, `buildExamDetail`, `getExamByIdFn` — o padrão
+  inteiro a espelhar), `src/server/db/schema.ts` (`assignmentQuestions`, `assignmentOptions`,
+  criadas na Tarefa 5.1)
+
+**Interfaces:**
+- Consome: `assignmentQuestions`, `assignmentOptions` de `src/server/db/schema.ts`.
+- Produz: `createAssignmentFn` ganha o parâmetro `kind`; `AssignmentDetail` ganha `kind`,
+  `locked` e `questions`; `addAssignmentQuestionFn` e `deleteAssignmentQuestionFn`, novas,
+  consumidas pela Tarefa 5.5.
+
+- [ ] **Passo 1: `kind` na criação da tarefa**
+
+Tarefa de múltipla escolha nasce com nota máxima 0, igual prova — ela sobe conforme as
+perguntas são cadastradas (`recomputeAssignmentMaxScore`, Passo 3). Tarefa aberta continua
+recebendo a nota máxima informada pelo professor, exatamente como hoje.
+
+```ts
+const createSchema = z.object({
+  disciplineId: z.string().uuid(),
+  kind: z.enum(["open", "multiple_choice"]).default("open"),
+  title: z.string().trim().min(1, "Informe um título."),
+  instructions: z.string().trim().optional(),
+  weight: z.number().positive().default(1),
+  maxScore: z.number().positive().default(10),
+  dueAt: z.string().optional(), // ISO — de <input type="datetime-local">
+});
+
+/** Cria a tarefa e a avaliação vinculada na aba Notas. */
+export const createAssignmentFn = createServerFn({ method: "POST" })
+  .validator(createSchema)
+  .handler(async ({ data }) => {
+    const discipline = await requireOwnDiscipline(data.disciplineId);
+
+    const [assessment] = await db
+      .insert(assessments)
+      .values({
+        disciplineId: data.disciplineId,
+        title: data.title,
+        maxScore: data.kind === "multiple_choice" ? "0" : String(data.maxScore),
+        weight: String(data.weight),
+      })
+      .returning({ id: assessments.id });
+
+    const [assignment] = await db
+      .insert(assignments)
+      .values({
+        disciplineId: data.disciplineId,
+        assessmentId: assessment.id,
+        kind: data.kind,
+        title: data.title,
+        instructions: data.instructions || null,
+        dueAt: data.dueAt ? new Date(data.dueAt) : null,
+      })
+      .returning({ id: assignments.id });
+
+    await logAudit("tarefa.criar", `Criou a tarefa "${data.title}" em ${discipline.discipline}.`);
+    return { assignmentId: assignment.id, assessmentId: assessment.id };
+  });
+```
+
+- [ ] **Passo 2: `AssignmentDetail` ganha `kind`, `locked` e `questions`**
+
+```ts
+export type AssignmentQuestionDetail = {
+  id: string;
+  text: string;
+  points: string;
+  sequence: number;
+  options: Array<{ id: string; text: string; isCorrect: boolean; sequence: number }>;
+};
+
+export type AssignmentDetail = {
+  id: string;
+  disciplineId: string;
+  kind: "open" | "multiple_choice";
+  title: string;
+  instructions: string | null;
+  dueAt: string | null;
+  weight: number;
+  maxScore: number;
+  /** true quando pelo menos um aluno já entregou — só importa pra "multiple_choice"
+   * (trava edição de perguntas), mesma regra de `ExamDetail.locked`. */
+  locked: boolean;
+  questions: Array<AssignmentQuestionDetail>;
+};
+```
+
+- [ ] **Passo 3: `buildAssignmentDetail` + `recomputeAssignmentMaxScore`, e trocar o corpo de
+      `getAssignmentByIdFn` para usá-los**
+
+```ts
+import { assignmentOptions, assignmentQuestions } from "@/server/db/schema";
+// ...(mantém os imports já existentes; asc, eq, inArray já vêm de "drizzle-orm")
+
+async function recomputeAssignmentMaxScore(assignmentId: string, assessmentId: string) {
+  const questions = await db
+    .select({ points: assignmentQuestions.points })
+    .from(assignmentQuestions)
+    .where(eq(assignmentQuestions.assignmentId, assignmentId));
+  const total = questions.reduce((sum, q) => sum + Number(q.points), 0);
+  await db.update(assessments).set({ maxScore: String(total) }).where(eq(assessments.id, assessmentId));
+}
+
+async function buildAssignmentDetail(
+  assignment: typeof assignments.$inferSelect,
+): Promise<AssignmentDetail> {
+  const [questionRows, submissionRows, assessmentRow] = await Promise.all([
+    assignment.kind === "multiple_choice"
+      ? db
+          .select()
+          .from(assignmentQuestions)
+          .where(eq(assignmentQuestions.assignmentId, assignment.id))
+          .orderBy(asc(assignmentQuestions.sequence))
+      : Promise.resolve([] as Array<typeof assignmentQuestions.$inferSelect>),
+    db
+      .select({ id: assignmentSubmissions.id })
+      .from(assignmentSubmissions)
+      .where(eq(assignmentSubmissions.assignmentId, assignment.id)),
+    db
+      .select({ weight: assessments.weight, maxScore: assessments.maxScore })
+      .from(assessments)
+      .where(eq(assessments.id, assignment.assessmentId))
+      .limit(1),
+  ]);
+
+  const questionIds = questionRows.map((q) => q.id);
+  const optionRows =
+    questionIds.length === 0
+      ? []
+      : await db
+          .select()
+          .from(assignmentOptions)
+          .where(inArray(assignmentOptions.questionId, questionIds))
+          .orderBy(asc(assignmentOptions.sequence));
+
+  return {
+    id: assignment.id,
+    disciplineId: assignment.disciplineId,
+    kind: assignment.kind,
+    title: assignment.title,
+    instructions: assignment.instructions,
+    dueAt: assignment.dueAt ? assignment.dueAt.toISOString() : null,
+    weight: Number(assessmentRow[0]?.weight ?? 1),
+    maxScore: Number(assessmentRow[0]?.maxScore ?? 10),
+    locked: submissionRows.length > 0,
+    questions: questionRows.map((q) => ({
+      id: q.id,
+      text: q.text,
+      points: q.points,
+      sequence: q.sequence,
+      options: optionRows
+        .filter((o) => o.questionId === q.id)
+        .map((o) => ({ id: o.id, text: o.text, isCorrect: o.isCorrect, sequence: o.sequence })),
+    })),
+  };
+}
+
+/** Detalhe da tarefa, resolvendo a disciplina sozinho a partir do assignmentId (rota do editor). */
+export const getAssignmentByIdFn = createServerFn({ method: "GET" })
+  .validator(z.object({ assignmentId: z.string().uuid() }))
+  .handler(async ({ data }): Promise<AssignmentDetail> => {
+    const [assignment] = await db
+      .select()
+      .from(assignments)
+      .where(eq(assignments.id, data.assignmentId))
+      .limit(1);
+    if (!assignment) throw new Error("Tarefa não encontrada.");
+    await requireOwnDiscipline(assignment.disciplineId);
+    return buildAssignmentDetail(assignment);
+  });
+```
+
+- [ ] **Passo 4: `addAssignmentQuestionFn` e `deleteAssignmentQuestionFn`**
+
+Mesmo par de `addExamQuestionFn`/`deleteExamQuestionFn`, trocando "trava se já tem tentativa"
+por "trava se já tem entrega" (`assignmentSubmissions` em vez de `examAttempts`) e recusando
+pergunta em tarefa que não é `multiple_choice`:
+
+```ts
+const optionInputSchema = z.object({
+  text: z.string().trim().min(1, "Informe o texto da opção."),
+  isCorrect: z.boolean(),
+});
+
+const questionInputSchema = z.object({
+  disciplineId: z.string().uuid(),
+  assignmentId: z.string().uuid(),
+  text: z.string().trim().min(1, "Informe o texto da pergunta."),
+  points: z.number().positive().default(1),
+  options: z
+    .array(optionInputSchema)
+    .min(2, "A pergunta precisa de pelo menos 2 opções.")
+    .max(6, "No máximo 6 opções por pergunta."),
+});
+
+function assertExactlyOneCorrect(options: Array<{ isCorrect: boolean }>) {
+  if (options.filter((o) => o.isCorrect).length !== 1) {
+    throw new Error("Marque exatamente uma opção como correta.");
+  }
+}
+
+/** Adiciona pergunta + opções a uma tarefa objetiva — bloqueado se algum aluno já entregou. */
+export const addAssignmentQuestionFn = createServerFn({ method: "POST" })
+  .validator(questionInputSchema)
+  .handler(async ({ data }) => {
+    await requireOwnDiscipline(data.disciplineId);
+    const assignment = await requireAssignmentInDiscipline(data.assignmentId, data.disciplineId);
+    if (assignment.kind !== "multiple_choice") {
+      throw new Error("Só é possível adicionar perguntas a uma tarefa de múltipla escolha.");
+    }
+    assertExactlyOneCorrect(data.options);
+
+    const hasSubmissions = await db
+      .select({ id: assignmentSubmissions.id })
+      .from(assignmentSubmissions)
+      .where(eq(assignmentSubmissions.assignmentId, assignment.id))
+      .limit(1);
+    if (hasSubmissions.length > 0) {
+      throw new Error("Não é possível editar perguntas depois que algum aluno já entregou.");
+    }
+
+    const existing = await db
+      .select({ sequence: assignmentQuestions.sequence })
+      .from(assignmentQuestions)
+      .where(eq(assignmentQuestions.assignmentId, assignment.id));
+    const nextSequence = existing.reduce((max, q) => Math.max(max, q.sequence), 0) + 1;
+
+    const [question] = await db
+      .insert(assignmentQuestions)
+      .values({
+        assignmentId: assignment.id,
+        text: data.text,
+        points: String(data.points),
+        sequence: nextSequence,
+      })
+      .returning({ id: assignmentQuestions.id });
+
+    await db.insert(assignmentOptions).values(
+      data.options.map((option, index) => ({
+        questionId: question.id,
+        text: option.text,
+        isCorrect: option.isCorrect,
+        sequence: index + 1,
+      })),
+    );
+
+    await recomputeAssignmentMaxScore(assignment.id, assignment.assessmentId);
+    return { id: question.id };
+  });
+
+const deleteQuestionSchema = z.object({
+  disciplineId: z.string().uuid(),
+  assignmentId: z.string().uuid(),
+  questionId: z.string().uuid(),
+});
+
+/** Remove a pergunta — bloqueado se algum aluno já entregou. */
+export const deleteAssignmentQuestionFn = createServerFn({ method: "POST" })
+  .validator(deleteQuestionSchema)
+  .handler(async ({ data }) => {
+    await requireOwnDiscipline(data.disciplineId);
+    const assignment = await requireAssignmentInDiscipline(data.assignmentId, data.disciplineId);
+
+    const hasSubmissions = await db
+      .select({ id: assignmentSubmissions.id })
+      .from(assignmentSubmissions)
+      .where(eq(assignmentSubmissions.assignmentId, assignment.id))
+      .limit(1);
+    if (hasSubmissions.length > 0) {
+      throw new Error("Não é possível editar perguntas depois que algum aluno já entregou.");
+    }
+
+    await db.delete(assignmentQuestions).where(eq(assignmentQuestions.id, data.questionId));
+    await recomputeAssignmentMaxScore(assignment.id, assignment.assessmentId);
+  });
+```
+
+- [ ] **Passo 5: Checar o arquivo**
+
+Run: `npx eslint src/functions/assignments.ts && npx tsc --noEmit`
+Expected: PASS.
+
+- [ ] **Passo 6: Commit**
+
+```bash
+git add src/functions/assignments.ts
+git commit -m "feat: adiciona criação de perguntas de tarefas de múltipla escolha"
+```
+
+### Tarefa 5.4 — Server functions: submissão + correção automática (aluno)
+
+**Arquivos:**
+- Criar: `src/server/assignments/scoring.ts`
+- Modificar: `src/functions/assignmentSubmissions.ts`
+- Ler: `src/functions/examAttempts.ts` (`buildAttemptState`, `submitExamAttemptFn` — o padrão de
+  expor perguntas/opções sem `isCorrect` pro aluno, e de chamar a correção automática)
+
+**Interfaces:**
+- Consome: `sumCorrectPoints` de `src/lib/scoring.ts` (Tarefa 5.2); `assignmentQuestions`,
+  `assignmentOptions`, `assignmentAnswers` de `src/server/db/schema.ts` (Tarefa 5.1).
+- Produz: `finalizeAssignmentSubmission(submissionId)`; `submitAssignmentAnswersFn`;
+  `MySubmission` ganha `kind` e `questions`, consumidos pela Tarefa 5.6.
+
+- [ ] **Passo 1: `finalizeAssignmentSubmission` em `src/server/assignments/scoring.ts`**
+
+Mesma forma de `finalizeExamAttempt` (Tarefa 5.2), sem o conceito de tentativa/tempo: soma os
+pontos das respostas certas, marca a entrega como corrigida (`gradedAt`) — pra não entrar na
+fila de correção manual da Fase 1 — e grava em `grades`.
+
+```ts
+import { eq, inArray } from "drizzle-orm";
+
+import { sumCorrectPoints } from "@/lib/scoring";
+import { db } from "@/server/db/client";
+import {
+  assignmentAnswers,
+  assignmentOptions,
+  assignmentQuestions,
+  assignments,
+  assignmentSubmissions,
+  grades,
+} from "@/server/db/schema";
+
+/**
+ * Corrige automaticamente uma entrega de tarefa objetiva: soma os pontos das
+ * respostas certas com `sumCorrectPoints` (mesma função pura da correção de
+ * provas), marca `gradedAt` na própria entrega e faz o upsert em `grades`
+ * pelo `assignments.assessmentId` — o mesmo caminho que `gradeSubmissionFn`
+ * usa na correção manual de tarefa aberta. Idempotente: se a entrega já foi
+ * corrigida, não recalcula.
+ */
+export async function finalizeAssignmentSubmission(submissionId: string): Promise<void> {
+  const [submission] = await db
+    .select()
+    .from(assignmentSubmissions)
+    .where(eq(assignmentSubmissions.id, submissionId))
+    .limit(1);
+  if (!submission || submission.gradedAt) return;
+
+  const [assignment] = await db
+    .select()
+    .from(assignments)
+    .where(eq(assignments.id, submission.assignmentId))
+    .limit(1);
+  if (!assignment) return;
+
+  const [answerRows, questionRows] = await Promise.all([
+    db
+      .select({ optionId: assignmentAnswers.optionId })
+      .from(assignmentAnswers)
+      .where(eq(assignmentAnswers.submissionId, submissionId)),
+    db
+      .select({ id: assignmentQuestions.id, points: assignmentQuestions.points })
+      .from(assignmentQuestions)
+      .where(eq(assignmentQuestions.assignmentId, assignment.id)),
+  ]);
+  const selectedOptionIds = answerRows
+    .map((a) => a.optionId)
+    .filter((id): id is string => id !== null);
+  const questionIds = questionRows.map((q) => q.id);
+
+  const optionRows =
+    questionIds.length === 0
+      ? []
+      : await db
+          .select({
+            id: assignmentOptions.id,
+            questionId: assignmentOptions.questionId,
+            isCorrect: assignmentOptions.isCorrect,
+          })
+          .from(assignmentOptions)
+          .where(inArray(assignmentOptions.questionId, questionIds));
+
+  const score = sumCorrectPoints(
+    selectedOptionIds,
+    optionRows,
+    questionRows.map((q) => ({ id: q.id, points: Number(q.points) })),
+  );
+
+  await db
+    .update(assignmentSubmissions)
+    .set({ gradedAt: new Date() })
+    .where(eq(assignmentSubmissions.id, submissionId));
+
+  await db
+    .insert(grades)
+    .values({ assessmentId: assignment.assessmentId, studentId: submission.studentId, score: String(score) })
+    .onConflictDoUpdate({
+      target: [grades.assessmentId, grades.studentId],
+      set: { score: String(score), updatedAt: new Date() },
+    });
+}
+```
+
+- [ ] **Passo 2: `MySubmission` ganha `kind` e `questions`; `getMySubmissionFn` expõe as
+      perguntas sem `isCorrect` (mesmo cuidado de `buildAttemptState` em `examAttempts.ts`)**
+
+`and`, `asc`, `eq` e `inArray` já vêm importados de `"drizzle-orm"` neste arquivo — só é
+preciso acrescentar `assignmentAnswers`, `assignmentOptions` e `assignmentQuestions` ao import
+de `@/server/db/schema`.
+
+```ts
+export type MySubmissionQuestion = {
+  id: string;
+  text: string;
+  points: string;
+  options: Array<{ id: string; text: string }>;
+  selectedOptionId: string | null;
+};
+
+export type MySubmission = {
+  assignmentId: string;
+  kind: "open" | "multiple_choice";
+  title: string;
+  instructions: string | null;
+  dueAt: string | null;
+  textContent: string | null;
+  fileUrl: string | null;
+  fileName: string | null;
+  submittedAt: string | null;
+  feedback: string | null;
+  score: string | null;
+  maxScore: string;
+  questions: Array<MySubmissionQuestion>;
+};
+
+/** Detalhe da tarefa + entrega própria (se houver), pra tela de envio do aluno. */
+export const getMySubmissionFn = createServerFn({ method: "GET" })
+  .validator(assignmentIdSchema)
+  .handler(async ({ data }): Promise<MySubmission> => {
+    const studentId = await requireStudentId();
+
+    const [row] = await db
+      .select({
+        id: assignments.id,
+        kind: assignments.kind,
+        title: assignments.title,
+        instructions: assignments.instructions,
+        dueAt: assignments.dueAt,
+        assessmentId: assignments.assessmentId,
+        maxScore: assessments.maxScore,
+      })
+      .from(assignments)
+      .innerJoin(assessments, eq(assignments.assessmentId, assessments.id))
+      .where(eq(assignments.id, data.assignmentId))
+      .limit(1);
+    if (!row) throw new Error("Tarefa não encontrada.");
+
+    const [submission] = await db
+      .select()
+      .from(assignmentSubmissions)
+      .where(
+        and(
+          eq(assignmentSubmissions.assignmentId, data.assignmentId),
+          eq(assignmentSubmissions.studentId, studentId),
+        ),
+      )
+      .limit(1);
+
+    const [grade] = await db
+      .select({ score: grades.score })
+      .from(grades)
+      .where(and(eq(grades.assessmentId, row.assessmentId), eq(grades.studentId, studentId)))
+      .limit(1);
+
+    let questions: Array<MySubmissionQuestion> = [];
+    if (row.kind === "multiple_choice") {
+      const questionRows = await db
+        .select()
+        .from(assignmentQuestions)
+        .where(eq(assignmentQuestions.assignmentId, row.id))
+        .orderBy(asc(assignmentQuestions.sequence));
+      const questionIds = questionRows.map((q) => q.id);
+
+      const [optionRows, answerRows] = await Promise.all([
+        questionIds.length === 0
+          ? []
+          : db
+              .select({ id: assignmentOptions.id, text: assignmentOptions.text, questionId: assignmentOptions.questionId })
+              .from(assignmentOptions)
+              .where(inArray(assignmentOptions.questionId, questionIds))
+              .orderBy(asc(assignmentOptions.sequence)),
+        submission
+          ? db
+              .select({ questionId: assignmentAnswers.questionId, optionId: assignmentAnswers.optionId })
+              .from(assignmentAnswers)
+              .where(eq(assignmentAnswers.submissionId, submission.id))
+          : Promise.resolve([]),
+      ]);
+
+      questions = questionRows.map((q) => ({
+        id: q.id,
+        text: q.text,
+        points: q.points,
+        options: optionRows.filter((o) => o.questionId === q.id).map((o) => ({ id: o.id, text: o.text })),
+        selectedOptionId: answerRows.find((a) => a.questionId === q.id)?.optionId ?? null,
+      }));
+    }
+
+    return {
+      assignmentId: row.id,
+      kind: row.kind,
+      title: row.title,
+      instructions: row.instructions,
+      dueAt: row.dueAt ? row.dueAt.toISOString() : null,
+      textContent: submission?.textContent ?? null,
+      fileUrl: submission?.fileUrl ?? null,
+      fileName: submission?.fileName ?? null,
+      submittedAt: submission?.submittedAt ? submission.submittedAt.toISOString() : null,
+      feedback: submission?.feedback ?? null,
+      score: grade?.score ?? null,
+      maxScore: row.maxScore,
+      questions,
+    };
+  });
+```
+
+- [ ] **Passo 3: `submitAssignmentAnswersFn`, e travar `submitAssignmentFn` pra tarefa aberta**
+
+`submitAssignmentFn` (texto/arquivo) passa a recusar tarefa `multiple_choice` — cada tipo tem
+seu próprio caminho de envio, sem se misturar. A nova função é de envio único: ao contrário da
+tarefa aberta (que aceita reenvio até ser corrigida), a objetiva já nasce corrigida no mesmo
+golpe do envio, então uma segunda tentativa de enviar já encontra a entrega existente e é
+recusada — sem precisar de lógica de bloqueio adicional.
+
+```ts
+const answerInputSchema = z.object({
+  questionId: z.string().uuid(),
+  optionId: z.string().uuid(),
+});
+
+const submitAnswersSchema = z.object({
+  assignmentId: z.string().uuid(),
+  answers: z.array(answerInputSchema).min(1, "Responda pelo menos uma pergunta."),
+});
+
+/** Envia as respostas de uma tarefa objetiva — grava e corrige na hora. Envio único. */
+export const submitAssignmentAnswersFn = createServerFn({ method: "POST" })
+  .validator(submitAnswersSchema)
+  .handler(async ({ data }) => {
+    const studentId = await requireStudentId();
+
+    const [assignment] = await db
+      .select()
+      .from(assignments)
+      .where(eq(assignments.id, data.assignmentId))
+      .limit(1);
+    if (!assignment) throw new Error("Tarefa não encontrada.");
+    if (assignment.kind !== "multiple_choice") {
+      throw new Error("Essa tarefa não é de múltipla escolha.");
+    }
+
+    const [existing] = await db
+      .select({ id: assignmentSubmissions.id })
+      .from(assignmentSubmissions)
+      .where(
+        and(
+          eq(assignmentSubmissions.assignmentId, data.assignmentId),
+          eq(assignmentSubmissions.studentId, studentId),
+        ),
+      )
+      .limit(1);
+    if (existing) {
+      throw new Error("Essa tarefa já foi respondida — envio único, sem reenvio.");
+    }
+
+    const [submission] = await db
+      .insert(assignmentSubmissions)
+      .values({ assignmentId: data.assignmentId, studentId })
+      .returning({ id: assignmentSubmissions.id });
+
+    await db.insert(assignmentAnswers).values(
+      data.answers.map((answer) => ({
+        submissionId: submission.id,
+        questionId: answer.questionId,
+        optionId: answer.optionId,
+      })),
+    );
+
+    await finalizeAssignmentSubmission(submission.id);
+    await logAudit("tarefa.entregar", `Entregou a tarefa objetiva "${assignment.title}".`);
+  });
+```
+
+Import `finalizeAssignmentSubmission` de `@/server/assignments/scoring` e `assignmentAnswers`
+de `@/server/db/schema` no topo do arquivo. Em `submitAssignmentFn` (a função existente de
+texto/arquivo), adicionar logo após buscar `assignment`:
+
+```ts
+if (assignment.kind !== "open") {
+  throw new Error("Essa tarefa é de múltipla escolha — responda pelas alternativas.");
+}
+```
+
+(A query que busca `assignment` em `submitAssignmentFn` precisa passar a selecionar também
+`assignments.kind`, além de `assessmentId` e `title` que já seleciona.)
+
+- [ ] **Passo 4: Checar os arquivos**
+
+Run: `npx eslint src/server/assignments/scoring.ts src/functions/assignmentSubmissions.ts && npx tsc --noEmit`
+Expected: PASS.
+
+- [ ] **Passo 5: Commit**
+
+```bash
+git add src/server/assignments/scoring.ts src/functions/assignmentSubmissions.ts
+git commit -m "feat: adiciona envio e correção automática de tarefas de múltipla escolha"
+```
+
+### Tarefa 5.5 — UI do professor: criar e editar tarefa de múltipla escolha
+
+**Arquivos:**
+- Modificar: `src/pages/painel/AssignmentsTab.tsx`, `src/pages/painel/AssignmentEditor.tsx`,
+  `src/functions/assignments.ts` (`AssignmentSummary`/`listMyDisciplineAssignmentsFn`)
+- Ler: `src/pages/painel/ExamEditor.tsx` (`AddQuestionDialog`, a seção "Perguntas", `ExamResults`
+  — os três padrões a espelhar), `src/pages/painel/Expenses.tsx` (uso de `Select`)
+
+**Interfaces:**
+- Consome: `createAssignmentFn` (com `kind`), `addAssignmentQuestionFn`,
+  `deleteAssignmentQuestionFn`, `AssignmentDetail`, `SubmissionRow` (Tarefa 5.3).
+- Produz: nada (fim da UI do professor).
+
+- [ ] **Passo 1: Seletor de tipo no diálogo de criação (`AssignmentsTab.tsx`)**
+
+```tsx
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+const assignmentSchema = z
+  .object({
+    kind: z.enum(["open", "multiple_choice"]).default("open"),
+    title: z.string().trim().min(1, "Informe um título."),
+    instructions: z.string().trim().optional(),
+    maxScore: z.coerce.number().positive("Deve ser maior que zero.").optional(),
+    weight: z.coerce.number().positive("Deve ser maior que zero."),
+    dueAt: z.string().optional(),
+  })
+  .refine((data) => data.kind === "multiple_choice" || data.maxScore !== undefined, {
+    message: "Informe a nota máxima.",
+    path: ["maxScore"],
+  });
+```
+
+No formulário, adicionar o campo antes de "Título" e esconder "Nota máxima" quando o tipo é
+múltipla escolha (ela nasce em 0 e sobe com as perguntas — Tarefa 5.3, Passo 1):
+
+```tsx
+<FormField
+  control={form.control}
+  name="kind"
+  render={({ field }) => (
+    <FormItem>
+      <FormLabel>Tipo de tarefa</FormLabel>
+      <Select onValueChange={field.onChange} value={field.value}>
+        <FormControl>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+        </FormControl>
+        <SelectContent>
+          <SelectItem value="open">Texto/arquivo</SelectItem>
+          <SelectItem value="multiple_choice">Múltipla escolha (corrige sozinha)</SelectItem>
+        </SelectContent>
+      </Select>
+      <FormMessage />
+    </FormItem>
+  )}
+/>
+```
+
+E envolver o campo "Nota máxima" existente com `{form.watch("kind") === "open" ? (...) : null}`.
+Em `mutation.mutationFn`, passar `kind: values.kind` e `maxScore: values.maxScore ?? 10` (valor
+ignorado no servidor quando `kind === "multiple_choice"`, mas o schema do form exige um número
+não-undefined pro `createAssignmentFn` — usar `?? 10` evita erro de tipo).
+
+- [ ] **Passo 2: Badge de tipo na listagem (`AssignmentsTab.tsx` + `assignments.ts`)**
+
+Em `src/functions/assignments.ts`, `AssignmentSummary` ganha `kind`, e o `select()` de
+`listMyDisciplineAssignmentsFn` passa a incluir `kind: assignments.kind` (a função já faz
+`db.select().from(assignments)` sem projeção — trocar por
+`db.select({ id: assignments.id, title: assignments.title, dueAt: assignments.dueAt, kind: assignments.kind, createdAt: assignments.createdAt }).from(assignments)`
+ou simplesmente ler `assignment.kind` do resultado já completo, se a query continuar sem
+projeção). No card do `Link` em `AssignmentsTab.tsx`, junto do prazo:
+
+```tsx
+<Badge variant="outline" className="mt-1">
+  {assignment.kind === "multiple_choice" ? "Múltipla escolha" : "Texto/arquivo"}
+</Badge>
+```
+
+Import `Badge` de `@/components/ui/badge` (novo neste arquivo).
+
+- [ ] **Passo 3: Seção "Perguntas" em `AssignmentEditor.tsx`, só quando `kind === "multiple_choice"`**
+
+Mesma estrutura visual de `ExamEditor.tsx` (lista de perguntas com opções, badge de pontos,
+botão de remover quando não travada, diálogo de nova pergunta com `RadioGroup` marcando a
+correta). Copiar `AddQuestionDialog` de `ExamEditor.tsx` quase literalmente, trocando
+`addExamQuestionFn`/`deleteExamQuestionFn`/`examId` por
+`addAssignmentQuestionFn`/`deleteAssignmentQuestionFn`/`assignmentId`, e renomeando pra
+`AddAssignmentQuestionDialog` — inclusive as importações que ela usa (`zodResolver`,
+`useFieldArray`, `useForm`, `z`, `RadioGroup`/`RadioGroupItem`, `Label`). `AssignmentEditor.tsx`
+também precisa de `CheckCircle2` e `Plus` de `lucide-react`, que hoje não importa. Encaixar a
+seção logo depois do cabeçalho de ações (editar/excluir tarefa) e antes de "Entregas":
+
+```tsx
+{assignment.kind === "multiple_choice" ? (
+  <>
+    <div className="flex items-center justify-between">
+      <h2 className="font-display text-lg font-semibold text-foreground">Perguntas</h2>
+      {!assignment.locked ? (
+        <Button size="sm" onClick={() => setAddQuestionOpen(true)}>
+          <Plus className="size-4" aria-hidden />
+          Adicionar pergunta
+        </Button>
+      ) : null}
+    </div>
+    {assignment.locked ? (
+      <p className="mt-2 text-sm text-muted-foreground">
+        Pelo menos um aluno já entregou essa tarefa — perguntas e opções não podem mais ser
+        editadas.
+      </p>
+    ) : null}
+    {assignment.questions.length === 0 ? (
+      <p className="mt-4 rounded-md border border-border/70 bg-card/70 p-6 text-center text-muted-foreground shadow-soft">
+        Nenhuma pergunta ainda.
+      </p>
+    ) : (
+      <div className="mt-4 grid gap-3">
+        {assignment.questions.map((question, index) => (
+          <div
+            key={question.id}
+            className="animate-in rounded-md border border-border/70 bg-card/70 p-4 shadow-soft fade-in slide-in-from-top-1 duration-200"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <p className="font-medium text-foreground">
+                {index + 1}. {question.text}
+              </p>
+              <div className="flex shrink-0 items-center gap-2">
+                <Badge variant="outline">
+                  {question.points} {Number(question.points) === 1 ? "ponto" : "pontos"}
+                </Badge>
+                {!assignment.locked ? (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    title="Remover pergunta"
+                    onClick={() => deleteQuestionMutation.mutate(question.id)}
+                  >
+                    <Trash2 className="size-4" aria-hidden />
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+            <ul className="mt-3 grid gap-1.5">
+              {question.options.map((option) => (
+                <li key={option.id} className="flex items-center gap-2 text-sm text-muted-foreground">
+                  {option.isCorrect ? (
+                    <CheckCircle2 className="size-4 shrink-0 text-success" aria-hidden />
+                  ) : (
+                    <span className="size-4 shrink-0" />
+                  )}
+                  <span className={option.isCorrect ? "text-foreground" : undefined}>{option.text}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    )}
+    <AddAssignmentQuestionDialog
+      disciplineId={assignment.disciplineId}
+      assignmentId={assignmentId}
+      open={addQuestionOpen}
+      onOpenChange={setAddQuestionOpen}
+      onAdded={() => queryClient.invalidateQueries({ queryKey: assignmentKey(assignmentId) })}
+    />
+  </>
+) : null}
+```
+
+Adicionar `const [addQuestionOpen, setAddQuestionOpen] = useState(false);` e
+`deleteQuestionMutation` (mesmo padrão do `deleteQuestionMutation` de `ExamEditor.tsx`, chamando
+`deleteAssignmentQuestionFn`) no topo do componente.
+
+- [ ] **Passo 4: Para `kind === "multiple_choice"`, trocar "Entregas" por uma tabela de
+      resultados — a nota já saiu sozinha, não faz sentido o formulário de lançar nota manual**
+
+Reaproveita `getAssignmentSubmissionsFn` como está (já devolve `score`/`gradedAt`), só muda a
+apresentação: uma tabela simples, no padrão de `ExamResults` de `ExamEditor.tsx`, em vez de
+`SubmissionCard`. Condicional em volta do bloco "Entregas" já existente:
+
+```tsx
+{assignment.kind === "multiple_choice" ? (
+  <AssignmentResultsTable submissions={submissions} loading={loadingSubmissions} />
+) : (
+  // ...o mapeamento de SubmissionCard que já existe, inalterado
+)}
+```
+
+```tsx
+function AssignmentResultsTable({
+  submissions,
+  loading,
+}: {
+  submissions: Array<SubmissionRow> | undefined;
+  loading: boolean;
+}) {
+  return (
+    <div className="mt-4 overflow-hidden rounded-md border border-border/70 bg-card/70 shadow-soft">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Aluno</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead className="text-center">Nota</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {loading || !submissions ? (
+            <TableSkeletonRows columns={3} />
+          ) : (
+            submissions.map((row) => (
+              <TableRow key={row.studentId} className="animate-in fade-in slide-in-from-top-1 duration-200">
+                <TableCell className="font-medium text-foreground">{row.studentName}</TableCell>
+                <TableCell className="text-muted-foreground">
+                  {row.submissionId === null ? "Não respondeu" : "Respondeu"}
+                </TableCell>
+                <TableCell className="text-center">
+                  {row.score === null ? "—" : Number(row.score).toFixed(1)}
+                </TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+```
+
+Import `Table`/`TableBody`/`TableCell`/`TableHead`/`TableHeader`/`TableRow` de
+`@/components/ui/table`, `TableSkeletonRows` de `@/components/TableSkeletonRows` e `SubmissionRow`
+de `@/functions/assignments` (já exportado).
+
+- [ ] **Passo 5: Checar os arquivos**
+
+Run: `npx eslint src/pages/painel/AssignmentsTab.tsx src/pages/painel/AssignmentEditor.tsx src/functions/assignments.ts && npx tsc --noEmit`
+Expected: PASS.
+
+- [ ] **Passo 6: Roteiro manual**
+
+Rodar `npm run dev`, logar como professor: criar uma tarefa "Múltipla escolha", conferir que
+nota máxima fica escondida no formulário, adicionar 2-3 perguntas com alternativas, ver a nota
+máxima da tarefa subir junto (na tela de editar tarefa/no peso mostrado), tentar adicionar
+pergunta depois de simular uma entrega (deve travar). Criar também uma tarefa "Texto/arquivo" e
+conferir que nada mudou nela (fluxo de correção manual intacto).
+
+- [ ] **Passo 7: Build e commit**
+
+Run: `npm run build`
+Expected: PASS.
+
+```bash
+git add src/pages/painel/AssignmentsTab.tsx src/pages/painel/AssignmentEditor.tsx src/functions/assignments.ts
+git commit -m "feat: UI do professor para criar e editar tarefas de múltipla escolha"
+```
+
+### Tarefa 5.6 — UI do aluno: responder tarefa de múltipla escolha
+
+**Arquivos:**
+- Modificar: `src/pages/portal/PortalAssignmentDetail.tsx`
+- Ler: `src/pages/portal/TakeExam.tsx` (o bloco de perguntas com `RadioGroup`, linhas 190-216, e
+  o diálogo de confirmação de envio, linhas 218-250 — padrão a espelhar, sem o cronômetro nem a
+  tela de compromisso, que são específicos de prova)
+
+**Interfaces:**
+- Consome: `getMySubmissionFn` (com `kind`/`questions`), `submitAssignmentAnswersFn` (Tarefa
+  5.4).
+- Produz: nada (fim da fase).
+
+- [ ] **Passo 1: Estado local das respostas e a mutation de envio**
+
+```tsx
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { getMySubmissionFn, submitAssignmentAnswersFn, submitAssignmentFn } from "@/functions/assignmentSubmissions";
+
+// ...dentro do componente, junto dos outros estados:
+const [answers, setAnswers] = useState<Record<string, string>>({});
+
+const submitAnswersMutation = useMutation({
+  mutationFn: () =>
+    submitAssignmentAnswersFn({
+      data: {
+        assignmentId,
+        answers: Object.entries(answers).map(([questionId, optionId]) => ({ questionId, optionId })),
+      },
+    }),
+  onSuccess: async () => {
+    toast.success("Respostas enviadas.");
+    await queryClient.invalidateQueries({ queryKey: submissionKey(assignmentId) });
+  },
+  onError: (error) =>
+    toast.error(error instanceof Error ? error.message : "Não foi possível enviar."),
+});
+```
+
+- [ ] **Passo 2: Ramificar a UI por `submission.kind`**
+
+O bloco `isGraded` (linhas 79-107 do arquivo atual) já funciona sem alteração pra tarefa
+objetiva corrigida — `textContent`/`fileUrl` vêm nulos e são simplesmente omitidos, e
+`feedback` também vem nulo (não há correção manual). A única mudança é no bloco "ainda não
+enviou" (o `else` da linha 108): trocar as `Tabs` de texto/arquivo por perguntas com
+`RadioGroup` quando `submission.kind === "multiple_choice"`.
+
+```tsx
+) : submission.kind === "multiple_choice" ? (
+  <div className="rounded-md border border-t-2 border-border/70 border-t-accent bg-card/70 p-5 shadow-soft">
+    <div className="grid gap-4">
+      {submission.questions.map((question, index) => (
+        <div
+          key={question.id}
+          className="animate-in rounded-md border border-border/70 bg-card/40 p-4 fade-in slide-in-from-top-1 duration-200"
+        >
+          <p className="font-medium text-foreground">
+            {index + 1}. {question.text}
+          </p>
+          <RadioGroup
+            className="mt-3 gap-2.5"
+            value={answers[question.id] ?? ""}
+            onValueChange={(value) => setAnswers((prev) => ({ ...prev, [question.id]: value }))}
+          >
+            {question.options.map((option) => (
+              <label
+                key={option.id}
+                className="flex cursor-pointer items-center gap-2.5 text-sm text-foreground"
+              >
+                <RadioGroupItem value={option.id} />
+                {option.text}
+              </label>
+            ))}
+          </RadioGroup>
+        </div>
+      ))}
+    </div>
+
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button className="mt-6" disabled={submitAnswersMutation.isPending}>
+          {submitAnswersMutation.isPending ? (
+            <Loader2 className="size-4 animate-spin" aria-hidden />
+          ) : null}
+          Entregar respostas
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Entregar respostas?</AlertDialogTitle>
+          <AlertDialogDescription>
+            A nota sai na hora e não dá pra reenviar depois.{" "}
+            {submission.questions.some((q) => !answers[q.id]) ? "Você tem pergunta(s) sem resposta." : ""}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Voltar</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={() => submitAnswersMutation.mutate()}
+            disabled={submitAnswersMutation.isPending}
+          >
+            {submitAnswersMutation.isPending ? (
+              <Loader2 className="size-4 animate-spin" aria-hidden />
+            ) : null}
+            Enviar
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  </div>
+) : (
+  // ...o bloco de Tabs texto/arquivo que já existe, inalterado (tarefa "open")
+```
+
+Note que `mutation` (a existente, de `submitAssignmentFn`) e a UI de `Tabs` continuam
+exatamente como estão — só passam a ficar atrás do `else` final, que só é alcançado quando
+`submission.kind === "open"`.
+
+- [ ] **Passo 3: Checar o arquivo**
+
+Run: `npx eslint src/pages/portal/PortalAssignmentDetail.tsx && npx tsc --noEmit`
+Expected: PASS.
+
+- [ ] **Passo 4: Roteiro manual e critério de pronto da fase**
+
+Rodar `npm run dev`, como aluno: abrir uma tarefa objetiva, responder todas as perguntas,
+entregar, ver a nota aparecer na hora (mesma tela) e depois conferir que a nota também aparece
+no boletim (`/portal/notas`) e na aba Notas do professor, sem precisar de nenhuma correção
+manual. Tentar reabrir a mesma tarefa depois de entregue: deve mostrar só o resultado, sem opção
+de reenviar. Conferir que uma tarefa aberta (texto/arquivo) continua funcionando exatamente como
+antes.
+
+- [ ] **Passo 5: Build final da fase**
+
+Run: `npm run build`
+Expected: PASS.
+
+- [ ] **Passo 6: Commit**
+
+```bash
+git add src/pages/portal/PortalAssignmentDetail.tsx
+git commit -m "feat: aluno responde tarefa de múltipla escolha com correção na hora"
+```
+
+---
