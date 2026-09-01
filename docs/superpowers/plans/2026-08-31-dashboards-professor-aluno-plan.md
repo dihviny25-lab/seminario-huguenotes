@@ -1216,3 +1216,639 @@ git commit -m "feat: mostra o botão de apagar tópico pro aluno dono sem respos
 ```
 
 ---
+
+## Fase 4 — Painel de acompanhamento por disciplina
+
+Nova aba "Acompanhamento" em `src/pages/painel/DisciplineDetail.tsx` (primeira aba, antes de
+"Frequência"), consolidando numa tabela só, por aluno ativo (Global Constraint 1), o que hoje
+está espalhado entre `GradesTab`, `AttendanceTab` e `VideoLessonsTab`: nota atual, status de
+tarefas, status de provas e vídeos assistidos.
+
+**Descobertas de leitura do código real que mudam o que o spec havia previsto:**
+- `getClassReportData` (`src/functions/reportData.ts:40`) já resolve nota média (via
+  `computeWeightedAverage`) e faltas por aluno ativo — a regra de "aula que já aconteceu" que
+  ela usa de fato é `lessons.givenAt !== null` (chamada lançada), não `lessons.date <= hoje`.
+  Esta fase só **reaproveita** `getClassReportData` como está; não reimplementa nem discute essa
+  regra.
+- `assignmentSubmissions` já tem a coluna `gradedAt` (`src/server/db/schema.ts:393`) — "aguarda
+  correção" é simplesmente `gradedAt IS NULL` numa entrega existente. Não é preciso cruzar com
+  `grades`/`assessmentId` como o spec sugeria.
+- Não existem `AssignmentsTab`/`ExamsTab` dentro de `DisciplineDetail.tsx` hoje (só
+  `AttendanceTab`, `GradesTab`, `VideoLessonsTab`, `ReadingMaterialsTab`) — a aba nova entra ao
+  lado dessas quatro, não substitui nenhuma.
+
+### Tarefa 4.1 — Lógica pura: resumo de tarefas e provas por aluno
+
+**Arquivos:**
+- Criar (ou complementar, se as Fases 1/2 já criaram o arquivo com `pickNextLesson` e outros
+  helpers): `src/lib/dashboard.ts`
+- Ler: `src/functions/assignmentSubmissions.ts` (`submitAssignmentFn` — confirma que
+  `assignmentSubmissions.gradedAt` só é preenchido em outro fluxo, nunca no envio),
+  `src/functions/examAttempts.ts` (`listAvailableExamsFn` — mesmo filtro `isNotNull(exams.opensAt)`
+  a replicar aqui), `src/server/db/schema.ts` (`assignments`, `assignmentSubmissions`, `exams`,
+  `examAttempts`)
+
+**Interfaces:**
+- Consome: nada (funções puras, recebem linhas já carregadas).
+- Produz: `summarizeAssignmentsByStudent` e `summarizeExamsByStudent`, usadas pela Tarefa 4.2.
+
+- [ ] **Passo 1: Escrever `summarizeAssignmentsByStudent`**
+
+```ts
+export type OverviewAssignmentSubmission = {
+  assignmentId: string;
+  studentId: string;
+  /** `assignmentSubmissions.gradedAt` — nulo enquanto a entrega aguarda correção. */
+  gradedAt: string | null;
+};
+
+export type AssignmentSummary = { submitted: number; total: number; awaitingGrading: number };
+
+/**
+ * Resumo de tarefas por aluno: quantas das tarefas da disciplina ele já
+ * entregou, e quantas dessas entregas ainda aguardam correção
+ * (`gradedAt` nulo). "Total" conta toda tarefa da disciplina — ao
+ * contrário de prova, tarefa não tem rascunho/publicação (decisão do
+ * spec: toda tarefa criada já é visível ao aluno).
+ */
+export function summarizeAssignmentsByStudent(
+  studentIds: Array<string>,
+  totalAssignments: number,
+  submissions: Array<OverviewAssignmentSubmission>,
+): Map<string, AssignmentSummary> {
+  const result = new Map<string, AssignmentSummary>();
+  for (const studentId of studentIds) {
+    const mySubmissions = submissions.filter((s) => s.studentId === studentId);
+    result.set(studentId, {
+      submitted: mySubmissions.length,
+      total: totalAssignments,
+      awaitingGrading: mySubmissions.filter((s) => s.gradedAt === null).length,
+    });
+  }
+  return result;
+}
+```
+
+- [ ] **Passo 2: Escrever `summarizeExamsByStudent`**
+
+```ts
+export type OverviewExam = { id: string; opensAt: string | null };
+export type OverviewExamAttempt = {
+  examId: string;
+  studentId: string;
+  submittedAt: string | null;
+};
+
+export type ExamSummary = { taken: number; total: number };
+
+/**
+ * Resumo de provas por aluno. Só entram no "total" as provas já
+ * publicadas (`opensAt` não nula, mesmo filtro de `listAvailableExamsFn`)
+ * — prova em rascunho é invisível ao aluno e não pode pesar contra ele.
+ * "Feita" é `examAttempts.submittedAt` preenchido — hoje toda prova é de
+ * múltipla escolha e a nota sai na hora do envio (Fase 1, card 2).
+ */
+export function summarizeExamsByStudent(
+  studentIds: Array<string>,
+  exams: Array<OverviewExam>,
+  attempts: Array<OverviewExamAttempt>,
+): Map<string, ExamSummary> {
+  const publishedIds = new Set(exams.filter((e) => e.opensAt !== null).map((e) => e.id));
+
+  const result = new Map<string, ExamSummary>();
+  for (const studentId of studentIds) {
+    const taken = attempts.filter(
+      (a) => a.studentId === studentId && a.submittedAt !== null && publishedIds.has(a.examId),
+    ).length;
+    result.set(studentId, { taken, total: publishedIds.size });
+  }
+  return result;
+}
+```
+
+- [ ] **Passo 3: Checar o arquivo**
+
+Run: `npx eslint src/lib/dashboard.ts && npx tsc --noEmit`
+Expected: PASS, sem erros.
+
+- [ ] **Passo 4: Commit**
+
+```bash
+git add src/lib/dashboard.ts
+git commit -m "feat: adiciona resumo de tarefas e provas por aluno em src/lib/dashboard.ts"
+```
+
+### Tarefa 4.2 — Lógica pura: resumo de vídeos e montagem da linha final
+
+**Arquivos:**
+- Modificar: `src/lib/dashboard.ts`
+- Ler: `src/functions/reportData.ts` (`ClassReportRow` — `studentId`, `studentName`, `average`,
+  `totalLessons`, `totalFaltas`; a razão de frequência é recalculada aqui com a mesma fórmula de
+  `reportData.ts:281`, já que `ClassReportRow` não expõe `attendanceRatio` pronto)
+
+**Interfaces:**
+- Consome: `AssignmentSummary`, `ExamSummary` da Tarefa 4.1.
+- Produz: `summarizeVideosByStudent` e `buildDisciplineOverview`, usadas pela Tarefa 4.3.
+
+- [ ] **Passo 1: Escrever `summarizeVideosByStudent`**
+
+```ts
+export type OverviewVideoWatch = { videoId: string; studentId: string };
+
+export type VideoSummary = { watched: number; total: number };
+
+/** Resumo de vídeo-aulas assistidas por aluno, dentre as vídeo-aulas da disciplina. */
+export function summarizeVideosByStudent(
+  studentIds: Array<string>,
+  videoIds: Array<string>,
+  watches: Array<OverviewVideoWatch>,
+): Map<string, VideoSummary> {
+  const total = videoIds.length;
+  const result = new Map<string, VideoSummary>();
+  for (const studentId of studentIds) {
+    const watched = new Set(
+      watches.filter((w) => w.studentId === studentId).map((w) => w.videoId),
+    ).size;
+    result.set(studentId, { watched, total });
+  }
+  return result;
+}
+```
+
+- [ ] **Passo 2: Escrever `buildDisciplineOverview`, que monta a linha final de cada aluno**
+
+```ts
+export type DisciplineOverviewClassRow = {
+  studentId: string;
+  studentName: string;
+  average: number | null;
+  totalLessons: number;
+  totalFaltas: number;
+};
+
+export type DisciplineOverviewRow = {
+  studentId: string;
+  studentName: string;
+  average: number | null;
+  /** Fração de aulas presentes (0 a 1); `null` quando a disciplina não tem aula lançada. */
+  attendanceRatio: number | null;
+  assignmentsSubmitted: number;
+  assignmentsTotal: number;
+  assignmentsAwaitingGrading: number;
+  examsTaken: number;
+  examsTotal: number;
+  videosWatched: number;
+  videosTotal: number;
+};
+
+/**
+ * Junta nota e frequência (já calculadas por `getClassReportData`, uma
+ * linha por aluno ativo) com os resumos de tarefas, provas e vídeos numa
+ * única linha por aluno, pronta pra tabela de acompanhamento. Mesma
+ * fórmula de frequência de `getStudentReportData` (`reportData.ts:281`):
+ * `null` — nunca 100% falso — quando a disciplina ainda não tem nenhuma
+ * aula lançada.
+ */
+export function buildDisciplineOverview(
+  classRows: Array<DisciplineOverviewClassRow>,
+  assignmentSummaries: Map<string, AssignmentSummary>,
+  examSummaries: Map<string, ExamSummary>,
+  videoSummaries: Map<string, VideoSummary>,
+): Array<DisciplineOverviewRow> {
+  return classRows.map((row) => {
+    const attendanceRatio =
+      row.totalLessons === 0 ? null : (row.totalLessons - row.totalFaltas) / row.totalLessons;
+    const assignments = assignmentSummaries.get(row.studentId) ?? {
+      submitted: 0,
+      total: 0,
+      awaitingGrading: 0,
+    };
+    const exams = examSummaries.get(row.studentId) ?? { taken: 0, total: 0 };
+    const videos = videoSummaries.get(row.studentId) ?? { watched: 0, total: 0 };
+
+    return {
+      studentId: row.studentId,
+      studentName: row.studentName,
+      average: row.average,
+      attendanceRatio,
+      assignmentsSubmitted: assignments.submitted,
+      assignmentsTotal: assignments.total,
+      assignmentsAwaitingGrading: assignments.awaitingGrading,
+      examsTaken: exams.taken,
+      examsTotal: exams.total,
+      videosWatched: videos.watched,
+      videosTotal: videos.total,
+    };
+  });
+}
+```
+
+- [ ] **Passo 3: Checar o arquivo**
+
+Run: `npx eslint src/lib/dashboard.ts && npx tsc --noEmit`
+Expected: PASS.
+
+- [ ] **Passo 4: Commit**
+
+```bash
+git add src/lib/dashboard.ts
+git commit -m "feat: adiciona buildDisciplineOverview em src/lib/dashboard.ts"
+```
+
+### Tarefa 4.3 — Server function: `getDisciplineOverviewFn`
+
+**Arquivos:**
+- Criar (ou complementar, se as Fases 1/2 já criaram o arquivo com `getTeacherDashboardFn` /
+  `getStudentDashboardFn`): `src/functions/dashboard.ts`
+- Ler: `src/functions/reportData.ts` (`getClassReportData`, `ClassReport`, `ClassReportRow`),
+  `src/functions/report.ts` (`getClassReportFn` — mesmo padrão de guard + chamada direta a usar
+  aqui), `src/server/auth/guard.ts` (`requireOwnDiscipline`), `src/server/db/schema.ts`
+  (`assignments`, `assignmentSubmissions`, `exams`, `examAttempts`, `videoLessons`,
+  `videoWatches`), `src/lib/dashboard.ts` (Tarefas 4.1–4.2)
+
+**Interfaces:**
+- Consome: `getClassReportData` de `src/functions/reportData.ts`;
+  `summarizeAssignmentsByStudent`, `summarizeExamsByStudent`, `summarizeVideosByStudent`,
+  `buildDisciplineOverview` de `src/lib/dashboard.ts`.
+- Produz: `getDisciplineOverviewFn` — `requireOwnDiscipline(disciplineId)`, devolve
+  `{ discipline, rows }`, consumido pela Tarefa 4.4.
+
+- [ ] **Passo 1: Escrever a server function**
+
+Reaproveita `getClassReportData` inteiro (nota, faltas, disciplina) em vez de reconsultar
+`grades`/`attendance`/`lessons` do zero. As outras quatro tabelas (`assignments`,
+`assignmentSubmissions`, `exams`, `examAttempts`, `videoLessons`, `videoWatches`) são
+consultadas com `inArray` sobre os ids da disciplina e dos alunos ativos, em `Promise.all`,
+seguindo o Global Constraint 6 — sempre guardando `inArray` com lista vazia.
+
+```ts
+import { and, eq, inArray } from "drizzle-orm";
+// ...(mantém os imports já existentes no arquivo, se a Fase 1/2 já criou)
+import {
+  buildDisciplineOverview,
+  summarizeAssignmentsByStudent,
+  summarizeExamsByStudent,
+  summarizeVideosByStudent,
+} from "@/lib/dashboard";
+import type { DisciplineOverviewRow } from "@/lib/dashboard";
+import { getClassReportData } from "@/functions/reportData";
+import { requireOwnDiscipline } from "@/server/auth/guard";
+import { db } from "@/server/db/client";
+import {
+  assignments,
+  assignmentSubmissions,
+  examAttempts,
+  exams,
+  videoLessons,
+  videoWatches,
+} from "@/server/db/schema";
+
+const disciplineIdSchema = z.object({ disciplineId: z.string().uuid() });
+
+export type DisciplineOverview = {
+  discipline: { id: string; discipline: string; module: string; term: string };
+  rows: Array<DisciplineOverviewRow>;
+};
+
+/**
+ * Painel de acompanhamento da disciplina: nota, frequência, tarefas,
+ * provas e vídeos de cada aluno ativo, numa tabela só.
+ */
+export const getDisciplineOverviewFn = createServerFn({ method: "GET" })
+  .validator(disciplineIdSchema)
+  .handler(async ({ data }): Promise<DisciplineOverview> => {
+    await requireOwnDiscipline(data.disciplineId);
+
+    const classReport = await getClassReportData(data.disciplineId);
+    const studentIds = classReport.rows.map((r) => r.studentId);
+
+    const [assignmentRows, examRows, videoRows] = await Promise.all([
+      db
+        .select({ id: assignments.id })
+        .from(assignments)
+        .where(eq(assignments.disciplineId, data.disciplineId)),
+      db
+        .select({ id: exams.id, opensAt: exams.opensAt })
+        .from(exams)
+        .where(eq(exams.disciplineId, data.disciplineId)),
+      db
+        .select({ id: videoLessons.id })
+        .from(videoLessons)
+        .where(eq(videoLessons.disciplineId, data.disciplineId)),
+    ]);
+
+    const assignmentIds = assignmentRows.map((a) => a.id);
+    const examIds = examRows.map((e) => e.id);
+    const videoIds = videoRows.map((v) => v.id);
+
+    const [submissionRows, attemptRows, watchRows] = await Promise.all([
+      assignmentIds.length === 0 || studentIds.length === 0
+        ? []
+        : db
+            .select({
+              assignmentId: assignmentSubmissions.assignmentId,
+              studentId: assignmentSubmissions.studentId,
+              gradedAt: assignmentSubmissions.gradedAt,
+            })
+            .from(assignmentSubmissions)
+            .where(
+              and(
+                inArray(assignmentSubmissions.assignmentId, assignmentIds),
+                inArray(assignmentSubmissions.studentId, studentIds),
+              ),
+            ),
+      examIds.length === 0 || studentIds.length === 0
+        ? []
+        : db
+            .select({
+              examId: examAttempts.examId,
+              studentId: examAttempts.studentId,
+              submittedAt: examAttempts.submittedAt,
+            })
+            .from(examAttempts)
+            .where(
+              and(
+                inArray(examAttempts.examId, examIds),
+                inArray(examAttempts.studentId, studentIds),
+              ),
+            ),
+      videoIds.length === 0 || studentIds.length === 0
+        ? []
+        : db
+            .select({ videoId: videoWatches.videoLessonId, studentId: videoWatches.studentId })
+            .from(videoWatches)
+            .where(
+              and(
+                inArray(videoWatches.videoLessonId, videoIds),
+                inArray(videoWatches.studentId, studentIds),
+              ),
+            ),
+    ]);
+
+    const assignmentSummaries = summarizeAssignmentsByStudent(
+      studentIds,
+      assignmentRows.length,
+      submissionRows.map((s) => ({
+        ...s,
+        gradedAt: s.gradedAt ? s.gradedAt.toISOString() : null,
+      })),
+    );
+    const examSummaries = summarizeExamsByStudent(
+      studentIds,
+      examRows.map((e) => ({ id: e.id, opensAt: e.opensAt ? e.opensAt.toISOString() : null })),
+      attemptRows.map((a) => ({
+        ...a,
+        submittedAt: a.submittedAt ? a.submittedAt.toISOString() : null,
+      })),
+    );
+    const videoSummaries = summarizeVideosByStudent(studentIds, videoIds, watchRows);
+
+    const rows = buildDisciplineOverview(
+      classReport.rows.map((r) => ({
+        studentId: r.studentId,
+        studentName: r.studentName,
+        average: r.average,
+        totalLessons: r.totalLessons,
+        totalFaltas: r.totalFaltas,
+      })),
+      assignmentSummaries,
+      examSummaries,
+      videoSummaries,
+    );
+
+    return { discipline: classReport.discipline, rows };
+  });
+```
+
+Se o arquivo já existir (Fases 1/2 mergeadas antes), o `createServerFn` do `@tanstack/react-start`
+e o `z` do `zod` já estão importados — não duplicar o import.
+
+- [ ] **Passo 2: Checar o arquivo**
+
+Run: `npx eslint src/functions/dashboard.ts && npx tsc --noEmit`
+Expected: PASS.
+
+- [ ] **Passo 3: Commit**
+
+```bash
+git add src/functions/dashboard.ts
+git commit -m "feat: adiciona getDisciplineOverviewFn"
+```
+
+### Tarefa 4.4 — UI: aba "Acompanhamento" em `DisciplineDetail.tsx`
+
+**Arquivos:**
+- Criar: `src/pages/painel/DisciplineOverviewTab.tsx`
+- Modificar: `src/pages/painel/DisciplineDetail.tsx`
+- Ler: `src/pages/painel/reports/ClassReport.tsx` (padrão de tabela com `Table`/`TableHeader`/
+  `TableRow` e destaque de linha abaixo do limiar), `src/pages/painel/GradesTab.tsx` (padrão de
+  skeleton de tabela), `src/lib/utils.ts` (`cn`)
+
+**Interfaces:**
+- Consome: `getDisciplineOverviewFn` da Tarefa 4.3.
+- Produz: nada (fim da fase — UI consumindo o dado agregado).
+
+- [ ] **Passo 1: Criar o componente da aba, com ordenação por nome/média/frequência**
+
+```tsx
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { ArrowUpDown } from "lucide-react";
+
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { getDisciplineOverviewFn } from "@/functions/dashboard";
+import { MINIMUM_ATTENDANCE_RATIO } from "@/lib/attendance";
+import { PASSING_AVERAGE } from "@/lib/grades";
+import { cn } from "@/lib/utils";
+
+type SortKey = "name" | "average" | "attendance";
+
+export function DisciplineOverviewTab({ disciplineId }: { disciplineId: string }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ["discipline-overview", disciplineId],
+    queryFn: () => getDisciplineOverviewFn({ data: { disciplineId } }),
+  });
+  const [sortKey, setSortKey] = useState<SortKey>("name");
+
+  // Ordenação crescente em média/frequência: o professor acha rápido quem
+  // está em risco (pior primeiro). Aluno sem nota/frequência (`null`) fica
+  // por último, não primeiro — não é "o pior", é "ainda sem dado".
+  const rows = useMemo(() => {
+    if (!data) return [];
+    const copy = [...data.rows];
+    if (sortKey === "average") {
+      return copy.sort((a, b) => (a.average ?? Infinity) - (b.average ?? Infinity));
+    }
+    if (sortKey === "attendance") {
+      return copy.sort(
+        (a, b) => (a.attendanceRatio ?? Infinity) - (b.attendanceRatio ?? Infinity),
+      );
+    }
+    return copy.sort((a, b) => a.studentName.localeCompare(b.studentName));
+  }, [data, sortKey]);
+
+  if (isLoading || !data) {
+    return (
+      <div className="overflow-hidden rounded-md border border-border/70 bg-card/70 shadow-soft">
+        <div className="flex items-center gap-6 border-b border-border/70 p-3">
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="ml-auto h-4 w-16" />
+        </div>
+        {Array.from({ length: 6 }).map((_, index) => (
+          <div
+            key={index}
+            className="flex items-center gap-6 border-b border-border/70 p-3 last:border-b-0"
+          >
+            <Skeleton className="h-4 w-40" />
+            <Skeleton className="ml-auto h-4 w-24" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  function SortableHead({ label, sortableKey }: { label: string; sortableKey: SortKey }) {
+    return (
+      <TableHead className="text-center">
+        <button
+          type="button"
+          onClick={() => setSortKey(sortableKey)}
+          className={cn(
+            "inline-flex items-center gap-1 transition-colors hover:text-foreground",
+            sortKey === sortableKey && "text-foreground",
+          )}
+        >
+          {label}
+          <ArrowUpDown className="size-3" aria-hidden />
+        </button>
+      </TableHead>
+    );
+  }
+
+  return (
+    <div className="overflow-x-auto rounded-md border border-border/70 bg-card/70 shadow-soft">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <SortableHead label="Aluno" sortableKey="name" />
+            <SortableHead label="Média" sortableKey="average" />
+            <SortableHead label="Frequência" sortableKey="attendance" />
+            <TableHead className="text-center">Tarefas</TableHead>
+            <TableHead className="text-center">Provas</TableHead>
+            <TableHead className="text-center">Vídeos</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rows.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={6} className="py-6 text-center text-muted-foreground">
+                Nenhum aluno ativo cadastrado.
+              </TableCell>
+            </TableRow>
+          ) : (
+            rows.map((row) => {
+              const belowAverage = row.average !== null && row.average < PASSING_AVERAGE;
+              const belowAttendance =
+                row.attendanceRatio !== null && row.attendanceRatio < MINIMUM_ATTENDANCE_RATIO;
+              return (
+                <TableRow
+                  key={row.studentId}
+                  className="animate-in fade-in slide-in-from-top-1 duration-200"
+                >
+                  <TableCell className="font-medium text-foreground">{row.studentName}</TableCell>
+                  <TableCell
+                    className={cn("text-center", belowAverage && "font-medium text-destructive")}
+                  >
+                    {row.average === null ? "—" : row.average.toFixed(1)}
+                  </TableCell>
+                  <TableCell
+                    className={cn("text-center", belowAttendance && "font-medium text-destructive")}
+                  >
+                    {row.attendanceRatio === null
+                      ? "—"
+                      : `${Math.round(row.attendanceRatio * 100)}%`}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {row.assignmentsSubmitted}/{row.assignmentsTotal}
+                    {row.assignmentsAwaitingGrading > 0 ? (
+                      <span className="ml-1 text-xs text-muted-foreground">
+                        ({row.assignmentsAwaitingGrading} p/ corrigir)
+                      </span>
+                    ) : null}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {row.examsTaken}/{row.examsTotal}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {row.videosWatched}/{row.videosTotal}
+                  </TableCell>
+                </TableRow>
+              );
+            })
+          )}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+```
+
+- [ ] **Passo 2: Integrar a aba em `DisciplineDetail.tsx`, como primeira aba**
+
+```tsx
+import { DisciplineOverviewTab } from "@/pages/painel/DisciplineOverviewTab";
+// ...
+<Tabs defaultValue="acompanhamento">
+  <TabsList>
+    <TabsTrigger value="acompanhamento">Acompanhamento</TabsTrigger>
+    <TabsTrigger value="frequencia">Frequência</TabsTrigger>
+    <TabsTrigger value="notas">Notas</TabsTrigger>
+    <TabsTrigger value="videos">Vídeo-aulas</TabsTrigger>
+    <TabsTrigger value="apostila">Apostila</TabsTrigger>
+  </TabsList>
+  <TabsContent value="acompanhamento">
+    <DisciplineOverviewTab disciplineId={disciplineId} />
+  </TabsContent>
+  <TabsContent value="frequencia">
+    <AttendanceTab disciplineId={disciplineId} />
+  </TabsContent>
+  {/* ...resto igual */}
+</Tabs>
+```
+
+- [ ] **Passo 3: Checar os arquivos**
+
+Run: `npx eslint src/pages/painel/DisciplineOverviewTab.tsx src/pages/painel/DisciplineDetail.tsx && npx tsc --noEmit`
+Expected: PASS.
+
+- [ ] **Passo 4: Roteiro manual**
+
+Rodar `npm run dev`, entrar como professor numa disciplina com alunos, tarefas, provas e vídeos
+variados. Conferir: a aba "Acompanhamento" abre primeiro; os números de cada aluno batem com o
+que `GradesTab`/`AttendanceTab`/`VideoLessonsTab` mostram pra dois ou três alunos escolhidos à
+mão; aluno abaixo de `PASSING_AVERAGE` ou de `MINIMUM_ATTENDANCE_RATIO` aparece destacado;
+clicar em "Média" e "Frequência" reordena a tabela com o pior caso no topo; disciplina sem
+tarefa/prova/vídeo mostra "0/0" sem quebrar; disciplina sem nenhuma aula lançada mostra "—" na
+frequência (nunca "100%").
+
+- [ ] **Passo 5: Build final da fase**
+
+Run: `npm run build`
+Expected: PASS.
+
+- [ ] **Passo 6: Commit**
+
+```bash
+git add src/pages/painel/DisciplineOverviewTab.tsx src/pages/painel/DisciplineDetail.tsx
+git commit -m "feat: adiciona aba de acompanhamento por disciplina"
+```
+
+---
