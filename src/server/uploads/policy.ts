@@ -52,23 +52,13 @@ export function getUploadPolicy(purpose: UploadPurpose): UploadPolicy {
     case "assignment":
       return {
         requiresTeacher: false,
-        allowedContentTypes: [
-          ...DOCUMENT_TYPES,
-          ...PRESENTATION_TYPES,
-          "image/png",
-          "image/jpeg",
-        ],
+        allowedContentTypes: [...DOCUMENT_TYPES, ...PRESENTATION_TYPES, "image/png", "image/jpeg"],
         maximumSizeInBytes: 50 * MB,
       };
     case "material":
       return {
         requiresTeacher: true,
-        allowedContentTypes: [
-          ...DOCUMENT_TYPES,
-          ...PRESENTATION_TYPES,
-          "image/png",
-          "image/jpeg",
-        ],
+        allowedContentTypes: [...DOCUMENT_TYPES, ...PRESENTATION_TYPES, "image/png", "image/jpeg"],
         maximumSizeInBytes: 100 * MB,
       };
     case "library":
