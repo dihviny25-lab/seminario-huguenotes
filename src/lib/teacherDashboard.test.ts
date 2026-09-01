@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildTeacherDashboard,
   computeDisciplineProgress,
+  MISSING_GRADES_LIMIT,
   pickAtRiskStudents,
   pickEndingDisciplines,
   pickForumActivity,
@@ -227,27 +228,51 @@ describe("pickPendingGrading", () => {
     const { items } = pickPendingGrading(input);
     expect(items.map((i) => i.assignmentId)).toEqual(["a1", "a2"]);
   });
+
+  it("mantém ordem estável (insertion order) quando oldestSubmittedAt empata", () => {
+    // Regressão do comparador `(a, b) => (a.x < b.x ? -1 : 1)`: em caso de
+    // empate ele retornava 1 (não 0), o que podia inverter a ordem original.
+    const tieInput = emptyInput({
+      disciplines: [{ id: "d1", discipline: "Disc", lessons: 10 }],
+      assignments: [
+        { id: "a1", disciplineId: "d1", title: "Tarefa 1" },
+        { id: "a2", disciplineId: "d1", title: "Tarefa 2" },
+      ],
+      submissions: [
+        { assignmentId: "a1", submittedAt: "2026-08-10T10:00:00.000Z", gradedAt: null },
+        { assignmentId: "a2", submittedAt: "2026-08-10T10:00:00.000Z", gradedAt: null },
+      ],
+    });
+    const { items } = pickPendingGrading(tieInput);
+    expect(items.map((i) => i.assignmentId)).toEqual(["a1", "a2"]);
+  });
 });
 
 describe("pickMissingGrades", () => {
-  it("studentsMissing = alunos ativos - studentIds distintos com nota", () => {
+  const disciplines = [{ id: "d1", discipline: "Disc", lessons: 10 }];
+  const activeStudents = [
+    { id: "s1", name: "A" },
+    { id: "s2", name: "B" },
+    { id: "s3", name: "C" },
+  ];
+  const assessments = [
+    { id: "av1", disciplineId: "d1", title: "Prova", weight: 1 },
+    { id: "av2", disciplineId: "d1", title: "Completa", weight: 1 },
+  ];
+  const grades = [
+    { assessmentId: "av1", studentId: "s1", score: 8 },
+    { assessmentId: "av2", studentId: "s1", score: 7 },
+    { assessmentId: "av2", studentId: "s2", score: 6 },
+    { assessmentId: "av2", studentId: "s3", score: 9 },
+  ];
+
+  it("studentsMissing = alunos ativos - studentIds distintos com nota, em disciplina iniciada e não encerrada", () => {
     const input = emptyInput({
-      disciplines: [{ id: "d1", discipline: "Disc", lessons: 10 }],
-      activeStudents: [
-        { id: "s1", name: "A" },
-        { id: "s2", name: "B" },
-        { id: "s3", name: "C" },
-      ],
-      assessments: [
-        { id: "av1", disciplineId: "d1", title: "Prova", weight: 1 },
-        { id: "av2", disciplineId: "d1", title: "Completa", weight: 1 },
-      ],
-      grades: [
-        { assessmentId: "av1", studentId: "s1", score: 8 },
-        { assessmentId: "av2", studentId: "s1", score: 7 },
-        { assessmentId: "av2", studentId: "s2", score: 6 },
-        { assessmentId: "av2", studentId: "s3", score: 9 },
-      ],
+      disciplines,
+      lessons: lessonsFor("d1", 3, 5), // progress 0.3 — iniciada e não encerrada
+      activeStudents,
+      assessments,
+      grades,
     });
     const out = pickMissingGrades(input);
     expect(out).toEqual([
@@ -259,6 +284,45 @@ describe("pickMissingGrades", () => {
         studentsMissing: 2,
       },
     ]);
+  });
+
+  it("exclui disciplina ainda não iniciada (progress <= 0)", () => {
+    const input = emptyInput({
+      disciplines,
+      lessons: lessonsFor("d1", 0, 5), // nenhuma aula dada ainda
+      activeStudents,
+      assessments,
+      grades,
+    });
+    expect(pickMissingGrades(input)).toEqual([]);
+  });
+
+  it("exclui disciplina já encerrada (progress >= 1)", () => {
+    const input = emptyInput({
+      disciplines: [{ id: "d1", discipline: "Disc", lessons: 4 }],
+      lessons: lessonsFor("d1", 4, 0), // 4/4 = encerrada
+      activeStudents,
+      assessments,
+      grades,
+    });
+    expect(pickMissingGrades(input)).toEqual([]);
+  });
+
+  it("respeita MISSING_GRADES_LIMIT", () => {
+    const manyAssessments = Array.from({ length: MISSING_GRADES_LIMIT + 4 }, (_, i) => ({
+      id: `av${i}`,
+      disciplineId: "d1",
+      title: `Av${i}`,
+      weight: 1,
+    }));
+    const input = emptyInput({
+      disciplines,
+      lessons: lessonsFor("d1", 3, 5),
+      activeStudents,
+      assessments: manyAssessments,
+      grades: [],
+    });
+    expect(pickMissingGrades(input)).toHaveLength(MISSING_GRADES_LIMIT);
   });
 });
 
@@ -459,7 +523,7 @@ describe("pickAtRiskStudents", () => {
 describe("buildTeacherDashboard", () => {
   it("monta counts a partir dos sub-resultados e propaga scope", () => {
     const input = emptyInput({
-      scope: "escola",
+      scope: "minhas",
       disciplines: [{ id: "d1", discipline: "Disc", lessons: 10 }],
       lessons: [
         { id: "l1", disciplineId: "d1", date: "2026-08-01", sequence: 1 },
@@ -471,7 +535,7 @@ describe("buildTeacherDashboard", () => {
       ],
     });
     const out = buildTeacherDashboard(input);
-    expect(out.scope).toBe("escola");
+    expect(out.scope).toBe("minhas");
     expect(out.counts).toMatchObject({
       pendingGrading: 1,
       lessonsWithoutAttendance: 1,

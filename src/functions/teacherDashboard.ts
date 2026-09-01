@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { eq, inArray } from "drizzle-orm";
 
-import { buildTeacherDashboard, type DashboardInput } from "@/lib/teacherDashboard";
+import { buildTeacherDashboard } from "@/lib/teacherDashboard";
 import { requireTeacherId } from "@/server/auth/guard";
 import { db } from "@/server/db/client";
 import {
@@ -16,22 +16,20 @@ import {
   lessons,
   readingMaterials,
   students,
-  teachers,
   videoLessons,
 } from "@/server/db/schema";
 
 export type { TeacherDashboard } from "@/lib/teacherDashboard";
 
-/** Snapshot completo do dashboard do professor logado (ou da escola, se admin). */
+/**
+ * Snapshot completo do dashboard do professor logado — sempre escopado às
+ * disciplinas do próprio professor, mesmo para admin (ver "toda a escola"
+ * é outra funcionalidade, fora do escopo deste dashboard: os links dos
+ * cartões levam a telas guardadas por requireOwnDiscipline, que não tem
+ * bypass de admin).
+ */
 export const getTeacherDashboardFn = createServerFn({ method: "GET" }).handler(async () => {
   const teacherId = await requireTeacherId();
-  const [me] = await db
-    .select({ role: teachers.role })
-    .from(teachers)
-    .where(eq(teachers.id, teacherId))
-    .limit(1);
-  const isAdmin = me?.role === "admin";
-  const scope: DashboardInput["scope"] = isAdmin ? "escola" : "minhas";
   const today = new Date().toISOString().slice(0, 10);
 
   const disciplineRows = await db
@@ -41,7 +39,7 @@ export const getTeacherDashboardFn = createServerFn({ method: "GET" }).handler(a
       lessons: disciplines.lessons,
     })
     .from(disciplines)
-    .where(isAdmin ? undefined : eq(disciplines.teacherId, teacherId));
+    .where(eq(disciplines.teacherId, teacherId));
   const disciplineIds = disciplineRows.map((d) => d.id);
 
   const activeStudentRows = await db
@@ -51,7 +49,7 @@ export const getTeacherDashboardFn = createServerFn({ method: "GET" }).handler(a
 
   if (disciplineIds.length === 0) {
     return buildTeacherDashboard({
-      scope,
+      scope: "minhas",
       today,
       disciplines: [],
       lessons: [],
@@ -170,7 +168,7 @@ export const getTeacherDashboardFn = createServerFn({ method: "GET" }).handler(a
   ]);
 
   return buildTeacherDashboard({
-    scope,
+    scope: "minhas",
     today,
     disciplines: disciplineRows,
     lessons: lessonRows,

@@ -5,9 +5,20 @@ export const ENDING_PROGRESS_RATIO = 0.8;
 export const UPCOMING_LESSONS_LIMIT = 5;
 export const FORUM_ITEMS_LIMIT = 8;
 export const AT_RISK_LIMIT = 8;
+export const PENDING_GRADING_LIMIT = 8;
+export const MISSING_GRADES_LIMIT = 8;
+export const MISSING_ATTENDANCE_LIMIT = 8;
+export const MATERIAL_GAPS_LIMIT = 8;
+export const ENDING_DISCIPLINES_LIMIT = 8;
 
 export type DashboardInput = {
-  scope: "minhas" | "escola";
+  /**
+   * Sempre "minhas": este dashboard mostra só as disciplinas do professor
+   * logado, mesmo para admin — ver "toda a escola" é outra funcionalidade.
+   * Mantido como campo (em vez de removido) para não quebrar o formato do
+   * payload; o valor é sempre o mesmo.
+   */
+  scope: "minhas";
   today: string;
   disciplines: Array<{ id: string; discipline: string; lessons: number | null }>;
   lessons: Array<{ id: string; disciplineId: string; date: string | null; sequence: number }>;
@@ -88,7 +99,7 @@ export type AtRiskStudentItem = {
 };
 
 export type TeacherDashboard = {
-  scope: "minhas" | "escola";
+  scope: "minhas";
   counts: {
     pendingGrading: number;
     endingDisciplines: number;
@@ -140,6 +151,7 @@ export function pickEndingDisciplines(input: DashboardInput): EndingDisciplineIt
   return [...progressByDiscipline(input).values()]
     .filter((p) => p.progress >= ENDING_PROGRESS_RATIO && p.progress < 1)
     .sort((a, b) => b.progress - a.progress)
+    .slice(0, ENDING_DISCIPLINES_LIMIT)
     .map((p) => ({
       disciplineId: p.disciplineId,
       disciplineName: p.disciplineName,
@@ -171,7 +183,7 @@ export function pickMaterialGaps(input: DashboardInput): MaterialGap[] {
       apostilaDeficit,
     });
   }
-  return gaps;
+  return gaps.slice(0, MATERIAL_GAPS_LIMIT);
 }
 
 export function pickPendingGrading(input: DashboardInput): {
@@ -203,15 +215,31 @@ export function pickPendingGrading(input: DashboardInput): {
       oldestSubmittedAt: oldest,
     });
   }
-  items.sort((a, b) => (a.oldestSubmittedAt < b.oldestSubmittedAt ? -1 : 1));
-  return { items, total: items.reduce((sum, i) => sum + i.awaitingCount, 0) };
+  items.sort((a, b) =>
+    a.oldestSubmittedAt < b.oldestSubmittedAt
+      ? -1
+      : a.oldestSubmittedAt > b.oldestSubmittedAt
+        ? 1
+        : 0,
+  );
+  const total = items.reduce((sum, i) => sum + i.awaitingCount, 0);
+  return { items: items.slice(0, PENDING_GRADING_LIMIT), total };
 }
 
+/**
+ * Assessments com alunos sem nota, restrito a disciplinas "em andamento"
+ * (já iniciadas e ainda não encerradas — mesmo critério de progress usado
+ * por pickEndingDisciplines/pickMaterialGaps), pra não empilhar pendências
+ * de disciplinas que nem começaram ou que já acabaram.
+ */
 export function pickMissingGrades(input: DashboardInput): MissingGradeItem[] {
   const active = input.activeStudents.length;
   const disciplineName = new Map(input.disciplines.map((d) => [d.id, d.discipline]));
+  const progress = progressByDiscipline(input);
   const out: MissingGradeItem[] = [];
   for (const a of input.assessments) {
+    const p = progress.get(a.disciplineId);
+    if (!p || p.progress <= 0 || p.progress >= 1) continue;
     const distinct = new Set(
       input.grades.filter((g) => g.assessmentId === a.id).map((g) => g.studentId),
     ).size;
@@ -225,7 +253,7 @@ export function pickMissingGrades(input: DashboardInput): MissingGradeItem[] {
       studentsMissing,
     });
   }
-  return out;
+  return out.slice(0, MISSING_GRADES_LIMIT);
 }
 
 export function pickMissingAttendance(input: DashboardInput): {
@@ -248,7 +276,7 @@ export function pickMissingAttendance(input: DashboardInput): {
       lessonsWithoutAttendance: missing,
     });
   }
-  return { items, total };
+  return { items: items.slice(0, MISSING_ATTENDANCE_LIMIT), total };
 }
 
 export function pickUpcomingLessons(input: DashboardInput): UpcomingLessonItem[] {
@@ -271,7 +299,7 @@ export function pickForumActivity(input: DashboardInput): ForumActivityItem[] {
     .map((thread) => {
       const posts = input.posts
         .filter((p) => p.threadId === thread.id)
-        .sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1));
+        .sort((a, b) => (a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0));
       const last = posts[posts.length - 1];
       const lastActivityAt =
         last && last.createdAt > thread.createdAt ? last.createdAt : thread.createdAt;
@@ -286,7 +314,7 @@ export function pickForumActivity(input: DashboardInput): ForumActivityItem[] {
     })
     .sort((a, b) => {
       if (a.awaitingTeacherReply !== b.awaitingTeacherReply) return a.awaitingTeacherReply ? -1 : 1;
-      return a.lastActivityAt < b.lastActivityAt ? 1 : -1;
+      return a.lastActivityAt < b.lastActivityAt ? 1 : a.lastActivityAt > b.lastActivityAt ? -1 : 0;
     })
     .slice(0, FORUM_ITEMS_LIMIT);
 }
@@ -303,6 +331,13 @@ export function pickAtRiskStudents(input: DashboardInput): {
     absentByStudent.get(a.studentId)!.add(a.lessonId);
   }
 
+  // Índice O(1) por "assessmentId:studentId" — evita varrer input.grades inteiro
+  // dentro do laço mais interno (disciplina × aluno × avaliação).
+  const gradeByKey = new Map<string, number>();
+  for (const g of input.grades) {
+    gradeByKey.set(`${g.assessmentId}:${g.studentId}`, g.score);
+  }
+
   const byStudent = new Map<string, AtRiskStudentItem>();
   for (const d of input.disciplines) {
     const p = progress.get(d.id)!;
@@ -315,10 +350,8 @@ export function pickAtRiskStudents(input: DashboardInput): {
     for (const student of input.activeStudents) {
       const scored = disciplineAssessments
         .map((a) => {
-          const g = input.grades.find(
-            (row) => row.assessmentId === a.id && row.studentId === student.id,
-          );
-          return g ? { score: g.score, weight: a.weight } : null;
+          const score = gradeByKey.get(`${a.id}:${student.id}`);
+          return score !== undefined ? { score, weight: a.weight } : null;
         })
         .filter((x): x is { score: number; weight: number } => x !== null);
       const average = computeWeightedAverage(scored);
