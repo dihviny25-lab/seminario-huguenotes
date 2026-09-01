@@ -46,19 +46,13 @@ describe("decidePaymentWebhook", () => {
 
   it("é idempotente para o mesmo pagamento", () => {
     expect(
-      decidePaymentWebhook(
-        { ...baseCharge, status: "paid", mpPaymentId: "pay_1" },
-        payment(),
-      ),
+      decidePaymentWebhook({ ...baseCharge, status: "paid", mpPaymentId: "pay_1" }, payment()),
     ).toEqual({ action: "already-processed" });
   });
 
   it("não sobrescreve cobrança paga por outro pagamento", () => {
     expect(
-      decidePaymentWebhook(
-        { ...baseCharge, status: "paid", mpPaymentId: "pay_old" },
-        payment(),
-      ),
+      decidePaymentWebhook({ ...baseCharge, status: "paid", mpPaymentId: "pay_old" }, payment()),
     ).toMatchObject({ action: "ignore" });
   });
 });
