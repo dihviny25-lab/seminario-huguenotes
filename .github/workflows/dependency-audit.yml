@@ -24,7 +24,7 @@ jobs:
       - name: Simulate safe dependency changes
         run: |
           npm uninstall xlsx
-          npm install drizzle-orm@0.45.2
+          npm install read-excel-file@9.3.10 drizzle-orm@0.45.2
           npm install -D vitest@4.1.11
           npm audit fix || true
       - name: Audit after safe changes
