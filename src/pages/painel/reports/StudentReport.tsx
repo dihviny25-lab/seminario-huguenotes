@@ -15,6 +15,7 @@ import { toast } from "sonner";
 
 import { PainelShell } from "@/components/painel/PainelShell";
 import { StatisticCard } from "@/components/StatisticCard";
+import { WhatsappButton } from "@/components/WhatsappButton";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -238,6 +239,15 @@ export function StudentReport() {
                     </h2>
                   </div>
                   <div className="flex gap-2 print:hidden">
+                    {selectedStudent ? (
+                      <WhatsappButton
+                        phone={selectedStudent.phone}
+                        studentName={selectedStudent.name}
+                        withLabel
+                        variant="outline"
+                        size="sm"
+                      />
+                    ) : null}
                     <Button variant="outline" asChild>
                       <a href={`/painel/relatorio/${report.student.id}/pdf`}>
                         <Download className="size-4" aria-hidden />

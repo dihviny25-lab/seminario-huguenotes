@@ -507,6 +507,7 @@ export type OverdueCharge = {
   chargeId: string;
   studentId: string;
   studentName: string;
+  studentPhone: string | null;
   description: string;
   amount: number;
   daysOverdue: number;
@@ -531,7 +532,11 @@ export const getFinancialSummaryFn = createServerFn({ method: "GET" }).handler(
     await requireAdminId();
 
     const rows = await db
-      .select({ charge: charges, studentName: students.name })
+      .select({
+        charge: charges,
+        studentName: students.name,
+        studentPhone: students.phone,
+      })
       .from(charges)
       .innerJoin(students, eq(charges.studentId, students.id));
 
@@ -549,7 +554,7 @@ export const getFinancialSummaryFn = createServerFn({ method: "GET" }).handler(
     const overdueList: Array<OverdueCharge> = [];
     const revenueByMonth = new Map<string, number>();
 
-    for (const { charge, studentName } of rows) {
+    for (const { charge, studentName, studentPhone } of rows) {
       if (charge.status === "paid") {
         const paid = Number(charge.paidAmount ?? charge.fullAmount);
         if (charge.paidManually) {
@@ -585,6 +590,7 @@ export const getFinancialSummaryFn = createServerFn({ method: "GET" }).handler(
             chargeId: charge.id,
             studentId: charge.studentId,
             studentName,
+            studentPhone,
             description: charge.description,
             amount,
             daysOverdue,
