@@ -21,7 +21,13 @@ export type DashboardInput = {
   scope: "minhas";
   today: string;
   disciplines: Array<{ id: string; discipline: string; lessons: number | null }>;
-  lessons: Array<{ id: string; disciplineId: string; date: string | null; sequence: number }>;
+  lessons: Array<{
+    id: string;
+    disciplineId: string;
+    date: string | null;
+    sequence: number;
+    givenAt: string | null;
+  }>;
   attendance: Array<{ lessonId: string; studentId: string; present: boolean }>;
   readingMaterials: Array<{ disciplineId: string }>;
   videoLessons: Array<{ disciplineId: string }>;
@@ -256,17 +262,22 @@ export function pickMissingGrades(input: DashboardInput): MissingGradeItem[] {
   return out.slice(0, MISSING_GRADES_LIMIT);
 }
 
+/**
+ * Aula "sem chamada" = já passou (date <= hoje) e o professor ainda não
+ * lançou a chamada como realizada (givenAt === null). Antes usava "zero
+ * linhas em attendance", que nunca zerava (aula 100% presente também não
+ * gera linha em attendance); givenAt é o sinal real e acionável — some
+ * assim que o professor clica em "Lançar chamada".
+ */
 export function pickMissingAttendance(input: DashboardInput): {
   items: MissingAttendanceItem[];
   total: number;
 } {
-  const withAttendance = new Set(input.attendance.map((a) => a.lessonId));
   const items: MissingAttendanceItem[] = [];
   let total = 0;
   for (const d of input.disciplines) {
     const missing = input.lessons.filter(
-      (l) =>
-        l.disciplineId === d.id && isPastLesson(l.date, input.today) && !withAttendance.has(l.id),
+      (l) => l.disciplineId === d.id && isPastLesson(l.date, input.today) && l.givenAt === null,
     ).length;
     if (missing < 1) continue;
     total += missing;

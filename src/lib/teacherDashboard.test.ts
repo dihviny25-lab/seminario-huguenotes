@@ -45,7 +45,13 @@ function lessonsFor(
 ): DashboardInput["lessons"] {
   const rows: DashboardInput["lessons"] = [];
   for (let i = 0; i < given; i++) {
-    rows.push({ id: `${disciplineId}-p${i}`, disciplineId, date: "2026-08-01", sequence: i + 1 });
+    rows.push({
+      id: `${disciplineId}-p${i}`,
+      disciplineId,
+      date: "2026-08-01",
+      sequence: i + 1,
+      givenAt: "2026-08-01T12:00:00.000Z",
+    });
   }
   for (let i = 0; i < future; i++) {
     rows.push({
@@ -53,6 +59,7 @@ function lessonsFor(
       disciplineId,
       date: "2026-12-01",
       sequence: given + i + 1,
+      givenAt: null,
     });
   }
   return rows;
@@ -327,21 +334,42 @@ describe("pickMissingGrades", () => {
 });
 
 describe("pickMissingAttendance", () => {
-  it("conta aulas passadas sem nenhuma linha de attendance, agrupadas por disciplina", () => {
+  it("conta aulas passadas com givenAt null, agrupadas por disciplina", () => {
     const input = emptyInput({
       disciplines: [{ id: "d1", discipline: "Disc", lessons: 10 }],
       lessons: [
-        { id: "l1", disciplineId: "d1", date: "2026-08-01", sequence: 1 },
-        { id: "l2", disciplineId: "d1", date: "2026-08-08", sequence: 2 },
-        { id: "l3", disciplineId: "d1", date: "2026-12-01", sequence: 3 }, // futura
+        { id: "l1", disciplineId: "d1", date: "2026-08-01", sequence: 1, givenAt: null },
+        {
+          id: "l2",
+          disciplineId: "d1",
+          date: "2026-08-08",
+          sequence: 2,
+          givenAt: "2026-08-08T12:00:00.000Z",
+        },
+        { id: "l3", disciplineId: "d1", date: "2026-12-01", sequence: 3, givenAt: null }, // futura
       ],
-      attendance: [{ lessonId: "l1", studentId: "s1", present: true }],
     });
     const { items, total } = pickMissingAttendance(input);
     expect(total).toBe(1);
     expect(items).toEqual([
       { disciplineId: "d1", disciplineName: "Disc", lessonsWithoutAttendance: 1 },
     ]);
+  });
+
+  it("aula passada com chamada lançada (givenAt preenchido) não conta como pendente", () => {
+    const input = emptyInput({
+      disciplines: [{ id: "d1", discipline: "Disc", lessons: 10 }],
+      lessons: [
+        {
+          id: "l1",
+          disciplineId: "d1",
+          date: "2026-08-01",
+          sequence: 1,
+          givenAt: "2026-08-01T12:00:00.000Z",
+        },
+      ],
+    });
+    expect(pickMissingAttendance(input)).toEqual({ items: [], total: 0 });
   });
 });
 
@@ -350,9 +378,9 @@ describe("pickUpcomingLessons", () => {
     const input = emptyInput({
       disciplines: [{ id: "d1", discipline: "Disc", lessons: 10 }],
       lessons: [
-        { id: "p", disciplineId: "d1", date: "2026-08-01", sequence: 1 },
-        { id: "f2", disciplineId: "d1", date: "2026-09-10", sequence: 3 },
-        { id: "f1", disciplineId: "d1", date: "2026-09-01", sequence: 2 },
+        { id: "p", disciplineId: "d1", date: "2026-08-01", sequence: 1, givenAt: null },
+        { id: "f2", disciplineId: "d1", date: "2026-09-10", sequence: 3, givenAt: null },
+        { id: "f1", disciplineId: "d1", date: "2026-09-01", sequence: 2, givenAt: null },
       ],
     });
     const out = pickUpcomingLessons(input);
@@ -425,10 +453,10 @@ describe("pickAtRiskStudents", () => {
         { id: "s3", name: "Cida" },
       ],
       lessons: [
-        { id: "l1", disciplineId: "d1", date: "2026-08-01", sequence: 1 },
-        { id: "l2", disciplineId: "d1", date: "2026-08-02", sequence: 2 },
-        { id: "l3", disciplineId: "d1", date: "2026-08-03", sequence: 3 },
-        { id: "l4", disciplineId: "d1", date: "2026-08-04", sequence: 4 },
+        { id: "l1", disciplineId: "d1", date: "2026-08-01", sequence: 1, givenAt: null },
+        { id: "l2", disciplineId: "d1", date: "2026-08-02", sequence: 2, givenAt: null },
+        { id: "l3", disciplineId: "d1", date: "2026-08-03", sequence: 3, givenAt: null },
+        { id: "l4", disciplineId: "d1", date: "2026-08-04", sequence: 4, givenAt: null },
       ],
       assessments: [{ id: "av1", disciplineId: "d1", title: "P1", weight: 1 }],
       grades: [
@@ -489,7 +517,7 @@ describe("pickAtRiskStudents", () => {
       lessons: 10,
     }));
     const lessons = disciplines.flatMap((d) => [
-      { id: `${d.id}-l1`, disciplineId: d.id, date: "2026-08-01", sequence: 1 },
+      { id: `${d.id}-l1`, disciplineId: d.id, date: "2026-08-01", sequence: 1, givenAt: null },
     ]);
     const assessments = disciplines.map((d) => ({
       id: `${d.id}-av`,
@@ -526,8 +554,8 @@ describe("buildTeacherDashboard", () => {
       scope: "minhas",
       disciplines: [{ id: "d1", discipline: "Disc", lessons: 10 }],
       lessons: [
-        { id: "l1", disciplineId: "d1", date: "2026-08-01", sequence: 1 },
-        { id: "l2", disciplineId: "d1", date: "2026-09-01", sequence: 2 },
+        { id: "l1", disciplineId: "d1", date: "2026-08-01", sequence: 1, givenAt: null },
+        { id: "l2", disciplineId: "d1", date: "2026-09-01", sequence: 2, givenAt: null },
       ],
       assignments: [{ id: "a1", disciplineId: "d1", title: "T1" }],
       submissions: [

@@ -80,6 +80,7 @@ export const getTeacherDashboardFn = createServerFn({ method: "GET" }).handler(a
         disciplineId: lessons.disciplineId,
         date: lessons.date,
         sequence: lessons.sequence,
+        givenAt: lessons.givenAt,
       })
       .from(lessons)
       .where(inArray(lessons.disciplineId, disciplineIds)),
@@ -171,7 +172,10 @@ export const getTeacherDashboardFn = createServerFn({ method: "GET" }).handler(a
     scope: "minhas",
     today,
     disciplines: disciplineRows,
-    lessons: lessonRows,
+    lessons: lessonRows.map((l) => ({
+      ...l,
+      givenAt: l.givenAt ? l.givenAt.toISOString() : null,
+    })),
     attendance: attendanceRows,
     readingMaterials: readingMaterialRows,
     videoLessons: videoLessonRows,
