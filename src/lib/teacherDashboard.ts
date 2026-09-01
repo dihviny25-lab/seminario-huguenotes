@@ -122,18 +122,24 @@ export type TeacherDashboard = {
   atRiskStudents: AtRiskStudentItem[];
 };
 
-/** Aula "dada" = tem data e a data já passou (ou é hoje). */
+/**
+ * Aula "passada" por data (tem data e a data já passou, ou é hoje). Usada só
+ * onde o conceito é "a data já chegou" (ex.: pickMissingAttendance, pra achar
+ * aula que já devia ter chamada lançada, e pickUpcomingLessons via `date >
+ * today`). Para "aula que já aconteceu de fato" (progresso da disciplina,
+ * frequência), o sinal certo é `givenAt !== null` — ver computeDisciplineProgress
+ * e pickAtRiskStudents, e reportData.ts, que já usa esse critério.
+ */
 function isPastLesson(date: string | null, today: string): boolean {
   return date !== null && date <= today;
 }
 
 export function computeDisciplineProgress(
   discipline: { id: string; discipline: string; lessons: number | null },
-  lessons: Array<{ disciplineId: string; date: string | null }>,
-  today: string,
+  lessons: Array<{ disciplineId: string; givenAt: string | null }>,
 ): DisciplineProgress {
   const mine = lessons.filter((l) => l.disciplineId === discipline.id);
-  const lessonsGiven = mine.filter((l) => isPastLesson(l.date, today)).length;
+  const lessonsGiven = mine.filter((l) => l.givenAt !== null).length;
   const lessonsPlanned = discipline.lessons ?? mine.length;
   const progress = lessonsPlanned > 0 ? lessonsGiven / lessonsPlanned : 0;
   return {
@@ -148,9 +154,7 @@ export function computeDisciplineProgress(
 }
 
 function progressByDiscipline(input: DashboardInput): Map<string, DisciplineProgress> {
-  return new Map(
-    input.disciplines.map((d) => [d.id, computeDisciplineProgress(d, input.lessons, input.today)]),
-  );
+  return new Map(input.disciplines.map((d) => [d.id, computeDisciplineProgress(d, input.lessons)]));
 }
 
 export function pickEndingDisciplines(input: DashboardInput): EndingDisciplineItem[] {
@@ -335,9 +339,13 @@ export function pickAtRiskStudents(input: DashboardInput): {
   total: number;
 } {
   const progress = progressByDiscipline(input);
+  // Chamada em rascunho (givenAt === null) não conta pra frequência — mesmo
+  // critério de reportData.ts, que só busca attendance de aulas já lançadas.
+  const givenLessonIds = new Set(input.lessons.filter((l) => l.givenAt !== null).map((l) => l.id));
   const absentByStudent = new Map<string, Set<string>>();
   for (const a of input.attendance) {
     if (a.present) continue;
+    if (!givenLessonIds.has(a.lessonId)) continue;
     if (!absentByStudent.has(a.studentId)) absentByStudent.set(a.studentId, new Set());
     absentByStudent.get(a.studentId)!.add(a.lessonId);
   }
@@ -354,8 +362,8 @@ export function pickAtRiskStudents(input: DashboardInput): {
     const p = progress.get(d.id)!;
     if (!p.isStarted || p.isEnded) continue;
     const disciplineAssessments = input.assessments.filter((a) => a.disciplineId === d.id);
-    const pastLessonIds = input.lessons
-      .filter((l) => l.disciplineId === d.id && isPastLesson(l.date, input.today))
+    const disciplineGivenLessonIds = input.lessons
+      .filter((l) => l.disciplineId === d.id && l.givenAt !== null)
       .map((l) => l.id);
 
     for (const student of input.activeStudents) {
@@ -369,9 +377,11 @@ export function pickAtRiskStudents(input: DashboardInput): {
       const atRiskMedia = average !== null && average < PASSING_AVERAGE;
 
       const absent = absentByStudent.get(student.id) ?? new Set<string>();
-      const faltas = countFaltas(pastLessonIds, absent);
+      const faltas = countFaltas(disciplineGivenLessonIds, absent);
       const ratio =
-        pastLessonIds.length > 0 ? (pastLessonIds.length - faltas) / pastLessonIds.length : null;
+        disciplineGivenLessonIds.length > 0
+          ? (disciplineGivenLessonIds.length - faltas) / disciplineGivenLessonIds.length
+          : null;
       const atRiskFreq = ratio !== null && ratio < MINIMUM_ATTENDANCE_RATIO;
 
       if (!atRiskMedia && !atRiskFreq) continue;

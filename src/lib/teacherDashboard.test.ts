@@ -70,7 +70,6 @@ describe("computeDisciplineProgress", () => {
     const p = computeDisciplineProgress(
       { id: "d1", discipline: "A", lessons: 10 },
       lessonsFor("d1", 8, 0),
-      TODAY,
     );
     expect(p).toMatchObject({
       lessonsGiven: 8,
@@ -85,14 +84,13 @@ describe("computeDisciplineProgress", () => {
     const p = computeDisciplineProgress(
       { id: "d1", discipline: "A", lessons: null },
       lessonsFor("d1", 3, 1), // 4 no total, 3 dadas
-      TODAY,
     );
     expect(p.lessonsPlanned).toBe(4);
     expect(p.progress).toBeCloseTo(0.75);
   });
 
   it("progress = 0 quando não há aulas planejadas", () => {
-    const p = computeDisciplineProgress({ id: "d1", discipline: "A", lessons: null }, [], TODAY);
+    const p = computeDisciplineProgress({ id: "d1", discipline: "A", lessons: null }, []);
     expect(p).toMatchObject({ lessonsGiven: 0, lessonsPlanned: 0, progress: 0, isStarted: false });
   });
 
@@ -100,21 +98,24 @@ describe("computeDisciplineProgress", () => {
     const p = computeDisciplineProgress(
       { id: "d1", discipline: "A", lessons: 4 },
       lessonsFor("d1", 4, 0),
-      TODAY,
     );
     expect(p).toMatchObject({ progress: 1, isEnded: true });
   });
 
-  it("ignora aulas sem data e aulas futuras na contagem de dadas", () => {
-    const p = computeDisciplineProgress(
-      { id: "d1", discipline: "A", lessons: 10 },
-      [
-        { disciplineId: "d1", date: "2026-08-01" },
-        { disciplineId: "d1", date: null },
-        { disciplineId: "d1", date: "2026-12-31" },
-      ],
-      TODAY,
-    );
+  it("conta como dada só quem tem givenAt preenchido, ignorando outras disciplinas", () => {
+    const p = computeDisciplineProgress({ id: "d1", discipline: "A", lessons: 10 }, [
+      { disciplineId: "d1", givenAt: "2026-08-01T12:00:00.000Z" },
+      { disciplineId: "d1", givenAt: null },
+      { disciplineId: "outra", givenAt: "2026-08-01T12:00:00.000Z" },
+    ]);
+    expect(p.lessonsGiven).toBe(1);
+  });
+
+  it("aula com data passada mas sem chamada lançada (givenAt null) não conta como dada", () => {
+    const p = computeDisciplineProgress({ id: "d1", discipline: "A", lessons: 10 }, [
+      { disciplineId: "d1", givenAt: "2026-08-01T12:00:00.000Z" },
+      { disciplineId: "d1", givenAt: null }, // data já passou, mas chamada não foi lançada
+    ]);
     expect(p.lessonsGiven).toBe(1);
   });
 });
@@ -453,10 +454,34 @@ describe("pickAtRiskStudents", () => {
         { id: "s3", name: "Cida" },
       ],
       lessons: [
-        { id: "l1", disciplineId: "d1", date: "2026-08-01", sequence: 1, givenAt: null },
-        { id: "l2", disciplineId: "d1", date: "2026-08-02", sequence: 2, givenAt: null },
-        { id: "l3", disciplineId: "d1", date: "2026-08-03", sequence: 3, givenAt: null },
-        { id: "l4", disciplineId: "d1", date: "2026-08-04", sequence: 4, givenAt: null },
+        {
+          id: "l1",
+          disciplineId: "d1",
+          date: "2026-08-01",
+          sequence: 1,
+          givenAt: "2026-08-01T12:00:00.000Z",
+        },
+        {
+          id: "l2",
+          disciplineId: "d1",
+          date: "2026-08-02",
+          sequence: 2,
+          givenAt: "2026-08-02T12:00:00.000Z",
+        },
+        {
+          id: "l3",
+          disciplineId: "d1",
+          date: "2026-08-03",
+          sequence: 3,
+          givenAt: "2026-08-03T12:00:00.000Z",
+        },
+        {
+          id: "l4",
+          disciplineId: "d1",
+          date: "2026-08-04",
+          sequence: 4,
+          givenAt: "2026-08-04T12:00:00.000Z",
+        },
       ],
       assessments: [{ id: "av1", disciplineId: "d1", title: "P1", weight: 1 }],
       grades: [
@@ -510,6 +535,39 @@ describe("pickAtRiskStudents", () => {
     expect(pickAtRiskStudents(input).items).toEqual([]);
   });
 
+  it("aula com data passada mas sem chamada lançada não entra no denominador de frequência nem conta falta", () => {
+    const input = emptyInput({
+      disciplines: [{ id: "d1", discipline: "Disc", lessons: 10 }],
+      activeStudents: [{ id: "s1", name: "Ana" }],
+      lessons: [
+        {
+          id: "l1",
+          disciplineId: "d1",
+          date: "2026-08-01",
+          sequence: 1,
+          givenAt: "2026-08-01T12:00:00.000Z",
+        },
+        {
+          id: "l2",
+          disciplineId: "d1",
+          date: "2026-08-02",
+          sequence: 2,
+          givenAt: "2026-08-02T12:00:00.000Z",
+        },
+        // data já passou, mas chamada segue em rascunho — não deve contar.
+        { id: "l3", disciplineId: "d1", date: "2026-08-03", sequence: 3, givenAt: null },
+      ],
+      attendance: [
+        { lessonId: "l1", studentId: "s1", present: true },
+        { lessonId: "l2", studentId: "s1", present: true },
+        // falta registrada numa aula ainda não lançada: se contasse, ratio cairia
+        // para 2/3 (66%, risco); ignorando l3, fica 2/2 (100%, sem risco).
+        { lessonId: "l3", studentId: "s1", present: false },
+      ],
+    });
+    expect(pickAtRiskStudents(input).items).toEqual([]);
+  });
+
   it("ordena por nº de disciplinas em risco desc e corta em AT_RISK_LIMIT", () => {
     const disciplines = Array.from({ length: 10 }, (_, i) => ({
       id: `d${i}`,
@@ -517,7 +575,13 @@ describe("pickAtRiskStudents", () => {
       lessons: 10,
     }));
     const lessons = disciplines.flatMap((d) => [
-      { id: `${d.id}-l1`, disciplineId: d.id, date: "2026-08-01", sequence: 1, givenAt: null },
+      {
+        id: `${d.id}-l1`,
+        disciplineId: d.id,
+        date: "2026-08-01",
+        sequence: 1,
+        givenAt: "2026-08-01T12:00:00.000Z",
+      },
     ]);
     const assessments = disciplines.map((d) => ({
       id: `${d.id}-av`,
