@@ -1,7 +1,7 @@
 import { computeCurrentAmount } from "@/lib/payments";
 
 export type ChargeForWebhook = {
-  status: "pending" | "paid" | "cancelled";
+  status: "pending" | "paid" | "canceled";
   fullAmount: string | number;
   discountPercent: string | number;
   dueDate: string;
