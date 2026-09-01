@@ -1,6 +1,4 @@
 import { Link } from "@tanstack/react-router";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import {
   AlertTriangle,
   CalendarClock,
@@ -20,7 +18,10 @@ const ITEM_CLASS =
   "flex animate-in items-start gap-2.5 rounded-md border border-border/70 bg-card/70 p-3 shadow-soft fade-in slide-in-from-top-1 duration-200 transition-colors hover:border-primary/50";
 
 function fmtDate(iso: string): string {
-  return format(new Date(`${iso}T00:00:00`), "dd/MM", { locale: ptBR });
+  return new Date(`${iso}T00:00:00`).toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+  });
 }
 
 export function DashboardCards({
@@ -87,7 +88,9 @@ export function DashboardCards({
                 </span>
                 <span className="text-xs text-muted-foreground">
                   {item.lessonsWithoutAttendance}{" "}
-                  {item.lessonsWithoutAttendance === 1 ? "aula sem chamada" : "aulas sem chamada"}
+                  {item.lessonsWithoutAttendance === 1
+                    ? "aula sem registro de chamada"
+                    : "aulas sem registro de chamada"}
                 </span>
               </span>
             </Link>

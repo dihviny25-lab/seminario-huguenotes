@@ -6,20 +6,20 @@ const KPIS = [
   { key: "pendingGrading", label: "Correções pendentes", alarm: true },
   { key: "endingDisciplines", label: "Disciplinas encerrando", alarm: false },
   { key: "atRiskStudents", label: "Alunos em risco", alarm: true },
-  { key: "lessonsWithoutAttendance", label: "Aulas sem chamada", alarm: true },
+  // Não é uma pendência acionável (ausência de registro = presente por
+  // padrão em AttendanceTab) — só um indicador informativo, sem alarme.
+  { key: "lessonsWithoutAttendance", label: "Aulas sem registro de chamada", alarm: false },
 ] as const;
 
+const SUFFIX = "nas suas disciplinas";
+
 export function KpiStrip({
-  scope,
   counts,
   isLoading,
 }: {
-  scope: TeacherDashboard["scope"];
   counts: TeacherDashboard["counts"];
   isLoading: boolean;
 }) {
-  const suffix = scope === "escola" ? "em toda a escola" : "nas suas disciplinas";
-
   if (isLoading) {
     return (
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -48,7 +48,7 @@ export function KpiStrip({
               {k.label}
             </p>
             <p className="mt-2 font-display text-2xl font-semibold text-foreground">{value}</p>
-            <p className="mt-1 text-xs text-muted-foreground">{suffix}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{SUFFIX}</p>
           </a>
         );
       })}

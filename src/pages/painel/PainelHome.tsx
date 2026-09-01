@@ -27,9 +27,14 @@ const shortcuts = [
 
 /** Landing do painel interno — dashboard de pendências + atalhos + disciplinas do professor. */
 export function PainelHome() {
-  const { data: dashboard, isLoading: loadingDashboard } = useQuery({
+  const {
+    data: dashboard,
+    isLoading: loadingDashboard,
+    isError: dashboardError,
+  } = useQuery({
     queryKey: ["teacher-dashboard"],
     queryFn: () => getTeacherDashboardFn(),
+    staleTime: 60_000,
   });
   const { data: disciplines, isLoading } = useQuery({
     queryKey: ["my-disciplines"],
@@ -61,27 +66,34 @@ export function PainelHome() {
         <NotificationToggle />
       </div>
 
-      <KpiStrip
-        scope={dashboard?.scope ?? "minhas"}
-        counts={
-          dashboard?.counts ?? {
-            pendingGrading: 0,
-            endingDisciplines: 0,
-            atRiskStudents: 0,
-            lessonsWithoutAttendance: 0,
-          }
-        }
-        isLoading={loadingDashboard}
-      />
-
-      {allClear ? (
-        <p className="mt-8 rounded-md border border-t-2 border-border/70 border-t-accent bg-card/70 p-6 text-center text-sm text-muted-foreground shadow-soft">
-          Nenhuma pendência — tudo em dia.
+      {dashboardError ? (
+        <p className="rounded-md border border-t-2 border-border/70 border-t-destructive bg-card/70 p-6 text-center text-sm text-muted-foreground shadow-soft">
+          Não foi possível carregar o resumo. Tente recarregar a página.
         </p>
       ) : (
-        <div className="mt-8 grid gap-4 lg:grid-cols-3">
-          <DashboardCards data={dashboard} isLoading={loadingDashboard} />
-        </div>
+        <>
+          <KpiStrip
+            counts={
+              dashboard?.counts ?? {
+                pendingGrading: 0,
+                endingDisciplines: 0,
+                atRiskStudents: 0,
+                lessonsWithoutAttendance: 0,
+              }
+            }
+            isLoading={loadingDashboard}
+          />
+
+          {allClear ? (
+            <p className="mt-8 rounded-md border border-t-2 border-border/70 border-t-accent bg-card/70 p-6 text-center text-sm text-muted-foreground shadow-soft">
+              Nenhuma pendência — tudo em dia.
+            </p>
+          ) : (
+            <div className="mt-8 grid gap-4 lg:grid-cols-3">
+              <DashboardCards data={dashboard} isLoading={loadingDashboard} />
+            </div>
+          )}
+        </>
       )}
 
       <div className="mt-10 grid gap-4 sm:grid-cols-2">
