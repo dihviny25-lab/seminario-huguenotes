@@ -21,8 +21,7 @@ export async function uploadFile(
 ): Promise<UploadedFile> {
   const explicitPurpose =
     typeof purposeOrProgress === "string" ? purposeOrProgress : undefined;
-  const purpose: UploadPurpose =
-    explicitPurpose ?? (file.type.startsWith("video/") ? "video" : "assignment");
+  const purpose: UploadPurpose = explicitPurpose ?? (file.type.startsWith("video/") ? "video" : "assignment");
   const progress = typeof purposeOrProgress === "function" ? purposeOrProgress : onProgress;
 
   const blob = await upload(file.name, file, {
