@@ -26,8 +26,11 @@ describe("parseStudentRows", () => {
   });
 
   it("recusa planilha sem coluna de nome", () => {
-    expect(() => parseStudentRows([["E-mail", "Telefone"], ["a@b.com", "123"]])).toThrow(
-      "Não encontrei uma coluna de nome",
-    );
+    expect(() =>
+      parseStudentRows([
+        ["E-mail", "Telefone"],
+        ["a@b.com", "123"],
+      ]),
+    ).toThrow("Não encontrei uma coluna de nome");
   });
 });
