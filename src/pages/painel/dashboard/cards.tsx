@@ -89,8 +89,8 @@ export function DashboardCards({
                 <span className="text-xs text-muted-foreground">
                   {item.lessonsWithoutAttendance}{" "}
                   {item.lessonsWithoutAttendance === 1
-                    ? "aula sem registro de chamada"
-                    : "aulas sem registro de chamada"}
+                    ? "aula sem chamada lançada"
+                    : "aulas sem chamada lançada"}
                 </span>
               </span>
             </Link>

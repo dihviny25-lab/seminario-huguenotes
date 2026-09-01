@@ -6,9 +6,10 @@ const KPIS = [
   { key: "pendingGrading", label: "Correções pendentes", alarm: true },
   { key: "endingDisciplines", label: "Disciplinas encerrando", alarm: false },
   { key: "atRiskStudents", label: "Alunos em risco", alarm: true },
-  // Não é uma pendência acionável (ausência de registro = presente por
-  // padrão em AttendanceTab) — só um indicador informativo, sem alarme.
-  { key: "lessonsWithoutAttendance", label: "Aulas sem registro de chamada", alarm: false },
+  // Pendência real e acionável desde que existe lessons.given_at: só conta
+  // aula passada sem chamada lançada (não mais "zero linhas em attendance",
+  // que nunca zerava porque aula 100% presente também não gera linha).
+  { key: "lessonsWithoutAttendance", label: "Aulas sem chamada lançada", alarm: true },
 ] as const;
 
 const SUFFIX = "nas suas disciplinas";
