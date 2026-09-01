@@ -55,6 +55,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { TableSkeletonRows } from "@/components/TableSkeletonRows";
+import { WhatsappButton } from "@/components/WhatsappButton";
 import { PainelShell } from "@/components/painel/PainelShell";
 import { getCurrentTeacherFn } from "@/functions/auth";
 import {
@@ -109,8 +110,10 @@ export function Students() {
       return bulkCreateStudentsFn({ data: { students: parsed } });
     },
     onSuccess: async (result) => {
-      const skippedNote = result.skipped.length > 0 ? `, ${result.skipped.length} já existiam` : "";
-      toast.success(`${result.created} aluno(s) importado(s)${skippedNote}.`);
+      const partes = [`${result.created} importado(s)`];
+      if (result.updated > 0) partes.push(`${result.updated} com WhatsApp preenchido`);
+      if (result.skipped.length > 0) partes.push(`${result.skipped.length} já cadastrado(s)`);
+      toast.success(`${partes.join(", ")}.`);
       await invalidate();
     },
     onError: (error) => toast.error(errorMessage(error, "Não foi possível importar a planilha.")),
@@ -203,6 +206,7 @@ export function Students() {
             <TableRow>
               <TableHead>Nome</TableHead>
               <TableHead>E-mail</TableHead>
+              <TableHead>WhatsApp</TableHead>
               <TableHead>Situação</TableHead>
               <TableHead>Portal</TableHead>
               <TableHead>Bolsa</TableHead>
@@ -211,7 +215,7 @@ export function Students() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableSkeletonRows columns={6} />
+              <TableSkeletonRows columns={7} />
             ) : students && students.length > 0 ? (
               students.map((student) => (
                 <TableRow
@@ -220,6 +224,9 @@ export function Students() {
                 >
                   <TableCell className="font-medium text-foreground">{student.name}</TableCell>
                   <TableCell className="text-muted-foreground">{student.email ?? "—"}</TableCell>
+                  <TableCell>
+                    <WhatsappButton phone={student.phone} studentName={student.name} />
+                  </TableCell>
                   <TableCell>
                     <Badge variant={student.active ? "default" : "secondary"}>
                       {student.active ? "Ativo" : "Inativo"}
@@ -305,7 +312,7 @@ export function Students() {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={6} className="py-6 text-center text-muted-foreground">
+                <TableCell colSpan={7} className="py-6 text-center text-muted-foreground">
                   Nenhum aluno cadastrado ainda.
                 </TableCell>
               </TableRow>
@@ -373,6 +380,7 @@ const studentSchema = z.object({
     .email("Informe um e-mail válido.")
     .optional()
     .or(z.literal("")),
+  phone: z.string().trim().optional().or(z.literal("")),
 });
 
 function CreateStudentDialog({
@@ -386,7 +394,7 @@ function CreateStudentDialog({
 }) {
   const form = useForm<z.infer<typeof studentSchema>>({
     resolver: zodResolver(studentSchema),
-    defaultValues: { name: "", email: "" },
+    defaultValues: { name: "", email: "", phone: "" },
   });
 
   const mutation = useMutation({
@@ -437,6 +445,19 @@ function CreateStudentDialog({
                 </FormItem>
               )}
             />
+            <FormField
+              control={form.control}
+              name="phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Telefone / WhatsApp (opcional)</FormLabel>
+                  <FormControl>
+                    <Input inputMode="tel" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <DialogFooter>
               <Button type="submit" disabled={mutation.isPending}>
                 {mutation.isPending ? (
@@ -463,7 +484,7 @@ function EditStudentDialog({
 }) {
   const form = useForm<z.infer<typeof studentSchema>>({
     resolver: zodResolver(studentSchema),
-    defaultValues: { name: student.name, email: student.email ?? "" },
+    defaultValues: { name: student.name, email: student.email ?? "", phone: student.phone ?? "" },
   });
 
   const mutation = useMutation({
@@ -509,6 +530,19 @@ function EditStudentDialog({
                   <FormLabel>E-mail (opcional)</FormLabel>
                   <FormControl>
                     <Input type="email" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Telefone / WhatsApp (opcional)</FormLabel>
+                  <FormControl>
+                    <Input inputMode="tel" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

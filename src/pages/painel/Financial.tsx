@@ -33,6 +33,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { TableSkeletonRows } from "@/components/TableSkeletonRows";
+import { WhatsappButton } from "@/components/WhatsappButton";
 import { getFinancialReportFn, getFinancialSummaryFn } from "@/functions/payments";
 import { PAYMENT_MODALITIES } from "@/lib/paymentModalities";
 
@@ -170,11 +171,24 @@ export function Financial() {
                         {item.daysOverdue}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button variant="outline" size="sm" asChild>
-                          <Link to="/painel/pagamentos" search={{ studentId: item.studentId }}>
-                            Gerenciar
-                          </Link>
-                        </Button>
+                        <div className="flex items-center justify-end gap-1">
+                          <WhatsappButton
+                            phone={item.studentPhone}
+                            studentName={item.studentName}
+                            context={{
+                              kind: "overdue",
+                              amount: item.amount,
+                              daysOverdue: item.daysOverdue,
+                            }}
+                            size="sm"
+                            variant="outline"
+                          />
+                          <Button variant="outline" size="sm" asChild>
+                            <Link to="/painel/pagamentos" search={{ studentId: item.studentId }}>
+                              Gerenciar
+                            </Link>
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
