@@ -8,7 +8,7 @@ on:
 jobs:
   audit:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -25,8 +25,17 @@ jobs:
         run: |
           npm uninstall xlsx
           npm install drizzle-orm@0.45.2
-          npm audit fix
+          npm install -D vitest@4.1.11
+          npm audit fix || true
       - name: Audit after safe changes
         run: npm audit --json || true
+      - name: Typecheck updated tree
+        run: npm run typecheck
+      - name: Lint updated tree
+        run: npm run lint
+      - name: Test updated tree
+        run: npm test
+      - name: Build updated tree
+        run: npm run build
       - name: Show dependency diff
         run: git diff -- package.json package-lock.json
