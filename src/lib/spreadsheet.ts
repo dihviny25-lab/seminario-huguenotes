@@ -1,7 +1,8 @@
-export type ParsedStudent = { name: string; email: string | null };
+export type ParsedStudent = { name: string; email: string | null; phone: string | null };
 
 const NAME_HEADER_HINTS = ["nome", "name", "aluno"];
 const EMAIL_HEADER_HINTS = ["e-mail", "email"];
+const PHONE_HEADER_HINTS = ["whatsapp", "whats", "celular", "telefone", "fone"];
 
 function findColumn(headers: string[], hints: string[]): string | undefined {
   return headers.find((header) => {
@@ -30,6 +31,7 @@ export async function parseStudentsFile(file: File): Promise<ParsedStudent[]> {
   const headers = Object.keys(rows[0]);
   const nameColumn = findColumn(headers, NAME_HEADER_HINTS);
   const emailColumn = findColumn(headers, EMAIL_HEADER_HINTS);
+  const phoneColumn = findColumn(headers, PHONE_HEADER_HINTS);
   if (!nameColumn) {
     throw new Error(
       `Não encontrei uma coluna de nome na planilha (colunas: ${headers.join(", ")}).`,
@@ -40,6 +42,7 @@ export async function parseStudentsFile(file: File): Promise<ParsedStudent[]> {
     .map((row) => ({
       name: String(row[nameColumn] ?? "").trim(),
       email: emailColumn ? String(row[emailColumn] ?? "").trim() || null : null,
+      phone: phoneColumn ? String(row[phoneColumn] ?? "").trim() || null : null,
     }))
     .filter((row) => row.name.length > 0);
 }

@@ -12,6 +12,7 @@ export type Student = {
   id: string;
   name: string;
   email: string | null;
+  phone: string | null;
   active: boolean;
   hasLogin: boolean;
   scholarshipPercent: number;
@@ -25,6 +26,7 @@ export const listStudentsFn = createServerFn({ method: "GET" }).handler(
         id: students.id,
         name: students.name,
         email: students.email,
+        phone: students.phone,
         active: students.active,
         passwordHash: students.passwordHash,
         scholarshipPercent: students.scholarshipPercent,
@@ -48,6 +50,7 @@ const createSchema = z.object({
     .email("Informe um e-mail válido.")
     .optional()
     .or(z.literal("")),
+  phone: z.string().trim().optional().or(z.literal("")),
 });
 
 export const createStudentFn = createServerFn({ method: "POST" })
@@ -56,7 +59,7 @@ export const createStudentFn = createServerFn({ method: "POST" })
     await requireAdminId();
     const [row] = await db
       .insert(students)
-      .values({ name: data.name, email: data.email || null })
+      .values({ name: data.name, email: data.email || null, phone: data.phone?.trim() || null })
       .returning({ id: students.id });
     await logAudit("aluno.criar", `Cadastrou o aluno ${data.name}.`);
     return row;
@@ -76,6 +79,7 @@ const updateSchema = z.object({
     .email("Informe um e-mail válido.")
     .optional()
     .or(z.literal("")),
+  phone: z.string().trim().optional().or(z.literal("")),
 });
 
 export const updateStudentFn = createServerFn({ method: "POST" })
@@ -84,7 +88,7 @@ export const updateStudentFn = createServerFn({ method: "POST" })
     await requireAdminId();
     await db
       .update(students)
-      .set({ name: data.name, email: data.email || null })
+      .set({ name: data.name, email: data.email || null, phone: data.phone?.trim() || null })
       .where(eq(students.id, data.id));
   });
 
@@ -198,42 +202,65 @@ const bulkCreateSchema = z.object({
         .min(1)
         .transform((name) => name.toUpperCase()),
       email: z.string().trim().nullable(),
+      phone: z.string().trim().nullable(),
     }),
   ),
 });
 
-export type BulkCreateResult = { created: number; skipped: Array<string> };
+export type BulkCreateResult = { created: number; updated: number; skipped: Array<string> };
 
-/** Importação por planilha: pula quem já existe (mesmo nome, sem diferenciar maiúsculas). */
+/**
+ * Importação por planilha: cria quem não existe (mesmo nome, sem diferenciar
+ * maiúsculas) e, pra quem já existe, preenche o WhatsApp só quando está vazio —
+ * nunca sobrescreve um número já cadastrado.
+ */
 export const bulkCreateStudentsFn = createServerFn({ method: "POST" })
   .validator(bulkCreateSchema)
   .handler(async ({ data }): Promise<BulkCreateResult> => {
     await requireAdminId();
 
-    const existing = await db.select({ name: students.name }).from(students);
-    const existingNames = new Set(existing.map((s) => s.name.trim().toLowerCase()));
+    const existing = await db
+      .select({ id: students.id, name: students.name, phone: students.phone })
+      .from(students);
+    const existingByName = new Map(
+      existing.map((s) => [s.name.trim().toLowerCase(), { id: s.id, phone: s.phone }]),
+    );
 
     const seenInBatch = new Set<string>();
-    const toInsert: Array<{ name: string; email: string | null }> = [];
+    const toInsert: Array<{ name: string; email: string | null; phone: string | null }> = [];
+    const toUpdatePhone: Array<{ id: string; phone: string }> = [];
     const skipped: Array<string> = [];
 
     for (const row of data.students) {
       const key = row.name.toLowerCase();
-      if (existingNames.has(key) || seenInBatch.has(key)) {
-        skipped.push(row.name);
+      const match = existingByName.get(key);
+
+      if (match || seenInBatch.has(key)) {
+        // Aluno já existe: preenche o telefone só se estiver vazio; nunca sobrescreve.
+        const currentPhone = match?.phone?.trim();
+        if (match && !currentPhone && row.phone) {
+          toUpdatePhone.push({ id: match.id, phone: row.phone });
+        } else {
+          skipped.push(row.name);
+        }
         continue;
       }
+
       seenInBatch.add(key);
-      toInsert.push({ name: row.name, email: row.email || null });
+      toInsert.push({ name: row.name, email: row.email || null, phone: row.phone || null });
     }
 
     if (toInsert.length > 0) {
       await db.insert(students).values(toInsert);
     }
+    for (const u of toUpdatePhone) {
+      await db.update(students).set({ phone: u.phone }).where(eq(students.id, u.id));
+    }
 
-    await logAudit(
-      "aluno.importar",
-      `Importou ${toInsert.length} aluno(s) por planilha${skipped.length > 0 ? ` (${skipped.length} já existiam)` : ""}.`,
-    );
-    return { created: toInsert.length, skipped };
+    const parts = [`Importou ${toInsert.length} aluno(s) por planilha`];
+    if (toUpdatePhone.length > 0) parts.push(`preencheu WhatsApp de ${toUpdatePhone.length}`);
+    if (skipped.length > 0) parts.push(`${skipped.length} já existiam`);
+    await logAudit("aluno.importar", `${parts.join("; ")}.`);
+
+    return { created: toInsert.length, updated: toUpdatePhone.length, skipped };
   });
