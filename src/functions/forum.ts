@@ -1,7 +1,8 @@
-import { createServerFn } from "@tanstack/react-start";
+﻿import { createServerFn } from "@tanstack/react-start";
 import { asc, desc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
+import { canDeleteThread } from "@/lib/forumPermissions";
 import { logAudit } from "@/server/audit";
 import { requireAnyIdentity, requireOwnDiscipline } from "@/server/auth/guard";
 import { sendPushToOwner } from "@/server/push";
@@ -169,6 +170,8 @@ export type ForumThreadDetail = {
   id: string;
   disciplineId: string;
   title: string;
+  /** O tópico foi criado por quem está logado agora. */
+  mine: boolean;
   posts: Array<ForumPost>;
 };
 
@@ -195,6 +198,9 @@ export const getThreadFn = createServerFn({ method: "GET" })
       id: thread.id,
       disciplineId: thread.disciplineId,
       title: thread.title,
+      mine:
+        (identity.role === "teacher" && thread.authorTeacherId === identity.id) ||
+        (identity.role === "student" && thread.authorStudentId === identity.id),
       posts: postRows.map((post) => ({
         id: post.id,
         authorName: post.authorName,
@@ -265,26 +271,56 @@ export const replyToThreadFn = createServerFn({ method: "POST" })
     );
   });
 
-const deleteThreadSchema = z.object({
-  disciplineId: z.string().uuid(),
-  threadId: z.string().uuid(),
-});
+const deleteThreadSchema = z.object({ threadId: z.string().uuid() });
 
-/** Professor apaga qualquer tópico da própria disciplina (moderação). */
+/**
+ * Apaga um tópico: o professor dono da disciplina sempre pode (moderação);
+ * o autor (professor ou aluno) só pode se ainda não houver nenhuma
+ * resposta. A contagem de posts é feita imediatamente antes do delete,
+ * aceitando a corrida rara em que uma resposta chega no meio do caminho —
+ * o custo de apagar um tópico com uma resposta recém-criada é baixo.
+ */
 export const deleteThreadFn = createServerFn({ method: "POST" })
   .validator(deleteThreadSchema)
   .handler(async ({ data }) => {
-    await requireOwnDiscipline(data.disciplineId);
+    const identity = await requireAnyIdentity();
+
     const [thread] = await db
-      .select({ title: forumThreads.title })
+      .select()
       .from(forumThreads)
       .where(eq(forumThreads.id, data.threadId))
       .limit(1);
+    if (!thread) throw new Error("Tópico não encontrado.");
+
+    const [discipline] = await db
+      .select({ teacherId: disciplines.teacherId })
+      .from(disciplines)
+      .where(eq(disciplines.id, thread.disciplineId))
+      .limit(1);
+    const isModerator = identity.role === "teacher" && discipline?.teacherId === identity.id;
+    const isAuthor =
+      (identity.role === "teacher" && thread.authorTeacherId === identity.id) ||
+      (identity.role === "student" && thread.authorStudentId === identity.id);
+
+    const postRows = await db
+      .select({ id: forumPosts.id })
+      .from(forumPosts)
+      .where(eq(forumPosts.threadId, data.threadId));
+    // A mensagem inicial do tópico também é uma linha de forumPosts — só
+    // conta como "resposta" o que vier depois dela.
+    const postCount = Math.max(0, postRows.length - 1);
+
+    if (!canDeleteThread({ isModerator, isAuthor, postCount })) {
+      throw new Error("Só é possível apagar um tópico que ainda não tem respostas.");
+    }
+
     await db.delete(forumThreads).where(eq(forumThreads.id, data.threadId));
-    await logAudit(
-      "forum.apagar_topico",
-      `Apagou o tópico "${thread?.title ?? data.threadId}" do fórum.`,
-    );
+
+    // Auditoria só quando é o professor moderando — o aluno apagando o
+    // próprio tópico vazio é correção trivial, não polui o log administrativo.
+    if (isModerator) {
+      await logAudit("forum.apagar_topico", `Apagou o tópico "${thread.title}" do fórum.`);
+    }
   });
 
 const deletePostSchema = z.object({ postId: z.string().uuid() });

@@ -69,7 +69,7 @@ export function ForumThreadView({
   });
 
   const deleteThreadMutation = useMutation({
-    mutationFn: () => deleteThreadFn({ data: { disciplineId: thread!.disciplineId, threadId } }),
+    mutationFn: () => deleteThreadFn({ data: { threadId } }),
     onSuccess: async () => {
       toast.success("Tópico apagado.");
       await navigate({ to: afterDeleteThreadTo });
