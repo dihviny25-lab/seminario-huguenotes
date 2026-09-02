@@ -17,6 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { canDeleteThread } from "@/lib/forumPermissions";
 import { deletePostFn, deleteThreadFn, getThreadFn, replyToThreadFn } from "@/functions/forum";
 
 export function threadKey(threadId: string) {
@@ -87,6 +88,14 @@ export function ForumThreadView({
     );
   }
 
+  const canDelete =
+    thread !== undefined &&
+    canDeleteThread({
+      isModerator: canModerateThread,
+      isAuthor: thread.mine,
+      postCount: Math.max(0, thread.posts.length - 1),
+    });
+
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
@@ -97,7 +106,7 @@ export function ForumThreadView({
           <ArrowLeft className="size-4 shrink-0" aria-hidden />
           {backLabel}
         </Link>
-        {canModerateThread ? (
+        {canDelete ? (
           <Button variant="ghost" size="sm" onClick={() => setDeleteThreadOpen(true)}>
             <Trash2 className="size-4" aria-hidden />
             Apagar tópico
