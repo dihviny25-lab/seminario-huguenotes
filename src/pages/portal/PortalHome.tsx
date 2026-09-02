@@ -9,13 +9,17 @@ import {
   ListChecks,
   MessageCircle,
   PlayCircle,
+  Video,
   type LucideIcon,
 } from "lucide-react";
 
 import { PortalShell } from "@/components/portal/PortalShell";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { listAvailableAssignmentsFn } from "@/functions/assignmentSubmissions";
+import { getStudentDashboardFn } from "@/functions/dashboard";
 import { listAvailableExamsFn } from "@/functions/examAttempts";
 import { listRecentForumThreadsFn } from "@/functions/forum";
 import { getMyStudentReportFn } from "@/functions/report";
@@ -27,6 +31,15 @@ import { cn } from "@/lib/utils";
 
 function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+}
+
+function formatAmount(amount: string): string {
+  return Number(amount).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+function formatDate(iso: string): string {
+  const [year, month, day] = iso.split("-");
+  return `${day}/${month}/${year}`;
 }
 
 /** Início do portal — visão geral: resumo, próximas tarefas, provas agendadas e fórum em atividade. */
@@ -50,6 +63,10 @@ export function PortalHome() {
   const { data: threads, isLoading: loadingThreads } = useQuery({
     queryKey: ["recent-forum-threads"],
     queryFn: () => listRecentForumThreadsFn(),
+  });
+  const { data: dashboard } = useQuery({
+    queryKey: ["student-dashboard"],
+    queryFn: () => getStudentDashboardFn(),
   });
 
   const summary = useMemo(() => {
@@ -95,6 +112,32 @@ export function PortalHome() {
       title={student ? `Olá, ${toDisplayFirstName(student.name)}` : "Início"}
       description="Resumo do que precisa da sua atenção agora."
     >
+      {dashboard?.chargeAlert ? (
+        <Alert
+          variant={dashboard.chargeAlert.level === "overdue" ? "destructive" : "default"}
+          className={cn(
+            "mb-6 animate-in fade-in slide-in-from-top-1 duration-200",
+            dashboard.chargeAlert.level === "due-soon" &&
+              "border-amber-500/50 text-amber-700 dark:border-amber-500 dark:text-amber-400 [&>svg]:text-amber-600",
+          )}
+        >
+          <AlertTriangle className="size-4" aria-hidden />
+          <AlertTitle>
+            {dashboard.chargeAlert.level === "overdue" ? "Cobrança vencida" : "Cobrança vence em breve"}
+          </AlertTitle>
+          <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
+            <span>
+              {dashboard.chargeAlert.featured.description} —{" "}
+              {formatAmount(dashboard.chargeAlert.featured.currentAmount)}, vencimento{" "}
+              {formatDate(dashboard.chargeAlert.featured.dueDate)}
+            </span>
+            <Button asChild size="sm">
+              <Link to="/portal/mensalidades">Pagar</Link>
+            </Button>
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
       {loadingReport ? (
         <div className="grid gap-4 sm:grid-cols-3">
           {Array.from({ length: 3 }).map((_, i) => (
@@ -214,6 +257,54 @@ export function PortalHome() {
                     </span>
                   )}
                 </span>
+              </span>
+            </Link>
+          ))}
+        </DashboardCard>
+
+        <DashboardCard
+          title="Próxima aula"
+          icon={CalendarClock}
+          viewAllTo="/portal/disciplinas"
+          loading={!dashboard}
+          emptyLabel="Nenhuma aula agendada no momento."
+        >
+          {dashboard?.nextLesson ? (
+            <Link
+              to="/portal/disciplinas/$disciplineId"
+              params={{ disciplineId: dashboard.nextLesson.disciplineId }}
+              className="flex animate-in items-start gap-2.5 rounded-md border border-border/70 bg-card/70 p-3 shadow-soft fade-in slide-in-from-top-1 duration-200 transition-colors hover:border-primary/50"
+            >
+              <CalendarClock className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-medium text-foreground">
+                  {dashboard.nextLesson.disciplineName}
+                </span>
+                <span className="block text-xs text-muted-foreground">
+                  {formatDate(dashboard.nextLesson.date)}
+                </span>
+              </span>
+            </Link>
+          ) : null}
+        </DashboardCard>
+
+        <DashboardCard
+          title="Vídeo-aulas novas"
+          icon={Video}
+          viewAllTo="/portal/videos"
+          loading={!dashboard}
+          emptyLabel="Nenhuma vídeo-aula nova."
+        >
+          {(dashboard?.unwatchedVideos ?? []).map((video) => (
+            <Link
+              key={video.id}
+              to="/portal/videos"
+              className="flex animate-in items-start gap-2.5 rounded-md border border-border/70 bg-card/70 p-3 shadow-soft fade-in slide-in-from-top-1 duration-200 transition-colors hover:border-primary/50"
+            >
+              <Video className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-medium text-foreground">{video.title}</span>
+                <span className="block text-xs text-muted-foreground">{video.disciplineName}</span>
               </span>
             </Link>
           ))}
