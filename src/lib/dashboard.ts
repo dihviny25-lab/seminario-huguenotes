@@ -68,3 +68,27 @@ export function buildChargeAlert(charges: Array<ChargeAlertInput>, todayIso: str
     },
   };
 }
+
+export type LessonForNextPick = {
+  id: string;
+  disciplineId: string;
+  /** ISO "YYYY-MM-DD" ou nula (aula sem data marcada ainda). */
+  date: string | null;
+};
+
+/**
+ * A aula futura mais próxima (`date >= hoje`), ignorando aulas com `date`
+ * nula. A aula de hoje ainda conta como "próxima" — a sobreposição com
+ * "aula que já aconteceu" (`date <= hoje`, usada na frequência) é
+ * deliberada (Global Constraint 8).
+ */
+export function pickNextLesson<T extends LessonForNextPick>(
+  lessons: Array<T>,
+  todayIso: string,
+): T | null {
+  const upcoming = lessons.filter(
+    (lesson): lesson is T & { date: string } => lesson.date !== null && lesson.date >= todayIso,
+  );
+  if (upcoming.length === 0) return null;
+  return upcoming.reduce((closest, lesson) => (lesson.date < closest.date ? lesson : closest));
+}
