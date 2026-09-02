@@ -92,3 +92,28 @@ export function pickNextLesson<T extends LessonForNextPick>(
   if (upcoming.length === 0) return null;
   return upcoming.reduce((closest, lesson) => (lesson.date < closest.date ? lesson : closest));
 }
+
+export type VideoLessonForPortal = {
+  id: string;
+  disciplineId: string;
+  title: string;
+  /** ISO, `videoLessons.createdAt` — usado só pra ordenar, não exibido. */
+  createdAt: string;
+};
+
+/**
+ * Vídeo-aulas que o aluno ainda não concluiu, mais recentes primeiro,
+ * limitadas a `limit`. `watchedVideoLessonIds` vem das linhas de
+ * `video_watches` do próprio aluno (mesmo dado de `listMyWatchedVideosFn`).
+ */
+export function selectUnwatchedVideos<T extends VideoLessonForPortal>(
+  videos: Array<T>,
+  watchedVideoLessonIds: Array<string>,
+  limit = 5,
+): Array<T> {
+  const watched = new Set(watchedVideoLessonIds);
+  return videos
+    .filter((video) => !watched.has(video.id))
+    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
+    .slice(0, limit);
+}
