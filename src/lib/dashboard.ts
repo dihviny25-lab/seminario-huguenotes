@@ -63,3 +63,87 @@ export function summarizeExamsByStudent(
   }
   return result;
 }
+
+export type OverviewVideoWatch = { videoId: string; studentId: string };
+
+export type VideoSummary = { watched: number; total: number };
+
+/** Resumo de vídeo-aulas assistidas por aluno, dentre as vídeo-aulas da disciplina. */
+export function summarizeVideosByStudent(
+  studentIds: Array<string>,
+  videoIds: Array<string>,
+  watches: Array<OverviewVideoWatch>,
+): Map<string, VideoSummary> {
+  const total = videoIds.length;
+  const result = new Map<string, VideoSummary>();
+  for (const studentId of studentIds) {
+    const watched = new Set(watches.filter((w) => w.studentId === studentId).map((w) => w.videoId))
+      .size;
+    result.set(studentId, { watched, total });
+  }
+  return result;
+}
+
+export type DisciplineOverviewClassRow = {
+  studentId: string;
+  studentName: string;
+  average: number | null;
+  totalLessons: number;
+  totalFaltas: number;
+};
+
+export type DisciplineOverviewRow = {
+  studentId: string;
+  studentName: string;
+  average: number | null;
+  /** Fração de aulas presentes (0 a 1); `null` quando a disciplina não tem aula lançada. */
+  attendanceRatio: number | null;
+  assignmentsSubmitted: number;
+  assignmentsTotal: number;
+  assignmentsAwaitingGrading: number;
+  examsTaken: number;
+  examsTotal: number;
+  videosWatched: number;
+  videosTotal: number;
+};
+
+/**
+ * Junta nota e frequência (já calculadas por `getClassReportData`, uma
+ * linha por aluno ativo) com os resumos de tarefas, provas e vídeos numa
+ * única linha por aluno, pronta pra tabela de acompanhamento. Mesma
+ * fórmula de frequência de `getStudentReportData` (`reportData.ts:281`):
+ * `null` — nunca 100% falso — quando a disciplina ainda não tem nenhuma
+ * aula lançada.
+ */
+export function buildDisciplineOverview(
+  classRows: Array<DisciplineOverviewClassRow>,
+  assignmentSummaries: Map<string, AssignmentSummary>,
+  examSummaries: Map<string, ExamSummary>,
+  videoSummaries: Map<string, VideoSummary>,
+): Array<DisciplineOverviewRow> {
+  return classRows.map((row) => {
+    const attendanceRatio =
+      row.totalLessons === 0 ? null : (row.totalLessons - row.totalFaltas) / row.totalLessons;
+    const assignments = assignmentSummaries.get(row.studentId) ?? {
+      submitted: 0,
+      total: 0,
+      awaitingGrading: 0,
+    };
+    const exams = examSummaries.get(row.studentId) ?? { taken: 0, total: 0 };
+    const videos = videoSummaries.get(row.studentId) ?? { watched: 0, total: 0 };
+
+    return {
+      studentId: row.studentId,
+      studentName: row.studentName,
+      average: row.average,
+      attendanceRatio,
+      assignmentsSubmitted: assignments.submitted,
+      assignmentsTotal: assignments.total,
+      assignmentsAwaitingGrading: assignments.awaitingGrading,
+      examsTaken: exams.taken,
+      examsTotal: exams.total,
+      videosWatched: videos.watched,
+      videosTotal: videos.total,
+    };
+  });
+}
