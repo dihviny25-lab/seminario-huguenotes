@@ -17,8 +17,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
-import { canDeleteThread } from "@/lib/forumPermissions";
 import { deletePostFn, deleteThreadFn, getThreadFn, replyToThreadFn } from "@/functions/forum";
+import { canDeletePost, canDeleteThread } from "@/lib/forumPermissions";
 
 export function threadKey(threadId: string) {
   return ["forum-thread", threadId] as const;
@@ -135,7 +135,11 @@ export function ForumThreadView({
                   })}
                 </p>
               </div>
-              {post.mine || moderateAllPosts ? (
+              {canDeletePost({
+                isOpeningPost: post.isOpeningPost,
+                isAuthor: post.mine,
+                isModerator: moderateAllPosts,
+              }) ? (
                 <Button
                   variant="ghost"
                   size="icon"

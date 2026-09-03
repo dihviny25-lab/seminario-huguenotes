@@ -1,10 +1,10 @@
-﻿import { createServerFn } from "@tanstack/react-start";
+import { createServerFn } from "@tanstack/react-start";
 import { asc, desc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
-import { canDeleteThread } from "@/lib/forumPermissions";
+import { canDeletePost, canDeleteThread } from "@/lib/forumPermissions";
 import { logAudit } from "@/server/audit";
-import { requireAnyIdentity, requireOwnDiscipline } from "@/server/auth/guard";
+import { requireAnyIdentity } from "@/server/auth/guard";
 import { sendPushToOwner } from "@/server/push";
 import { db } from "@/server/db/client";
 import { disciplines, forumPosts, forumThreads } from "@/server/db/schema";
@@ -164,6 +164,7 @@ export type ForumPost = {
   content: string;
   createdAt: string;
   mine: boolean;
+  isOpeningPost: boolean;
 };
 
 export type ForumThreadDetail = {
@@ -201,7 +202,7 @@ export const getThreadFn = createServerFn({ method: "GET" })
       mine:
         (identity.role === "teacher" && thread.authorTeacherId === identity.id) ||
         (identity.role === "student" && thread.authorStudentId === identity.id),
-      posts: postRows.map((post) => ({
+      posts: postRows.map((post, index) => ({
         id: post.id,
         authorName: post.authorName,
         authorRole: post.authorRole,
@@ -210,6 +211,7 @@ export const getThreadFn = createServerFn({ method: "GET" })
         mine:
           (identity.role === "teacher" && post.authorTeacherId === identity.id) ||
           (identity.role === "student" && post.authorStudentId === identity.id),
+        isOpeningPost: index === 0,
       })),
     };
   });
@@ -325,7 +327,7 @@ export const deleteThreadFn = createServerFn({ method: "POST" })
 
 const deletePostSchema = z.object({ postId: z.string().uuid() });
 
-/** Apaga a própria mensagem, OU qualquer uma se for o professor dono da disciplina. */
+/** Apaga uma resposta própria, OU qualquer resposta se for o professor dono da disciplina. */
 export const deletePostFn = createServerFn({ method: "POST" })
   .validator(deletePostSchema)
   .handler(async ({ data }) => {
@@ -342,14 +344,33 @@ export const deletePostFn = createServerFn({ method: "POST" })
       (identity.role === "teacher" && post.authorTeacherId === identity.id) ||
       (identity.role === "student" && post.authorStudentId === identity.id);
 
-    if (!isAuthor) {
-      const [thread] = await db
-        .select({ disciplineId: forumThreads.disciplineId })
-        .from(forumThreads)
-        .where(eq(forumThreads.id, post.threadId))
-        .limit(1);
-      if (!thread) throw new Error("Tópico não encontrado.");
-      await requireOwnDiscipline(thread.disciplineId);
+    const [thread] = await db
+      .select({ disciplineId: forumThreads.disciplineId })
+      .from(forumThreads)
+      .where(eq(forumThreads.id, post.threadId))
+      .limit(1);
+    if (!thread) throw new Error("Tópico não encontrado.");
+
+    const [openingPost] = await db
+      .select({ id: forumPosts.id })
+      .from(forumPosts)
+      .where(eq(forumPosts.threadId, post.threadId))
+      .orderBy(asc(forumPosts.createdAt))
+      .limit(1);
+    const isOpeningPost = openingPost?.id === post.id;
+
+    const [discipline] = await db
+      .select({ teacherId: disciplines.teacherId })
+      .from(disciplines)
+      .where(eq(disciplines.id, thread.disciplineId))
+      .limit(1);
+    const isModerator = identity.role === "teacher" && discipline?.teacherId === identity.id;
+
+    if (!canDeletePost({ isOpeningPost, isAuthor, isModerator })) {
+      if (isOpeningPost) {
+        throw new Error("A mensagem inicial só pode ser removida apagando o tópico.");
+      }
+      throw new Error("Você não pode apagar esta mensagem.");
     }
 
     await db.delete(forumPosts).where(eq(forumPosts.id, data.postId));
