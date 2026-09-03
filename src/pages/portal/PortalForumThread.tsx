@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { PortalShell } from "@/components/portal/PortalShell";
-import { ForumThreadView, threadKey } from "@/components/forum/ForumThreadView";
+import { ForumThreadView } from "@/components/forum/ForumThreadView";
 import { getThreadFn } from "@/functions/forum";
+import { threadKey } from "@/lib/forumQueryKeys";
 
 export function PortalForumThread({ threadId }: { threadId: string }) {
   const { data: thread } = useQuery({
