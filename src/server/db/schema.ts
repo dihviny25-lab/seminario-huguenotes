@@ -361,6 +361,42 @@ export const readingMaterials = pgTable("reading_materials", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+// Compartilhamento explícito e nominal de uma apostila com outro professor —
+// dá acesso de leitura e comentário, nunca de edição (só o dono da
+// disciplina edita). sharedById é quem fez o compartilhamento (sempre o
+// dono, na prática, já que só ele pode chamar shareMaterialFn) — snapshot
+// anulável pra sobreviver à exclusão da conta de quem compartilhou.
+export const readingMaterialShares = pgTable(
+  "reading_material_shares",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    readingMaterialId: uuid("reading_material_id")
+      .notNull()
+      .references(() => readingMaterials.id, { onDelete: "cascade" }),
+    teacherId: uuid("teacher_id")
+      .notNull()
+      .references(() => teachers.id, { onDelete: "cascade" }),
+    sharedById: uuid("shared_by_id").references(() => teachers.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [unique().on(table.readingMaterialId, table.teacherId)],
+);
+
+// Discussão sobre uma apostila entre o dono e os professores com quem ela
+// foi compartilhada. Mesmo formato de reflectionComments: teacherId
+// anulável + authorName desnormalizado, pro histórico sobreviver à exclusão
+// da conta.
+export const readingMaterialComments = pgTable("reading_material_comments", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  readingMaterialId: uuid("reading_material_id")
+    .notNull()
+    .references(() => readingMaterials.id, { onDelete: "cascade" }),
+  teacherId: uuid("teacher_id").references(() => teachers.id, { onDelete: "set null" }),
+  authorName: text("author_name").notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const assignments = pgTable("assignments", {
   id: uuid("id").primaryKey().defaultRandom(),
   disciplineId: uuid("discipline_id")
