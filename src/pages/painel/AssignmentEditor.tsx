@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Download, Loader2, Pencil, Trash2 } from "lucide-react";
+import { useFieldArray, useForm } from "react-hook-form";
+import { ArrowLeft, CheckCircle2, Download, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { z } from "zod";
 
 import { PainelShell } from "@/components/painel/PainelShell";
 import {
@@ -24,17 +27,38 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Textarea } from "@/components/ui/textarea";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
+import { TableSkeletonRows } from "@/components/TableSkeletonRows";
+import {
+  addAssignmentQuestionFn,
   deleteAssignmentFn,
+  deleteAssignmentQuestionFn,
   getAssignmentByIdFn,
   getAssignmentSubmissionsFn,
   gradeSubmissionFn,
   updateAssignmentFn,
   type AssignmentDetail,
+  type SubmissionRow,
 } from "@/functions/assignments";
 
 function assignmentKey(assignmentId: string) {
@@ -50,6 +74,7 @@ export function AssignmentEditor({ assignmentId }: { assignmentId: string }) {
   const queryClient = useQueryClient();
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [addQuestionOpen, setAddQuestionOpen] = useState(false);
   const { data: assignment, isLoading } = useQuery({
     queryKey: assignmentKey(assignmentId),
     queryFn: () => getAssignmentByIdFn({ data: { assignmentId } }),
@@ -67,6 +92,19 @@ export function AssignmentEditor({ assignmentId }: { assignmentId: string }) {
     },
     onError: (error) =>
       toast.error(error instanceof Error ? error.message : "Não foi possível apagar a tarefa."),
+  });
+
+  const deleteQuestionMutation = useMutation({
+    mutationFn: (questionId: string) =>
+      deleteAssignmentQuestionFn({
+        data: { disciplineId: assignment!.disciplineId, assignmentId, questionId },
+      }),
+    onSuccess: async () => {
+      toast.success("Pergunta removida.");
+      await queryClient.invalidateQueries({ queryKey: assignmentKey(assignmentId) });
+    },
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Não foi possível remover."),
   });
   const { data: submissions, isLoading: loadingSubmissions } = useQuery({
     queryKey: submissionsKey(assignmentId),
@@ -113,9 +151,92 @@ export function AssignmentEditor({ assignmentId }: { assignmentId: string }) {
         </div>
       </div>
 
-      <h2 className="font-display text-lg font-semibold text-foreground">Entregas</h2>
+      {assignment.kind === "multiple_choice" ? (
+        <>
+          <div className="flex items-center justify-between">
+            <h2 className="font-display text-lg font-semibold text-foreground">Perguntas</h2>
+            {!assignment.locked ? (
+              <Button size="sm" onClick={() => setAddQuestionOpen(true)}>
+                <Plus className="size-4" aria-hidden />
+                Adicionar pergunta
+              </Button>
+            ) : null}
+          </div>
+          {assignment.locked ? (
+            <p className="mt-2 text-sm text-muted-foreground">
+              Pelo menos um aluno já entregou essa tarefa — perguntas e opções não podem mais ser
+              editadas.
+            </p>
+          ) : null}
+          {assignment.questions.length === 0 ? (
+            <p className="mt-4 rounded-md border border-border/70 bg-card/70 p-6 text-center text-muted-foreground shadow-soft">
+              Nenhuma pergunta ainda.
+            </p>
+          ) : (
+            <div className="mt-4 grid gap-3">
+              {assignment.questions.map((question, index) => (
+                <div
+                  key={question.id}
+                  className="animate-in rounded-md border border-border/70 bg-card/70 p-4 shadow-soft fade-in slide-in-from-top-1 duration-200"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="font-medium text-foreground">
+                      {index + 1}. {question.text}
+                    </p>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <Badge variant="outline">
+                        {question.points} {Number(question.points) === 1 ? "ponto" : "pontos"}
+                      </Badge>
+                      {!assignment.locked ? (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title="Remover pergunta"
+                          onClick={() => deleteQuestionMutation.mutate(question.id)}
+                        >
+                          <Trash2 className="size-4" aria-hidden />
+                        </Button>
+                      ) : null}
+                    </div>
+                  </div>
+                  <ul className="mt-3 grid gap-1.5">
+                    {question.options.map((option) => (
+                      <li
+                        key={option.id}
+                        className="flex items-center gap-2 text-sm text-muted-foreground"
+                      >
+                        {option.isCorrect ? (
+                          <CheckCircle2 className="size-4 shrink-0 text-success" aria-hidden />
+                        ) : (
+                          <span className="size-4 shrink-0" />
+                        )}
+                        <span className={option.isCorrect ? "text-foreground" : undefined}>
+                          {option.text}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          )}
+          <AddAssignmentQuestionDialog
+            disciplineId={assignment.disciplineId}
+            assignmentId={assignmentId}
+            open={addQuestionOpen}
+            onOpenChange={setAddQuestionOpen}
+            onAdded={() => queryClient.invalidateQueries({ queryKey: assignmentKey(assignmentId) })}
+          />
+        </>
+      ) : null}
 
-      {loadingSubmissions || !submissions ? (
+      <h2 className="mt-8 font-display text-lg font-semibold text-foreground">
+        {assignment.kind === "multiple_choice" ? "Resultados" : "Entregas"}
+      </h2>
+
+      {assignment.kind === "multiple_choice" ? (
+        <AssignmentResultsTable submissions={submissions} loading={loadingSubmissions} />
+      ) : loadingSubmissions || !submissions ? (
         <div className="mt-4 space-y-3">
           <Skeleton className="h-20 w-full" />
           <Skeleton className="h-20 w-full" />
@@ -407,5 +528,211 @@ function SubmissionCard({
         </>
       ) : null}
     </div>
+  );
+}
+
+function AssignmentResultsTable({
+  submissions,
+  loading,
+}: {
+  submissions: Array<SubmissionRow> | undefined;
+  loading: boolean;
+}) {
+  return (
+    <div className="mt-4 overflow-hidden rounded-md border border-border/70 bg-card/70 shadow-soft">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Aluno</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead className="text-center">Nota</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {loading || !submissions ? (
+            <TableSkeletonRows columns={3} />
+          ) : (
+            submissions.map((row) => (
+              <TableRow
+                key={row.studentId}
+                className="animate-in fade-in slide-in-from-top-1 duration-200"
+              >
+                <TableCell className="font-medium text-foreground">{row.studentName}</TableCell>
+                <TableCell className="text-muted-foreground">
+                  {row.submissionId === null ? "Não respondeu" : "Respondeu"}
+                </TableCell>
+                <TableCell className="text-center">
+                  {row.score === null ? "—" : Number(row.score).toFixed(1)}
+                </TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
+const optionFormSchema = z.object({ text: z.string().trim().min(1, "Informe o texto.") });
+
+const questionFormSchema = z.object({
+  text: z.string().trim().min(1, "Informe a pergunta."),
+  points: z.coerce.number().positive("Deve ser maior que zero."),
+  options: z.array(optionFormSchema).min(2, "Mínimo de 2 opções.").max(6, "Máximo de 6 opções."),
+  correctIndex: z.coerce.number().int().min(0),
+});
+
+function AddAssignmentQuestionDialog({
+  disciplineId,
+  assignmentId,
+  open,
+  onOpenChange,
+  onAdded,
+}: {
+  disciplineId: string;
+  assignmentId: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onAdded: () => Promise<unknown>;
+}) {
+  const form = useForm<z.infer<typeof questionFormSchema>>({
+    resolver: zodResolver(questionFormSchema),
+    defaultValues: {
+      text: "",
+      points: 1,
+      options: [{ text: "" }, { text: "" }],
+      correctIndex: 0,
+    },
+  });
+  const { fields, append, remove } = useFieldArray({ control: form.control, name: "options" });
+
+  const mutation = useMutation({
+    mutationFn: (values: z.infer<typeof questionFormSchema>) =>
+      addAssignmentQuestionFn({
+        data: {
+          disciplineId,
+          assignmentId,
+          text: values.text,
+          points: values.points,
+          options: values.options.map((option, index) => ({
+            text: option.text,
+            isCorrect: index === values.correctIndex,
+          })),
+        },
+      }),
+    onSuccess: async () => {
+      toast.success("Pergunta adicionada.");
+      form.reset({ text: "", points: 1, options: [{ text: "" }, { text: "" }], correctIndex: 0 });
+      onOpenChange(false);
+      await onAdded();
+    },
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Não foi possível adicionar."),
+  });
+
+  const correctIndex = form.watch("correctIndex");
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Nova pergunta</DialogTitle>
+        </DialogHeader>
+        <Form {...form}>
+          <form
+            className="space-y-4"
+            onSubmit={form.handleSubmit((values) => mutation.mutate(values))}
+          >
+            <FormField
+              control={form.control}
+              name="text"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Pergunta</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Qual...?" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="points"
+              render={({ field }) => (
+                <FormItem className="max-w-32">
+                  <FormLabel>Pontos</FormLabel>
+                  <FormControl>
+                    <Input type="number" step="0.1" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div>
+              <Label>Opções (marque a correta)</Label>
+              <RadioGroup
+                className="mt-2 gap-3"
+                value={String(correctIndex)}
+                onValueChange={(value) => form.setValue("correctIndex", Number(value))}
+              >
+                {fields.map((field, index) => (
+                  <div
+                    key={field.id}
+                    className="animate-in flex items-center gap-2 fade-in slide-in-from-top-1 duration-200"
+                  >
+                    <RadioGroupItem value={String(index)} id={`assignment-option-${field.id}`} />
+                    <FormField
+                      control={form.control}
+                      name={`options.${index}.text`}
+                      render={({ field: textField }) => (
+                        <FormItem className="flex-1">
+                          <FormControl>
+                            <Input placeholder={`Opção ${index + 1}`} {...textField} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    {fields.length > 2 ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => remove(index)}
+                      >
+                        <Trash2 className="size-4" aria-hidden />
+                      </Button>
+                    ) : null}
+                  </div>
+                ))}
+              </RadioGroup>
+              {fields.length < 6 ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-3"
+                  onClick={() => append({ text: "" })}
+                >
+                  <Plus className="size-4" aria-hidden />
+                  Adicionar opção
+                </Button>
+              ) : null}
+            </div>
+
+            <DialogFooter>
+              <Button type="submit" disabled={mutation.isPending}>
+                {mutation.isPending ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                ) : null}
+                Adicionar pergunta
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
   );
 }

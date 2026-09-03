@@ -7,11 +7,15 @@ import { requireStudentId } from "@/server/auth/guard";
 import { db } from "@/server/db/client";
 import {
   assessments,
+  assignmentAnswers,
+  assignmentOptions,
+  assignmentQuestions,
   assignments,
   assignmentSubmissions,
   disciplines,
   grades,
 } from "@/server/db/schema";
+import { finalizeAssignmentSubmission } from "@/server/assignments/scoring";
 
 export type AvailableAssignment = {
   id: string;
@@ -167,8 +171,17 @@ export const listDisciplineAssignmentsFn = createServerFn({ method: "GET" })
     });
   });
 
+export type MySubmissionQuestion = {
+  id: string;
+  text: string;
+  points: string;
+  options: Array<{ id: string; text: string }>;
+  selectedOptionId: string | null;
+};
+
 export type MySubmission = {
   assignmentId: string;
+  kind: "open" | "multiple_choice";
   title: string;
   instructions: string | null;
   dueAt: string | null;
@@ -179,6 +192,7 @@ export type MySubmission = {
   feedback: string | null;
   score: string | null;
   maxScore: string;
+  questions: Array<MySubmissionQuestion>;
 };
 
 const assignmentIdSchema = z.object({ assignmentId: z.string().uuid() });
@@ -192,6 +206,7 @@ export const getMySubmissionFn = createServerFn({ method: "GET" })
     const [row] = await db
       .select({
         id: assignments.id,
+        kind: assignments.kind,
         title: assignments.title,
         instructions: assignments.instructions,
         dueAt: assignments.dueAt,
@@ -221,8 +236,52 @@ export const getMySubmissionFn = createServerFn({ method: "GET" })
       .where(and(eq(grades.assessmentId, row.assessmentId), eq(grades.studentId, studentId)))
       .limit(1);
 
+    let questions: Array<MySubmissionQuestion> = [];
+    if (row.kind === "multiple_choice") {
+      const questionRows = await db
+        .select()
+        .from(assignmentQuestions)
+        .where(eq(assignmentQuestions.assignmentId, row.id))
+        .orderBy(asc(assignmentQuestions.sequence));
+      const questionIds = questionRows.map((q) => q.id);
+
+      const [optionRows, answerRows] = await Promise.all([
+        questionIds.length === 0
+          ? []
+          : db
+              .select({
+                id: assignmentOptions.id,
+                text: assignmentOptions.text,
+                questionId: assignmentOptions.questionId,
+              })
+              .from(assignmentOptions)
+              .where(inArray(assignmentOptions.questionId, questionIds))
+              .orderBy(asc(assignmentOptions.sequence)),
+        submission
+          ? db
+              .select({
+                questionId: assignmentAnswers.questionId,
+                optionId: assignmentAnswers.optionId,
+              })
+              .from(assignmentAnswers)
+              .where(eq(assignmentAnswers.submissionId, submission.id))
+          : Promise.resolve([]),
+      ]);
+
+      questions = questionRows.map((q) => ({
+        id: q.id,
+        text: q.text,
+        points: q.points,
+        options: optionRows
+          .filter((o) => o.questionId === q.id)
+          .map((o) => ({ id: o.id, text: o.text })),
+        selectedOptionId: answerRows.find((a) => a.questionId === q.id)?.optionId ?? null,
+      }));
+    }
+
     return {
       assignmentId: row.id,
+      kind: row.kind,
       title: row.title,
       instructions: row.instructions,
       dueAt: row.dueAt ? row.dueAt.toISOString() : null,
@@ -233,6 +292,7 @@ export const getMySubmissionFn = createServerFn({ method: "GET" })
       feedback: submission?.feedback ?? null,
       score: grade?.score ?? null,
       maxScore: row.maxScore,
+      questions,
     };
   });
 
@@ -254,11 +314,18 @@ export const submitAssignmentFn = createServerFn({ method: "POST" })
     const studentId = await requireStudentId();
 
     const [assignment] = await db
-      .select({ assessmentId: assignments.assessmentId, title: assignments.title })
+      .select({
+        assessmentId: assignments.assessmentId,
+        title: assignments.title,
+        kind: assignments.kind,
+      })
       .from(assignments)
       .where(eq(assignments.id, data.assignmentId))
       .limit(1);
     if (!assignment) throw new Error("Tarefa não encontrada.");
+    if (assignment.kind !== "open") {
+      throw new Error("Essa tarefa é de múltipla escolha — responda pelas alternativas.");
+    }
 
     const [existingGrade] = await db
       .select({ id: grades.id })
@@ -288,4 +355,67 @@ export const submitAssignmentFn = createServerFn({ method: "POST" })
         },
       });
     await logAudit("tarefa.entregar", `Entregou a tarefa "${assignment.title}".`);
+  });
+
+const answerInputSchema = z.object({
+  questionId: z.string().uuid(),
+  optionId: z.string().uuid(),
+});
+
+const submitAnswersSchema = z.object({
+  assignmentId: z.string().uuid(),
+  answers: z
+    .array(answerInputSchema)
+    .min(1, "Responda pelo menos uma pergunta.")
+    .refine(
+      (answers) => new Set(answers.map((a) => a.questionId)).size === answers.length,
+      { message: "Cada pergunta só pode ter uma resposta." },
+    ),
+});
+
+/** Envia as respostas de uma tarefa objetiva — grava e corrige na hora. Envio único. */
+export const submitAssignmentAnswersFn = createServerFn({ method: "POST" })
+  .validator(submitAnswersSchema)
+  .handler(async ({ data }) => {
+    const studentId = await requireStudentId();
+
+    const [assignment] = await db
+      .select()
+      .from(assignments)
+      .where(eq(assignments.id, data.assignmentId))
+      .limit(1);
+    if (!assignment) throw new Error("Tarefa não encontrada.");
+    if (assignment.kind !== "multiple_choice") {
+      throw new Error("Essa tarefa não é de múltipla escolha.");
+    }
+
+    const [existing] = await db
+      .select({ id: assignmentSubmissions.id })
+      .from(assignmentSubmissions)
+      .where(
+        and(
+          eq(assignmentSubmissions.assignmentId, data.assignmentId),
+          eq(assignmentSubmissions.studentId, studentId),
+        ),
+      )
+      .limit(1);
+    if (existing) {
+      throw new Error("Essa tarefa já foi respondida — envio único, sem reenvio.");
+    }
+
+    const [submission] = await db
+      .insert(assignmentSubmissions)
+      .values({ assignmentId: data.assignmentId, studentId })
+      .returning({ id: assignmentSubmissions.id });
+
+    await db.insert(assignmentAnswers).values(
+      data.answers.map((answer) => ({
+        submissionId: submission.id,
+        questionId: answer.questionId,
+        optionId: answer.optionId,
+      })),
+    );
+
+    await finalizeAssignmentSubmission(submission.id);
+    await logAudit("tarefa.entregar", `Entregou a tarefa objetiva "${assignment.title}".`);
   });

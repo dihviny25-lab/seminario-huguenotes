@@ -7,7 +7,9 @@ import { requireOwnDiscipline } from "@/server/auth/guard";
 import { db } from "@/server/db/client";
 import {
   assessments,
+  assignmentOptions,
   assignments,
+  assignmentQuestions,
   assignmentSubmissions,
   grades,
   students,
@@ -35,6 +37,7 @@ async function requireAssignmentInDiscipline(assignmentId: string, disciplineId:
 export type AssignmentSummary = {
   id: string;
   title: string;
+  kind: "open" | "multiple_choice";
   dueAt: string | null;
   submittedCount: number;
   gradedCount: number;
@@ -67,6 +70,7 @@ export const listMyDisciplineAssignmentsFn = createServerFn({ method: "GET" })
     return rows.map((assignment) => ({
       id: assignment.id,
       title: assignment.title,
+      kind: assignment.kind,
       dueAt: assignment.dueAt ? assignment.dueAt.toISOString() : null,
       submittedCount: submissionRows.filter((s) => s.assignmentId === assignment.id).length,
       gradedCount: submissionRows.filter(
@@ -77,6 +81,7 @@ export const listMyDisciplineAssignmentsFn = createServerFn({ method: "GET" })
 
 const createSchema = z.object({
   disciplineId: z.string().uuid(),
+  kind: z.enum(["open", "multiple_choice"]).default("open"),
   title: z.string().trim().min(1, "Informe um título."),
   instructions: z.string().trim().optional(),
   weight: z.number().positive().default(1),
@@ -95,7 +100,7 @@ export const createAssignmentFn = createServerFn({ method: "POST" })
       .values({
         disciplineId: data.disciplineId,
         title: data.title,
-        maxScore: String(data.maxScore),
+        maxScore: data.kind === "multiple_choice" ? "0" : String(data.maxScore),
         weight: String(data.weight),
       })
       .returning({ id: assessments.id });
@@ -105,6 +110,7 @@ export const createAssignmentFn = createServerFn({ method: "POST" })
       .values({
         disciplineId: data.disciplineId,
         assessmentId: assessment.id,
+        kind: data.kind,
         title: data.title,
         instructions: data.instructions || null,
         dueAt: data.dueAt ? new Date(data.dueAt) : null,
@@ -160,15 +166,94 @@ export const deleteAssignmentFn = createServerFn({ method: "POST" })
     );
   });
 
+export type AssignmentQuestionDetail = {
+  id: string;
+  text: string;
+  points: string;
+  sequence: number;
+  options: Array<{ id: string; text: string; isCorrect: boolean; sequence: number }>;
+};
+
 export type AssignmentDetail = {
   id: string;
   disciplineId: string;
+  kind: "open" | "multiple_choice";
   title: string;
   instructions: string | null;
   dueAt: string | null;
   weight: number;
   maxScore: number;
+  /** true quando pelo menos um aluno já entregou — só importa pra "multiple_choice"
+   * (trava edição de perguntas), mesma regra de `ExamDetail.locked`. */
+  locked: boolean;
+  questions: Array<AssignmentQuestionDetail>;
 };
+
+async function recomputeAssignmentMaxScore(assignmentId: string, assessmentId: string) {
+  const questions = await db
+    .select({ points: assignmentQuestions.points })
+    .from(assignmentQuestions)
+    .where(eq(assignmentQuestions.assignmentId, assignmentId));
+  const total = questions.reduce((sum, q) => sum + Number(q.points), 0);
+  await db
+    .update(assessments)
+    .set({ maxScore: String(total) })
+    .where(eq(assessments.id, assessmentId));
+}
+
+async function buildAssignmentDetail(
+  assignment: typeof assignments.$inferSelect,
+): Promise<AssignmentDetail> {
+  const [questionRows, submissionRows, assessmentRow] = await Promise.all([
+    assignment.kind === "multiple_choice"
+      ? db
+          .select()
+          .from(assignmentQuestions)
+          .where(eq(assignmentQuestions.assignmentId, assignment.id))
+          .orderBy(asc(assignmentQuestions.sequence))
+      : Promise.resolve([] as Array<typeof assignmentQuestions.$inferSelect>),
+    db
+      .select({ id: assignmentSubmissions.id })
+      .from(assignmentSubmissions)
+      .where(eq(assignmentSubmissions.assignmentId, assignment.id)),
+    db
+      .select({ weight: assessments.weight, maxScore: assessments.maxScore })
+      .from(assessments)
+      .where(eq(assessments.id, assignment.assessmentId))
+      .limit(1),
+  ]);
+
+  const questionIds = questionRows.map((q) => q.id);
+  const optionRows =
+    questionIds.length === 0
+      ? []
+      : await db
+          .select()
+          .from(assignmentOptions)
+          .where(inArray(assignmentOptions.questionId, questionIds))
+          .orderBy(asc(assignmentOptions.sequence));
+
+  return {
+    id: assignment.id,
+    disciplineId: assignment.disciplineId,
+    kind: assignment.kind,
+    title: assignment.title,
+    instructions: assignment.instructions,
+    dueAt: assignment.dueAt ? assignment.dueAt.toISOString() : null,
+    weight: Number(assessmentRow[0]?.weight ?? 1),
+    maxScore: Number(assessmentRow[0]?.maxScore ?? 10),
+    locked: submissionRows.length > 0,
+    questions: questionRows.map((q) => ({
+      id: q.id,
+      text: q.text,
+      points: q.points,
+      sequence: q.sequence,
+      options: optionRows
+        .filter((o) => o.questionId === q.id)
+        .map((o) => ({ id: o.id, text: o.text, isCorrect: o.isCorrect, sequence: o.sequence })),
+    })),
+  };
+}
 
 /** Detalhe da tarefa, resolvendo a disciplina sozinho a partir do assignmentId (rota do editor). */
 export const getAssignmentByIdFn = createServerFn({ method: "GET" })
@@ -181,22 +266,7 @@ export const getAssignmentByIdFn = createServerFn({ method: "GET" })
       .limit(1);
     if (!assignment) throw new Error("Tarefa não encontrada.");
     await requireOwnDiscipline(assignment.disciplineId);
-
-    const [assessment] = await db
-      .select({ weight: assessments.weight, maxScore: assessments.maxScore })
-      .from(assessments)
-      .where(eq(assessments.id, assignment.assessmentId))
-      .limit(1);
-
-    return {
-      id: assignment.id,
-      disciplineId: assignment.disciplineId,
-      title: assignment.title,
-      instructions: assignment.instructions,
-      dueAt: assignment.dueAt ? assignment.dueAt.toISOString() : null,
-      weight: Number(assessment?.weight ?? 1),
-      maxScore: Number(assessment?.maxScore ?? 10),
-    };
+    return buildAssignmentDetail(assignment);
   });
 
 export type SubmissionRow = {
@@ -315,4 +385,101 @@ export const gradeSubmissionFn = createServerFn({ method: "POST" })
       body: `Sua tarefa "${assignment.title}" foi corrigida — nota ${data.score}.`,
       url: "/portal",
     });
+  });
+
+const optionInputSchema = z.object({
+  text: z.string().trim().min(1, "Informe o texto da opção."),
+  isCorrect: z.boolean(),
+});
+
+const questionInputSchema = z.object({
+  disciplineId: z.string().uuid(),
+  assignmentId: z.string().uuid(),
+  text: z.string().trim().min(1, "Informe o texto da pergunta."),
+  points: z.number().positive().default(1),
+  options: z
+    .array(optionInputSchema)
+    .min(2, "A pergunta precisa de pelo menos 2 opções.")
+    .max(6, "No máximo 6 opções por pergunta."),
+});
+
+function assertExactlyOneCorrect(options: Array<{ isCorrect: boolean }>) {
+  if (options.filter((o) => o.isCorrect).length !== 1) {
+    throw new Error("Marque exatamente uma opção como correta.");
+  }
+}
+
+/** Adiciona pergunta + opções a uma tarefa objetiva — bloqueado se algum aluno já entregou. */
+export const addAssignmentQuestionFn = createServerFn({ method: "POST" })
+  .validator(questionInputSchema)
+  .handler(async ({ data }) => {
+    await requireOwnDiscipline(data.disciplineId);
+    const assignment = await requireAssignmentInDiscipline(data.assignmentId, data.disciplineId);
+    if (assignment.kind !== "multiple_choice") {
+      throw new Error("Só é possível adicionar perguntas a uma tarefa de múltipla escolha.");
+    }
+    assertExactlyOneCorrect(data.options);
+
+    const hasSubmissions = await db
+      .select({ id: assignmentSubmissions.id })
+      .from(assignmentSubmissions)
+      .where(eq(assignmentSubmissions.assignmentId, assignment.id))
+      .limit(1);
+    if (hasSubmissions.length > 0) {
+      throw new Error("Não é possível editar perguntas depois que algum aluno já entregou.");
+    }
+
+    const existing = await db
+      .select({ sequence: assignmentQuestions.sequence })
+      .from(assignmentQuestions)
+      .where(eq(assignmentQuestions.assignmentId, assignment.id));
+    const nextSequence = existing.reduce((max, q) => Math.max(max, q.sequence), 0) + 1;
+
+    const [question] = await db
+      .insert(assignmentQuestions)
+      .values({
+        assignmentId: assignment.id,
+        text: data.text,
+        points: String(data.points),
+        sequence: nextSequence,
+      })
+      .returning({ id: assignmentQuestions.id });
+
+    await db.insert(assignmentOptions).values(
+      data.options.map((option, index) => ({
+        questionId: question.id,
+        text: option.text,
+        isCorrect: option.isCorrect,
+        sequence: index + 1,
+      })),
+    );
+
+    await recomputeAssignmentMaxScore(assignment.id, assignment.assessmentId);
+    return { id: question.id };
+  });
+
+const deleteQuestionSchema = z.object({
+  disciplineId: z.string().uuid(),
+  assignmentId: z.string().uuid(),
+  questionId: z.string().uuid(),
+});
+
+/** Remove a pergunta — bloqueado se algum aluno já entregou. */
+export const deleteAssignmentQuestionFn = createServerFn({ method: "POST" })
+  .validator(deleteQuestionSchema)
+  .handler(async ({ data }) => {
+    await requireOwnDiscipline(data.disciplineId);
+    const assignment = await requireAssignmentInDiscipline(data.assignmentId, data.disciplineId);
+
+    const hasSubmissions = await db
+      .select({ id: assignmentSubmissions.id })
+      .from(assignmentSubmissions)
+      .where(eq(assignmentSubmissions.assignmentId, assignment.id))
+      .limit(1);
+    if (hasSubmissions.length > 0) {
+      throw new Error("Não é possível editar perguntas depois que algum aluno já entregou.");
+    }
+
+    await db.delete(assignmentQuestions).where(eq(assignmentQuestions.id, data.questionId));
+    await recomputeAssignmentMaxScore(assignment.id, assignment.assessmentId);
   });

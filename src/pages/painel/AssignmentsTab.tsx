@@ -7,6 +7,7 @@ import { CalendarClock, FileText, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -24,6 +25,13 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { createAssignmentFn, listMyDisciplineAssignmentsFn } from "@/functions/assignments";
@@ -97,6 +105,9 @@ export function AssignmentsTab({ disciplineId }: { disciplineId: string }) {
                   {assignment.gradedCount}{" "}
                   {assignment.gradedCount === 1 ? "corrigida" : "corrigidas"}
                 </span>
+                <Badge variant="outline" className="mt-1">
+                  {assignment.kind === "multiple_choice" ? "Múltipla escolha" : "Texto/arquivo"}
+                </Badge>
               </span>
             </Link>
           ))}
@@ -112,13 +123,19 @@ export function AssignmentsTab({ disciplineId }: { disciplineId: string }) {
   );
 }
 
-const assignmentSchema = z.object({
-  title: z.string().trim().min(1, "Informe um título."),
-  instructions: z.string().trim().optional(),
-  maxScore: z.coerce.number().positive("Deve ser maior que zero."),
-  weight: z.coerce.number().positive("Deve ser maior que zero."),
-  dueAt: z.string().optional(),
-});
+const assignmentSchema = z
+  .object({
+    kind: z.enum(["open", "multiple_choice"]),
+    title: z.string().trim().min(1, "Informe um título."),
+    instructions: z.string().trim().optional(),
+    maxScore: z.coerce.number().positive("Deve ser maior que zero.").optional(),
+    weight: z.coerce.number().positive("Deve ser maior que zero."),
+    dueAt: z.string().optional(),
+  })
+  .refine((data) => data.kind === "multiple_choice" || data.maxScore !== undefined, {
+    message: "Informe a nota máxima.",
+    path: ["maxScore"],
+  });
 
 function CreateAssignmentDialog({
   disciplineId,
@@ -133,7 +150,14 @@ function CreateAssignmentDialog({
   const navigate = useNavigate();
   const form = useForm<z.infer<typeof assignmentSchema>>({
     resolver: zodResolver(assignmentSchema),
-    defaultValues: { title: "", instructions: "", maxScore: 10, weight: 1, dueAt: "" },
+    defaultValues: {
+      kind: "open",
+      title: "",
+      instructions: "",
+      maxScore: 10,
+      weight: 1,
+      dueAt: "",
+    },
   });
 
   const mutation = useMutation({
@@ -141,9 +165,10 @@ function CreateAssignmentDialog({
       createAssignmentFn({
         data: {
           disciplineId,
+          kind: values.kind,
           title: values.title,
           instructions: values.instructions,
-          maxScore: values.maxScore,
+          maxScore: values.maxScore ?? 10,
           weight: values.weight,
           dueAt: values.dueAt ? new Date(values.dueAt).toISOString() : undefined,
         },
@@ -175,6 +200,29 @@ function CreateAssignmentDialog({
           >
             <FormField
               control={form.control}
+              name="kind"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tipo de tarefa</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="open">Texto/arquivo</SelectItem>
+                      <SelectItem value="multiple_choice">
+                        Múltipla escolha (corrige sozinha)
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
               name="title"
               render={({ field }) => (
                 <FormItem>
@@ -200,19 +248,21 @@ function CreateAssignmentDialog({
               )}
             />
             <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="maxScore"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nota máxima</FormLabel>
-                    <FormControl>
-                      <Input type="number" step="0.1" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {form.watch("kind") === "open" ? (
+                <FormField
+                  control={form.control}
+                  name="maxScore"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nota máxima</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="0.1" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              ) : null}
               <FormField
                 control={form.control}
                 name="weight"
