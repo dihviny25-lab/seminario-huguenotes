@@ -37,6 +37,7 @@ async function requireAssignmentInDiscipline(assignmentId: string, disciplineId:
 export type AssignmentSummary = {
   id: string;
   title: string;
+  kind: "open" | "multiple_choice";
   dueAt: string | null;
   submittedCount: number;
   gradedCount: number;
@@ -69,6 +70,7 @@ export const listMyDisciplineAssignmentsFn = createServerFn({ method: "GET" })
     return rows.map((assignment) => ({
       id: assignment.id,
       title: assignment.title,
+      kind: assignment.kind,
       dueAt: assignment.dueAt ? assignment.dueAt.toISOString() : null,
       submittedCount: submissionRows.filter((s) => s.assignmentId === assignment.id).length,
       gradedCount: submissionRows.filter(
