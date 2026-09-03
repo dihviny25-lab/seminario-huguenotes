@@ -367,10 +367,9 @@ const submitAnswersSchema = z.object({
   answers: z
     .array(answerInputSchema)
     .min(1, "Responda pelo menos uma pergunta.")
-    .refine(
-      (answers) => new Set(answers.map((a) => a.questionId)).size === answers.length,
-      { message: "Cada pergunta só pode ter uma resposta." },
-    ),
+    .refine((answers) => new Set(answers.map((a) => a.questionId)).size === answers.length, {
+      message: "Cada pergunta só pode ter uma resposta.",
+    }),
 });
 
 /** Envia as respostas de uma tarefa objetiva — grava e corrige na hora. Envio único. */
