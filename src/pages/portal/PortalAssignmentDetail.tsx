@@ -5,12 +5,28 @@ import { ArrowLeft, CheckCircle2, Download, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { PortalShell } from "@/components/portal/PortalShell";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { getMySubmissionFn, submitAssignmentFn } from "@/functions/assignmentSubmissions";
+import {
+  getMySubmissionFn,
+  submitAssignmentAnswersFn,
+  submitAssignmentFn,
+} from "@/functions/assignmentSubmissions";
 import { uploadFile } from "@/lib/blobUpload";
 
 function submissionKey(assignmentId: string) {
@@ -26,6 +42,26 @@ export function PortalAssignmentDetail({ assignmentId }: { assignmentId: string 
   const [textContent, setTextContent] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+
+  const submitAnswersMutation = useMutation({
+    mutationFn: () =>
+      submitAssignmentAnswersFn({
+        data: {
+          assignmentId,
+          answers: Object.entries(answers).map(([questionId, optionId]) => ({
+            questionId,
+            optionId,
+          })),
+        },
+      }),
+    onSuccess: async () => {
+      toast.success("Respostas enviadas.");
+      await queryClient.invalidateQueries({ queryKey: submissionKey(assignmentId) });
+    },
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Não foi possível enviar."),
+  });
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -104,6 +140,72 @@ export function PortalAssignmentDetail({ assignmentId }: { assignmentId: string 
               {submission.textContent}
             </p>
           ) : null}
+        </div>
+      ) : submission.kind === "multiple_choice" ? (
+        <div className="rounded-md border border-t-2 border-border/70 border-t-accent bg-card/70 p-5 shadow-soft">
+          <div className="grid gap-4">
+            {submission.questions.map((question, index) => (
+              <div
+                key={question.id}
+                className="animate-in rounded-md border border-border/70 bg-card/40 p-4 fade-in slide-in-from-top-1 duration-200"
+              >
+                <p className="font-medium text-foreground">
+                  {index + 1}. {question.text}
+                </p>
+                <RadioGroup
+                  className="mt-3 gap-2.5"
+                  value={answers[question.id] ?? ""}
+                  onValueChange={(value) =>
+                    setAnswers((prev) => ({ ...prev, [question.id]: value }))
+                  }
+                >
+                  {question.options.map((option) => (
+                    <label
+                      key={option.id}
+                      className="flex cursor-pointer items-center gap-2.5 text-sm text-foreground"
+                    >
+                      <RadioGroupItem value={option.id} />
+                      {option.text}
+                    </label>
+                  ))}
+                </RadioGroup>
+              </div>
+            ))}
+          </div>
+
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button className="mt-6" disabled={submitAnswersMutation.isPending}>
+                {submitAnswersMutation.isPending ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                ) : null}
+                Entregar respostas
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Entregar respostas?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  A nota sai na hora e não dá pra reenviar depois.{" "}
+                  {submission.questions.some((q) => !answers[q.id])
+                    ? "Você tem pergunta(s) sem resposta."
+                    : ""}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Voltar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => submitAnswersMutation.mutate()}
+                  disabled={submitAnswersMutation.isPending}
+                >
+                  {submitAnswersMutation.isPending ? (
+                    <Loader2 className="size-4 animate-spin" aria-hidden />
+                  ) : null}
+                  Enviar
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       ) : (
         <div className="rounded-md border border-t-2 border-border/70 border-t-accent bg-card/70 p-5 shadow-soft">
