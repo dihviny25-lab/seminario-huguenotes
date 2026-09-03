@@ -19,10 +19,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { deletePostFn, deleteThreadFn, getThreadFn, replyToThreadFn } from "@/functions/forum";
 import { canDeletePost, canDeleteThread } from "@/lib/forumPermissions";
-
-export function threadKey(threadId: string) {
-  return ["forum-thread", threadId] as const;
-}
+import { threadKey } from "@/lib/forumQueryKeys";
 
 export function ForumThreadView({
   threadId,
