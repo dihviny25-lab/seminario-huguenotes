@@ -63,6 +63,7 @@ import { Route as PainelTarefasAssignmentIdRouteImport } from './routes/painel/t
 import { Route as PainelProvasExamIdRouteImport } from './routes/painel/provas/$examId'
 import { Route as PainelForumThreadIdRouteImport } from './routes/painel/forum/$threadId'
 import { Route as PainelDisciplinasDisciplineIdRouteImport } from './routes/painel/disciplinas/$disciplineId'
+import { Route as PainelApostilasCompartilhadasMaterialIdRouteImport } from './routes/painel/apostilas-compartilhadas/$materialId'
 import { Route as ApiMercadopagoWebhookRouteImport } from './routes/api/mercadopago/webhook'
 import { Route as ApiCronPaymentRemindersRouteImport } from './routes/api/cron/payment-reminders'
 import { Route as ApiCronFinalizeExpiredExamsRouteImport } from './routes/api/cron/finalize-expired-exams'
@@ -362,6 +363,12 @@ const PainelDisciplinasDisciplineIdRoute =
     path: '/disciplinas/$disciplineId',
     getParentRoute: () => PainelRouteRoute,
   } as any)
+const PainelApostilasCompartilhadasMaterialIdRoute =
+  PainelApostilasCompartilhadasMaterialIdRouteImport.update({
+    id: '/apostilas-compartilhadas/$materialId',
+    path: '/apostilas-compartilhadas/$materialId',
+    getParentRoute: () => PainelRouteRoute,
+  } as any)
 const ApiMercadopagoWebhookRoute = ApiMercadopagoWebhookRouteImport.update({
   id: '/api/mercadopago/webhook',
   path: '/api/mercadopago/webhook',
@@ -446,6 +453,7 @@ export interface FileRoutesByFullPath {
   '/api/cron/finalize-expired-exams': typeof ApiCronFinalizeExpiredExamsRoute
   '/api/cron/payment-reminders': typeof ApiCronPaymentRemindersRoute
   '/api/mercadopago/webhook': typeof ApiMercadopagoWebhookRoute
+  '/painel/apostilas-compartilhadas/$materialId': typeof PainelApostilasCompartilhadasMaterialIdRoute
   '/painel/disciplinas/$disciplineId': typeof PainelDisciplinasDisciplineIdRoute
   '/painel/forum/$threadId': typeof PainelForumThreadIdRoute
   '/painel/provas/$examId': typeof PainelProvasExamIdRoute
@@ -508,6 +516,7 @@ export interface FileRoutesByTo {
   '/api/cron/finalize-expired-exams': typeof ApiCronFinalizeExpiredExamsRoute
   '/api/cron/payment-reminders': typeof ApiCronPaymentRemindersRoute
   '/api/mercadopago/webhook': typeof ApiMercadopagoWebhookRoute
+  '/painel/apostilas-compartilhadas/$materialId': typeof PainelApostilasCompartilhadasMaterialIdRoute
   '/painel/disciplinas/$disciplineId': typeof PainelDisciplinasDisciplineIdRoute
   '/painel/forum/$threadId': typeof PainelForumThreadIdRoute
   '/painel/provas/$examId': typeof PainelProvasExamIdRoute
@@ -573,6 +582,7 @@ export interface FileRoutesById {
   '/api/cron/finalize-expired-exams': typeof ApiCronFinalizeExpiredExamsRoute
   '/api/cron/payment-reminders': typeof ApiCronPaymentRemindersRoute
   '/api/mercadopago/webhook': typeof ApiMercadopagoWebhookRoute
+  '/painel/apostilas-compartilhadas/$materialId': typeof PainelApostilasCompartilhadasMaterialIdRoute
   '/painel/disciplinas/$disciplineId': typeof PainelDisciplinasDisciplineIdRoute
   '/painel/forum/$threadId': typeof PainelForumThreadIdRoute
   '/painel/provas/$examId': typeof PainelProvasExamIdRoute
@@ -639,6 +649,7 @@ export interface FileRouteTypes {
     | '/api/cron/finalize-expired-exams'
     | '/api/cron/payment-reminders'
     | '/api/mercadopago/webhook'
+    | '/painel/apostilas-compartilhadas/$materialId'
     | '/painel/disciplinas/$disciplineId'
     | '/painel/forum/$threadId'
     | '/painel/provas/$examId'
@@ -701,6 +712,7 @@ export interface FileRouteTypes {
     | '/api/cron/finalize-expired-exams'
     | '/api/cron/payment-reminders'
     | '/api/mercadopago/webhook'
+    | '/painel/apostilas-compartilhadas/$materialId'
     | '/painel/disciplinas/$disciplineId'
     | '/painel/forum/$threadId'
     | '/painel/provas/$examId'
@@ -765,6 +777,7 @@ export interface FileRouteTypes {
     | '/api/cron/finalize-expired-exams'
     | '/api/cron/payment-reminders'
     | '/api/mercadopago/webhook'
+    | '/painel/apostilas-compartilhadas/$materialId'
     | '/painel/disciplinas/$disciplineId'
     | '/painel/forum/$threadId'
     | '/painel/provas/$examId'
@@ -1191,6 +1204,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PainelDisciplinasDisciplineIdRouteImport
       parentRoute: typeof PainelRouteRoute
     }
+    '/painel/apostilas-compartilhadas/$materialId': {
+      id: '/painel/apostilas-compartilhadas/$materialId'
+      path: '/apostilas-compartilhadas/$materialId'
+      fullPath: '/painel/apostilas-compartilhadas/$materialId'
+      preLoaderRoute: typeof PainelApostilasCompartilhadasMaterialIdRouteImport
+      parentRoute: typeof PainelRouteRoute
+    }
     '/api/mercadopago/webhook': {
       id: '/api/mercadopago/webhook'
       path: '/api/mercadopago/webhook'
@@ -1290,6 +1310,7 @@ interface PainelRouteRouteChildren {
   PainelRelatorioModuloRoute: typeof PainelRelatorioModuloRoute
   PainelTrocarSenhaRoute: typeof PainelTrocarSenhaRoute
   PainelIndexRoute: typeof PainelIndexRoute
+  PainelApostilasCompartilhadasMaterialIdRoute: typeof PainelApostilasCompartilhadasMaterialIdRoute
   PainelDisciplinasDisciplineIdRoute: typeof PainelDisciplinasDisciplineIdRoute
   PainelForumThreadIdRoute: typeof PainelForumThreadIdRoute
   PainelProvasExamIdRoute: typeof PainelProvasExamIdRoute
@@ -1314,6 +1335,8 @@ const PainelRouteRouteChildren: PainelRouteRouteChildren = {
   PainelRelatorioModuloRoute: PainelRelatorioModuloRoute,
   PainelTrocarSenhaRoute: PainelTrocarSenhaRoute,
   PainelIndexRoute: PainelIndexRoute,
+  PainelApostilasCompartilhadasMaterialIdRoute:
+    PainelApostilasCompartilhadasMaterialIdRoute,
   PainelDisciplinasDisciplineIdRoute: PainelDisciplinasDisciplineIdRoute,
   PainelForumThreadIdRoute: PainelForumThreadIdRoute,
   PainelProvasExamIdRoute: PainelProvasExamIdRoute,
