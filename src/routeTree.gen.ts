@@ -51,6 +51,7 @@ import { Route as PortalApostilasIndexRouteImport } from './routes/portal/aposti
 import { Route as PainelTarefasIndexRouteImport } from './routes/painel/tarefas/index'
 import { Route as PainelProvasIndexRouteImport } from './routes/painel/provas/index'
 import { Route as PainelForumIndexRouteImport } from './routes/painel/forum/index'
+import { Route as PainelApostilasCompartilhadasIndexRouteImport } from './routes/painel/apostilas-compartilhadas/index'
 import { Route as PortalTarefasAssignmentIdRouteImport } from './routes/portal/tarefas/$assignmentId'
 import { Route as PortalProvasExamIdRouteImport } from './routes/portal/provas/$examId'
 import { Route as PortalForumThreadIdRouteImport } from './routes/portal/forum/$threadId'
@@ -289,6 +290,12 @@ const PainelForumIndexRoute = PainelForumIndexRouteImport.update({
   path: '/forum/',
   getParentRoute: () => PainelRouteRoute,
 } as any)
+const PainelApostilasCompartilhadasIndexRoute =
+  PainelApostilasCompartilhadasIndexRouteImport.update({
+    id: '/apostilas-compartilhadas/',
+    path: '/apostilas-compartilhadas/',
+    getParentRoute: () => PainelRouteRoute,
+  } as any)
 const PortalTarefasAssignmentIdRoute =
   PortalTarefasAssignmentIdRouteImport.update({
     id: '/tarefas/$assignmentId',
@@ -450,6 +457,7 @@ export interface FileRoutesByFullPath {
   '/portal/forum/$threadId': typeof PortalForumThreadIdRoute
   '/portal/provas/$examId': typeof PortalProvasExamIdRoute
   '/portal/tarefas/$assignmentId': typeof PortalTarefasAssignmentIdRoute
+  '/painel/apostilas-compartilhadas/': typeof PainelApostilasCompartilhadasIndexRoute
   '/painel/forum/': typeof PainelForumIndexRoute
   '/painel/provas/': typeof PainelProvasIndexRoute
   '/painel/tarefas/': typeof PainelTarefasIndexRoute
@@ -511,6 +519,7 @@ export interface FileRoutesByTo {
   '/portal/forum/$threadId': typeof PortalForumThreadIdRoute
   '/portal/provas/$examId': typeof PortalProvasExamIdRoute
   '/portal/tarefas/$assignmentId': typeof PortalTarefasAssignmentIdRoute
+  '/painel/apostilas-compartilhadas': typeof PainelApostilasCompartilhadasIndexRoute
   '/painel/forum': typeof PainelForumIndexRoute
   '/painel/provas': typeof PainelProvasIndexRoute
   '/painel/tarefas': typeof PainelTarefasIndexRoute
@@ -575,6 +584,7 @@ export interface FileRoutesById {
   '/portal/forum/$threadId': typeof PortalForumThreadIdRoute
   '/portal/provas/$examId': typeof PortalProvasExamIdRoute
   '/portal/tarefas/$assignmentId': typeof PortalTarefasAssignmentIdRoute
+  '/painel/apostilas-compartilhadas/': typeof PainelApostilasCompartilhadasIndexRoute
   '/painel/forum/': typeof PainelForumIndexRoute
   '/painel/provas/': typeof PainelProvasIndexRoute
   '/painel/tarefas/': typeof PainelTarefasIndexRoute
@@ -640,6 +650,7 @@ export interface FileRouteTypes {
     | '/portal/forum/$threadId'
     | '/portal/provas/$examId'
     | '/portal/tarefas/$assignmentId'
+    | '/painel/apostilas-compartilhadas/'
     | '/painel/forum/'
     | '/painel/provas/'
     | '/painel/tarefas/'
@@ -701,6 +712,7 @@ export interface FileRouteTypes {
     | '/portal/forum/$threadId'
     | '/portal/provas/$examId'
     | '/portal/tarefas/$assignmentId'
+    | '/painel/apostilas-compartilhadas'
     | '/painel/forum'
     | '/painel/provas'
     | '/painel/tarefas'
@@ -764,6 +776,7 @@ export interface FileRouteTypes {
     | '/portal/forum/$threadId'
     | '/portal/provas/$examId'
     | '/portal/tarefas/$assignmentId'
+    | '/painel/apostilas-compartilhadas/'
     | '/painel/forum/'
     | '/painel/provas/'
     | '/painel/tarefas/'
@@ -1094,6 +1107,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PainelForumIndexRouteImport
       parentRoute: typeof PainelRouteRoute
     }
+    '/painel/apostilas-compartilhadas/': {
+      id: '/painel/apostilas-compartilhadas/'
+      path: '/apostilas-compartilhadas'
+      fullPath: '/painel/apostilas-compartilhadas/'
+      preLoaderRoute: typeof PainelApostilasCompartilhadasIndexRouteImport
+      parentRoute: typeof PainelRouteRoute
+    }
     '/portal/tarefas/$assignmentId': {
       id: '/portal/tarefas/$assignmentId'
       path: '/tarefas/$assignmentId'
@@ -1274,6 +1294,7 @@ interface PainelRouteRouteChildren {
   PainelForumThreadIdRoute: typeof PainelForumThreadIdRoute
   PainelProvasExamIdRoute: typeof PainelProvasExamIdRoute
   PainelTarefasAssignmentIdRoute: typeof PainelTarefasAssignmentIdRoute
+  PainelApostilasCompartilhadasIndexRoute: typeof PainelApostilasCompartilhadasIndexRoute
   PainelForumIndexRoute: typeof PainelForumIndexRoute
   PainelProvasIndexRoute: typeof PainelProvasIndexRoute
   PainelTarefasIndexRoute: typeof PainelTarefasIndexRoute
@@ -1297,6 +1318,8 @@ const PainelRouteRouteChildren: PainelRouteRouteChildren = {
   PainelForumThreadIdRoute: PainelForumThreadIdRoute,
   PainelProvasExamIdRoute: PainelProvasExamIdRoute,
   PainelTarefasAssignmentIdRoute: PainelTarefasAssignmentIdRoute,
+  PainelApostilasCompartilhadasIndexRoute:
+    PainelApostilasCompartilhadasIndexRoute,
   PainelForumIndexRoute: PainelForumIndexRoute,
   PainelProvasIndexRoute: PainelProvasIndexRoute,
   PainelTarefasIndexRoute: PainelTarefasIndexRoute,
