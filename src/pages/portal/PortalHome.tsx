@@ -123,7 +123,9 @@ export function PortalHome() {
         >
           <AlertTriangle className="size-4" aria-hidden />
           <AlertTitle>
-            {dashboard.chargeAlert.level === "overdue" ? "Cobrança vencida" : "Cobrança vence em breve"}
+            {dashboard.chargeAlert.level === "overdue"
+              ? "Cobrança vencida"
+              : "Cobrança vence em breve"}
           </AlertTitle>
           <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
             <span>
@@ -303,7 +305,9 @@ export function PortalHome() {
             >
               <Video className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden />
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-medium text-foreground">{video.title}</span>
+                <span className="block truncate text-sm font-medium text-foreground">
+                  {video.title}
+                </span>
                 <span className="block text-xs text-muted-foreground">{video.disciplineName}</span>
               </span>
             </Link>
