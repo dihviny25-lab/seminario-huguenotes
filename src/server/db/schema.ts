@@ -33,6 +33,7 @@ export const videoSource = pgEnum("video_source", ["youtube", "upload"]);
 export const noteKind = pgEnum("note_kind", ["note", "question"]);
 export const auditActorType = pgEnum("audit_actor_type", ["teacher", "student"]);
 export const pushOwnerType = pgEnum("push_owner_type", ["teacher", "student"]);
+export const assignmentKind = pgEnum("assignment_kind", ["open", "multiple_choice"]);
 
 export const teachers = pgTable("teachers", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -369,6 +370,10 @@ export const assignments = pgTable("assignments", {
     .notNull()
     .unique()
     .references(() => assessments.id, { onDelete: "cascade" }),
+  // "open" (texto/arquivo, como sempre foi) ou "multiple_choice" (corrigida
+  // sozinha, igual prova). Imutável depois de criada — trocar o tipo
+  // significa apagar e recriar a tarefa.
+  kind: assignmentKind("kind").notNull().default("open"),
   title: text("title").notNull(),
   instructions: text("instructions"),
   dueAt: timestamp("due_at", { withTimezone: true }),
@@ -393,6 +398,43 @@ export const assignmentSubmissions = pgTable(
     gradedAt: timestamp("graded_at", { withTimezone: true }),
   },
   (table) => [unique().on(table.assignmentId, table.studentId)],
+);
+
+export const assignmentQuestions = pgTable("assignment_questions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  assignmentId: uuid("assignment_id")
+    .notNull()
+    .references(() => assignments.id, { onDelete: "cascade" }),
+  text: text("text").notNull(),
+  points: numeric("points", { precision: 5, scale: 2 }).notNull().default("1"),
+  sequence: integer("sequence").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const assignmentOptions = pgTable("assignment_options", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  questionId: uuid("question_id")
+    .notNull()
+    .references(() => assignmentQuestions.id, { onDelete: "cascade" }),
+  text: text("text").notNull(),
+  isCorrect: boolean("is_correct").notNull().default(false),
+  sequence: integer("sequence").notNull(),
+});
+
+export const assignmentAnswers = pgTable(
+  "assignment_answers",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    submissionId: uuid("submission_id")
+      .notNull()
+      .references(() => assignmentSubmissions.id, { onDelete: "cascade" }),
+    questionId: uuid("question_id")
+      .notNull()
+      .references(() => assignmentQuestions.id, { onDelete: "cascade" }),
+    optionId: uuid("option_id").references(() => assignmentOptions.id, { onDelete: "set null" }),
+    answeredAt: timestamp("answered_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [unique().on(table.submissionId, table.questionId)],
 );
 
 export const forumThreads = pgTable("forum_threads", {
