@@ -43,6 +43,7 @@ import { Route as PainelAuditoriaRouteImport } from './routes/painel/auditoria'
 import { Route as PainelAlunosRouteImport } from './routes/painel/alunos'
 import { Route as PainelAgendaRouteImport } from './routes/painel/agenda'
 import { Route as PortalTarefasIndexRouteImport } from './routes/portal/tarefas/index'
+import { Route as PortalSlidesIndexRouteImport } from './routes/portal/slides/index'
 import { Route as PortalProvasIndexRouteImport } from './routes/portal/provas/index'
 import { Route as PortalForumIndexRouteImport } from './routes/portal/forum/index'
 import { Route as PortalDisciplinasIndexRouteImport } from './routes/portal/disciplinas/index'
@@ -252,6 +253,11 @@ const PainelAgendaRoute = PainelAgendaRouteImport.update({
 const PortalTarefasIndexRoute = PortalTarefasIndexRouteImport.update({
   id: '/tarefas/',
   path: '/tarefas/',
+  getParentRoute: () => PortalRouteRoute,
+} as any)
+const PortalSlidesIndexRoute = PortalSlidesIndexRouteImport.update({
+  id: '/slides/',
+  path: '/slides/',
   getParentRoute: () => PortalRouteRoute,
 } as any)
 const PortalProvasIndexRoute = PortalProvasIndexRouteImport.update({
@@ -497,6 +503,7 @@ export interface FileRoutesByFullPath {
   '/portal/disciplinas/': typeof PortalDisciplinasIndexRoute
   '/portal/forum/': typeof PortalForumIndexRoute
   '/portal/provas/': typeof PortalProvasIndexRoute
+  '/portal/slides/': typeof PortalSlidesIndexRoute
   '/portal/tarefas/': typeof PortalTarefasIndexRoute
   '/painel/pagamentos/$chargeId/recibo': typeof PainelPagamentosChargeIdReciboRoute
   '/painel/relatorio/$studentId/pdf': typeof PainelRelatorioStudentIdPdfRoute
@@ -563,6 +570,7 @@ export interface FileRoutesByTo {
   '/portal/disciplinas': typeof PortalDisciplinasIndexRoute
   '/portal/forum': typeof PortalForumIndexRoute
   '/portal/provas': typeof PortalProvasIndexRoute
+  '/portal/slides': typeof PortalSlidesIndexRoute
   '/portal/tarefas': typeof PortalTarefasIndexRoute
   '/painel/pagamentos/$chargeId/recibo': typeof PainelPagamentosChargeIdReciboRoute
   '/painel/relatorio/$studentId/pdf': typeof PainelRelatorioStudentIdPdfRoute
@@ -632,6 +640,7 @@ export interface FileRoutesById {
   '/portal/disciplinas/': typeof PortalDisciplinasIndexRoute
   '/portal/forum/': typeof PortalForumIndexRoute
   '/portal/provas/': typeof PortalProvasIndexRoute
+  '/portal/slides/': typeof PortalSlidesIndexRoute
   '/portal/tarefas/': typeof PortalTarefasIndexRoute
   '/painel/pagamentos/$chargeId/recibo': typeof PainelPagamentosChargeIdReciboRoute
   '/painel/relatorio/$studentId/pdf': typeof PainelRelatorioStudentIdPdfRoute
@@ -702,6 +711,7 @@ export interface FileRouteTypes {
     | '/portal/disciplinas/'
     | '/portal/forum/'
     | '/portal/provas/'
+    | '/portal/slides/'
     | '/portal/tarefas/'
     | '/painel/pagamentos/$chargeId/recibo'
     | '/painel/relatorio/$studentId/pdf'
@@ -768,6 +778,7 @@ export interface FileRouteTypes {
     | '/portal/disciplinas'
     | '/portal/forum'
     | '/portal/provas'
+    | '/portal/slides'
     | '/portal/tarefas'
     | '/painel/pagamentos/$chargeId/recibo'
     | '/painel/relatorio/$studentId/pdf'
@@ -836,6 +847,7 @@ export interface FileRouteTypes {
     | '/portal/disciplinas/'
     | '/portal/forum/'
     | '/portal/provas/'
+    | '/portal/slides/'
     | '/portal/tarefas/'
     | '/painel/pagamentos/$chargeId/recibo'
     | '/painel/relatorio/$studentId/pdf'
@@ -1100,6 +1112,13 @@ declare module '@tanstack/react-router' {
       path: '/tarefas'
       fullPath: '/portal/tarefas/'
       preLoaderRoute: typeof PortalTarefasIndexRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
+    '/portal/slides/': {
+      id: '/portal/slides/'
+      path: '/slides'
+      fullPath: '/portal/slides/'
+      preLoaderRoute: typeof PortalSlidesIndexRouteImport
       parentRoute: typeof PortalRouteRoute
     }
     '/portal/provas/': {
@@ -1449,6 +1468,7 @@ interface PortalRouteRouteChildren {
   PortalDisciplinasIndexRoute: typeof PortalDisciplinasIndexRoute
   PortalForumIndexRoute: typeof PortalForumIndexRoute
   PortalProvasIndexRoute: typeof PortalProvasIndexRoute
+  PortalSlidesIndexRoute: typeof PortalSlidesIndexRoute
   PortalTarefasIndexRoute: typeof PortalTarefasIndexRoute
 }
 
@@ -1473,6 +1493,7 @@ const PortalRouteRouteChildren: PortalRouteRouteChildren = {
   PortalDisciplinasIndexRoute: PortalDisciplinasIndexRoute,
   PortalForumIndexRoute: PortalForumIndexRoute,
   PortalProvasIndexRoute: PortalProvasIndexRoute,
+  PortalSlidesIndexRoute: PortalSlidesIndexRoute,
   PortalTarefasIndexRoute: PortalTarefasIndexRoute,
 }
 

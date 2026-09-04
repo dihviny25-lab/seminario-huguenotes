@@ -2,42 +2,43 @@ import { useQuery } from "@tanstack/react-query";
 
 import { ContentTypeToggle } from "@/components/portal/ContentTypeToggle";
 import { PortalShell } from "@/components/portal/PortalShell";
-import { ReadingMaterialCard } from "@/components/portal/ReadingMaterialCard";
+import { SlideCard } from "@/components/portal/SlideCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getPublicDisciplinesFn } from "@/functions/schedule";
-import { listAllReadingMaterialsFn, type ReadingMaterial } from "@/functions/readingMaterials";
+import {
+  listAllPresentationSlidesFn,
+  type PresentationSlide,
+} from "@/functions/presentationSlides";
 import { groupBySemester, semesterLabel } from "@/lib/schedule-utils";
 
-/** Biblioteca de apostilas/materiais de leitura — todas as disciplinas, agrupadas por semestre. */
-export function PortalMaterials() {
+/** Biblioteca de slides — todas as disciplinas, agrupadas por semestre. */
+export function PortalSlides() {
   const { data: disciplines, isLoading: loadingDisciplines } = useQuery({
     queryKey: ["public-disciplines"],
     queryFn: () => getPublicDisciplinesFn(),
   });
-  const { data: materials, isLoading: loadingMaterials } = useQuery({
-    queryKey: ["all-reading-materials"],
-    queryFn: () => listAllReadingMaterialsFn(),
+  const { data: slides, isLoading: loadingSlides } = useQuery({
+    queryKey: ["all-presentation-slides"],
+    queryFn: () => listAllPresentationSlidesFn(),
   });
 
-  const isLoading = loadingDisciplines || loadingMaterials;
-  const materialsByDiscipline = new Map<string, Array<ReadingMaterial>>();
-  for (const material of materials ?? []) {
-    const list = materialsByDiscipline.get(material.disciplineId) ?? [];
-    list.push(material);
-    materialsByDiscipline.set(material.disciplineId, list);
+  const isLoading = loadingDisciplines || loadingSlides;
+  const slidesByDiscipline = new Map<string, Array<PresentationSlide>>();
+  for (const slide of slides ?? []) {
+    const list = slidesByDiscipline.get(slide.disciplineId) ?? [];
+    list.push(slide);
+    slidesByDiscipline.set(slide.disciplineId, list);
   }
 
-  const disciplinesWithMaterials = (disciplines ?? []).filter((d) =>
-    materialsByDiscipline.has(d.id),
-  );
-  const semesters = groupBySemester(disciplinesWithMaterials);
+  const disciplinesWithSlides = (disciplines ?? []).filter((d) => slidesByDiscipline.has(d.id));
+  const semesters = groupBySemester(disciplinesWithSlides);
 
   return (
     <PortalShell
-      title="Apostilas"
-      description="Materiais de leitura disponibilizados pelos professores em cada disciplina."
+      title="Slides"
+      description="Apresentações disponibilizadas pelos professores em cada disciplina."
     >
-      <ContentTypeToggle active="apostilas" />
+      <ContentTypeToggle active="slides" />
 
       {isLoading ? (
         <div className="mt-8 space-y-10">
@@ -54,7 +55,7 @@ export function PortalMaterials() {
         </div>
       ) : semesters.length === 0 ? (
         <p className="animate-in mt-8 rounded-md border border-border/70 bg-card/70 p-6 text-center text-muted-foreground shadow-soft fade-in zoom-in-95 duration-300">
-          Nenhum material de leitura disponível no momento.
+          Nenhum slide disponível no momento.
         </p>
       ) : (
         <div className="mt-8 space-y-10">
@@ -66,7 +67,7 @@ export function PortalMaterials() {
               <div className="mt-4 space-y-8">
                 {semester.modules.flatMap((module) =>
                   module.disciplines.map((discipline) => {
-                    const disciplineMaterials = materialsByDiscipline.get(discipline.id) ?? [];
+                    const disciplineSlides = slidesByDiscipline.get(discipline.id) ?? [];
                     return (
                       <div key={discipline.id}>
                         <h3 className="text-base font-semibold text-foreground">
@@ -76,12 +77,12 @@ export function PortalMaterials() {
                           <p className="text-sm text-muted-foreground">{discipline.teacher}</p>
                         ) : null}
                         <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                          {disciplineMaterials.map((material) => (
+                          {disciplineSlides.map((slide) => (
                             <div
-                              key={material.id}
+                              key={slide.id}
                               className="animate-in fade-in slide-in-from-top-1 duration-200"
                             >
-                              <ReadingMaterialCard material={material} />
+                              <SlideCard slide={slide} />
                             </div>
                           ))}
                         </div>
