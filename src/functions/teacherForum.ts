@@ -90,6 +90,7 @@ export type TeacherForumPost = {
   content: string;
   createdAt: string;
   mine: boolean;
+  isInitial: boolean;
 };
 
 export type TeacherForumThreadDetail = {
@@ -117,18 +118,19 @@ export const getTeacherThreadFn = createServerFn({ method: "GET" })
       .select()
       .from(teacherForumPosts)
       .where(eq(teacherForumPosts.threadId, data.threadId))
-      .orderBy(asc(teacherForumPosts.createdAt));
+      .orderBy(asc(teacherForumPosts.createdAt), asc(teacherForumPosts.id));
 
     return {
       id: thread.id,
       title: thread.title,
       mine: thread.authorTeacherId === teacherId,
-      posts: postRows.map((post) => ({
+      posts: postRows.map((post, index) => ({
         id: post.id,
         authorName: post.authorName,
         content: post.content,
         createdAt: post.createdAt.toISOString(),
         mine: post.authorTeacherId === teacherId,
+        isInitial: index === 0,
       })),
     };
   });
@@ -255,7 +257,20 @@ export const deleteTeacherPostFn = createServerFn({ method: "POST" })
       .limit(1);
     if (!post) return;
 
+    const [initialPost] = await db
+      .select({ id: teacherForumPosts.id })
+      .from(teacherForumPosts)
+      .where(eq(teacherForumPosts.threadId, post.threadId))
+      .orderBy(asc(teacherForumPosts.createdAt), asc(teacherForumPosts.id))
+      .limit(1);
+    if (initialPost?.id === post.id) {
+      throw new Error(
+        "A mensagem inicial faz parte do tópico e não pode ser apagada separadamente.",
+      );
+    }
+
     const isAuthor = post.authorTeacherId === teacherId;
+    let isAdminModeration = false;
     if (!isAuthor) {
       const [teacher] = await db
         .select({ role: teachers.role })
@@ -265,7 +280,15 @@ export const deleteTeacherPostFn = createServerFn({ method: "POST" })
       if (teacher?.role !== "admin") {
         throw new Error("Você só pode apagar a própria mensagem.");
       }
+      isAdminModeration = true;
     }
 
     await db.delete(teacherForumPosts).where(eq(teacherForumPosts.id, data.postId));
+
+    if (isAdminModeration) {
+      await logAudit(
+        "forum_interno.apagar_mensagem",
+        `Apagou uma mensagem de ${post.authorName} no fórum interno.`,
+      );
+    }
   });
