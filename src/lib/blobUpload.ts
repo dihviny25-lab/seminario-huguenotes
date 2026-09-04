@@ -1,7 +1,7 @@
 import { upload } from "@vercel/blob/client";
 
 export type UploadedFile = { url: string; fileName: string };
-export type UploadPurpose = "assignment" | "material" | "library" | "video";
+export type UploadPurpose = "assignment" | "material" | "library" | "video" | "slide";
 
 type ProgressHandler = (percent: number) => void;
 
