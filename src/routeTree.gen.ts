@@ -51,6 +51,7 @@ import { Route as PortalApostilasIndexRouteImport } from './routes/portal/aposti
 import { Route as PainelTarefasIndexRouteImport } from './routes/painel/tarefas/index'
 import { Route as PainelProvasIndexRouteImport } from './routes/painel/provas/index'
 import { Route as PainelForumIndexRouteImport } from './routes/painel/forum/index'
+import { Route as PainelForumInternoIndexRouteImport } from './routes/painel/forum-interno/index'
 import { Route as PainelApostilasCompartilhadasIndexRouteImport } from './routes/painel/apostilas-compartilhadas/index'
 import { Route as PortalTarefasAssignmentIdRouteImport } from './routes/portal/tarefas/$assignmentId'
 import { Route as PortalProvasExamIdRouteImport } from './routes/portal/provas/$examId'
@@ -62,6 +63,7 @@ import { Route as PortalApostilasMaterialIdRouteImport } from './routes/portal/a
 import { Route as PainelTarefasAssignmentIdRouteImport } from './routes/painel/tarefas/$assignmentId'
 import { Route as PainelProvasExamIdRouteImport } from './routes/painel/provas/$examId'
 import { Route as PainelForumThreadIdRouteImport } from './routes/painel/forum/$threadId'
+import { Route as PainelForumInternoThreadIdRouteImport } from './routes/painel/forum-interno/$threadId'
 import { Route as PainelDisciplinasDisciplineIdRouteImport } from './routes/painel/disciplinas/$disciplineId'
 import { Route as PainelApostilasCompartilhadasMaterialIdRouteImport } from './routes/painel/apostilas-compartilhadas/$materialId'
 import { Route as ApiMercadopagoWebhookRouteImport } from './routes/api/mercadopago/webhook'
@@ -291,6 +293,11 @@ const PainelForumIndexRoute = PainelForumIndexRouteImport.update({
   path: '/forum/',
   getParentRoute: () => PainelRouteRoute,
 } as any)
+const PainelForumInternoIndexRoute = PainelForumInternoIndexRouteImport.update({
+  id: '/forum-interno/',
+  path: '/forum-interno/',
+  getParentRoute: () => PainelRouteRoute,
+} as any)
 const PainelApostilasCompartilhadasIndexRoute =
   PainelApostilasCompartilhadasIndexRouteImport.update({
     id: '/apostilas-compartilhadas/',
@@ -357,6 +364,12 @@ const PainelForumThreadIdRoute = PainelForumThreadIdRouteImport.update({
   path: '/forum/$threadId',
   getParentRoute: () => PainelRouteRoute,
 } as any)
+const PainelForumInternoThreadIdRoute =
+  PainelForumInternoThreadIdRouteImport.update({
+    id: '/forum-interno/$threadId',
+    path: '/forum-interno/$threadId',
+    getParentRoute: () => PainelRouteRoute,
+  } as any)
 const PainelDisciplinasDisciplineIdRoute =
   PainelDisciplinasDisciplineIdRouteImport.update({
     id: '/disciplinas/$disciplineId',
@@ -455,6 +468,7 @@ export interface FileRoutesByFullPath {
   '/api/mercadopago/webhook': typeof ApiMercadopagoWebhookRoute
   '/painel/apostilas-compartilhadas/$materialId': typeof PainelApostilasCompartilhadasMaterialIdRoute
   '/painel/disciplinas/$disciplineId': typeof PainelDisciplinasDisciplineIdRoute
+  '/painel/forum-interno/$threadId': typeof PainelForumInternoThreadIdRoute
   '/painel/forum/$threadId': typeof PainelForumThreadIdRoute
   '/painel/provas/$examId': typeof PainelProvasExamIdRoute
   '/painel/tarefas/$assignmentId': typeof PainelTarefasAssignmentIdRoute
@@ -466,6 +480,7 @@ export interface FileRoutesByFullPath {
   '/portal/provas/$examId': typeof PortalProvasExamIdRoute
   '/portal/tarefas/$assignmentId': typeof PortalTarefasAssignmentIdRoute
   '/painel/apostilas-compartilhadas/': typeof PainelApostilasCompartilhadasIndexRoute
+  '/painel/forum-interno/': typeof PainelForumInternoIndexRoute
   '/painel/forum/': typeof PainelForumIndexRoute
   '/painel/provas/': typeof PainelProvasIndexRoute
   '/painel/tarefas/': typeof PainelTarefasIndexRoute
@@ -518,6 +533,7 @@ export interface FileRoutesByTo {
   '/api/mercadopago/webhook': typeof ApiMercadopagoWebhookRoute
   '/painel/apostilas-compartilhadas/$materialId': typeof PainelApostilasCompartilhadasMaterialIdRoute
   '/painel/disciplinas/$disciplineId': typeof PainelDisciplinasDisciplineIdRoute
+  '/painel/forum-interno/$threadId': typeof PainelForumInternoThreadIdRoute
   '/painel/forum/$threadId': typeof PainelForumThreadIdRoute
   '/painel/provas/$examId': typeof PainelProvasExamIdRoute
   '/painel/tarefas/$assignmentId': typeof PainelTarefasAssignmentIdRoute
@@ -529,6 +545,7 @@ export interface FileRoutesByTo {
   '/portal/provas/$examId': typeof PortalProvasExamIdRoute
   '/portal/tarefas/$assignmentId': typeof PortalTarefasAssignmentIdRoute
   '/painel/apostilas-compartilhadas': typeof PainelApostilasCompartilhadasIndexRoute
+  '/painel/forum-interno': typeof PainelForumInternoIndexRoute
   '/painel/forum': typeof PainelForumIndexRoute
   '/painel/provas': typeof PainelProvasIndexRoute
   '/painel/tarefas': typeof PainelTarefasIndexRoute
@@ -584,6 +601,7 @@ export interface FileRoutesById {
   '/api/mercadopago/webhook': typeof ApiMercadopagoWebhookRoute
   '/painel/apostilas-compartilhadas/$materialId': typeof PainelApostilasCompartilhadasMaterialIdRoute
   '/painel/disciplinas/$disciplineId': typeof PainelDisciplinasDisciplineIdRoute
+  '/painel/forum-interno/$threadId': typeof PainelForumInternoThreadIdRoute
   '/painel/forum/$threadId': typeof PainelForumThreadIdRoute
   '/painel/provas/$examId': typeof PainelProvasExamIdRoute
   '/painel/tarefas/$assignmentId': typeof PainelTarefasAssignmentIdRoute
@@ -595,6 +613,7 @@ export interface FileRoutesById {
   '/portal/provas/$examId': typeof PortalProvasExamIdRoute
   '/portal/tarefas/$assignmentId': typeof PortalTarefasAssignmentIdRoute
   '/painel/apostilas-compartilhadas/': typeof PainelApostilasCompartilhadasIndexRoute
+  '/painel/forum-interno/': typeof PainelForumInternoIndexRoute
   '/painel/forum/': typeof PainelForumIndexRoute
   '/painel/provas/': typeof PainelProvasIndexRoute
   '/painel/tarefas/': typeof PainelTarefasIndexRoute
@@ -651,6 +670,7 @@ export interface FileRouteTypes {
     | '/api/mercadopago/webhook'
     | '/painel/apostilas-compartilhadas/$materialId'
     | '/painel/disciplinas/$disciplineId'
+    | '/painel/forum-interno/$threadId'
     | '/painel/forum/$threadId'
     | '/painel/provas/$examId'
     | '/painel/tarefas/$assignmentId'
@@ -662,6 +682,7 @@ export interface FileRouteTypes {
     | '/portal/provas/$examId'
     | '/portal/tarefas/$assignmentId'
     | '/painel/apostilas-compartilhadas/'
+    | '/painel/forum-interno/'
     | '/painel/forum/'
     | '/painel/provas/'
     | '/painel/tarefas/'
@@ -714,6 +735,7 @@ export interface FileRouteTypes {
     | '/api/mercadopago/webhook'
     | '/painel/apostilas-compartilhadas/$materialId'
     | '/painel/disciplinas/$disciplineId'
+    | '/painel/forum-interno/$threadId'
     | '/painel/forum/$threadId'
     | '/painel/provas/$examId'
     | '/painel/tarefas/$assignmentId'
@@ -725,6 +747,7 @@ export interface FileRouteTypes {
     | '/portal/provas/$examId'
     | '/portal/tarefas/$assignmentId'
     | '/painel/apostilas-compartilhadas'
+    | '/painel/forum-interno'
     | '/painel/forum'
     | '/painel/provas'
     | '/painel/tarefas'
@@ -779,6 +802,7 @@ export interface FileRouteTypes {
     | '/api/mercadopago/webhook'
     | '/painel/apostilas-compartilhadas/$materialId'
     | '/painel/disciplinas/$disciplineId'
+    | '/painel/forum-interno/$threadId'
     | '/painel/forum/$threadId'
     | '/painel/provas/$examId'
     | '/painel/tarefas/$assignmentId'
@@ -790,6 +814,7 @@ export interface FileRouteTypes {
     | '/portal/provas/$examId'
     | '/portal/tarefas/$assignmentId'
     | '/painel/apostilas-compartilhadas/'
+    | '/painel/forum-interno/'
     | '/painel/forum/'
     | '/painel/provas/'
     | '/painel/tarefas/'
@@ -1120,6 +1145,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PainelForumIndexRouteImport
       parentRoute: typeof PainelRouteRoute
     }
+    '/painel/forum-interno/': {
+      id: '/painel/forum-interno/'
+      path: '/forum-interno'
+      fullPath: '/painel/forum-interno/'
+      preLoaderRoute: typeof PainelForumInternoIndexRouteImport
+      parentRoute: typeof PainelRouteRoute
+    }
     '/painel/apostilas-compartilhadas/': {
       id: '/painel/apostilas-compartilhadas/'
       path: '/apostilas-compartilhadas'
@@ -1195,6 +1227,13 @@ declare module '@tanstack/react-router' {
       path: '/forum/$threadId'
       fullPath: '/painel/forum/$threadId'
       preLoaderRoute: typeof PainelForumThreadIdRouteImport
+      parentRoute: typeof PainelRouteRoute
+    }
+    '/painel/forum-interno/$threadId': {
+      id: '/painel/forum-interno/$threadId'
+      path: '/forum-interno/$threadId'
+      fullPath: '/painel/forum-interno/$threadId'
+      preLoaderRoute: typeof PainelForumInternoThreadIdRouteImport
       parentRoute: typeof PainelRouteRoute
     }
     '/painel/disciplinas/$disciplineId': {
@@ -1312,10 +1351,12 @@ interface PainelRouteRouteChildren {
   PainelIndexRoute: typeof PainelIndexRoute
   PainelApostilasCompartilhadasMaterialIdRoute: typeof PainelApostilasCompartilhadasMaterialIdRoute
   PainelDisciplinasDisciplineIdRoute: typeof PainelDisciplinasDisciplineIdRoute
+  PainelForumInternoThreadIdRoute: typeof PainelForumInternoThreadIdRoute
   PainelForumThreadIdRoute: typeof PainelForumThreadIdRoute
   PainelProvasExamIdRoute: typeof PainelProvasExamIdRoute
   PainelTarefasAssignmentIdRoute: typeof PainelTarefasAssignmentIdRoute
   PainelApostilasCompartilhadasIndexRoute: typeof PainelApostilasCompartilhadasIndexRoute
+  PainelForumInternoIndexRoute: typeof PainelForumInternoIndexRoute
   PainelForumIndexRoute: typeof PainelForumIndexRoute
   PainelProvasIndexRoute: typeof PainelProvasIndexRoute
   PainelTarefasIndexRoute: typeof PainelTarefasIndexRoute
@@ -1338,11 +1379,13 @@ const PainelRouteRouteChildren: PainelRouteRouteChildren = {
   PainelApostilasCompartilhadasMaterialIdRoute:
     PainelApostilasCompartilhadasMaterialIdRoute,
   PainelDisciplinasDisciplineIdRoute: PainelDisciplinasDisciplineIdRoute,
+  PainelForumInternoThreadIdRoute: PainelForumInternoThreadIdRoute,
   PainelForumThreadIdRoute: PainelForumThreadIdRoute,
   PainelProvasExamIdRoute: PainelProvasExamIdRoute,
   PainelTarefasAssignmentIdRoute: PainelTarefasAssignmentIdRoute,
   PainelApostilasCompartilhadasIndexRoute:
     PainelApostilasCompartilhadasIndexRoute,
+  PainelForumInternoIndexRoute: PainelForumInternoIndexRoute,
   PainelForumIndexRoute: PainelForumIndexRoute,
   PainelProvasIndexRoute: PainelProvasIndexRoute,
   PainelTarefasIndexRoute: PainelTarefasIndexRoute,

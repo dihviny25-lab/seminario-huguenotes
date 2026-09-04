@@ -507,6 +507,33 @@ export const forumPosts = pgTable("forum_posts", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+// Fórum interno do corpo docente — dúvidas e coordenação entre professores,
+// sem disciplina associada (o assunto é o próprio funcionamento do
+// seminário) e sem aluno participando. `authorName` é desnormalizado, como
+// em forumThreads/forumPosts, pra o histórico sobreviver à exclusão da conta.
+export const teacherForumThreads = pgTable("teacher_forum_threads", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  authorTeacherId: uuid("author_teacher_id").references(() => teachers.id, {
+    onDelete: "set null",
+  }),
+  authorName: text("author_name").notNull(),
+  title: text("title").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const teacherForumPosts = pgTable("teacher_forum_posts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  threadId: uuid("thread_id")
+    .notNull()
+    .references(() => teacherForumThreads.id, { onDelete: "cascade" }),
+  authorTeacherId: uuid("author_teacher_id").references(() => teachers.id, {
+    onDelete: "set null",
+  }),
+  authorName: text("author_name").notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const spiritualReflections = pgTable("spiritual_reflections", {
   id: uuid("id").primaryKey().defaultRandom(),
   studentId: uuid("student_id")
