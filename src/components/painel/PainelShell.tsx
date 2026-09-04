@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useState, type ComponentProps, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
@@ -34,6 +34,7 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { getCurrentTeacherFn, logoutFn } from "@/functions/auth";
 import { cn } from "@/lib/utils";
@@ -60,6 +61,24 @@ const adminOnlyNavItems = [
   { to: "/painel/despesas", label: "Despesas", icon: Receipt },
   { to: "/painel/auditoria", label: "Auditoria", icon: ShieldCheck },
 ] as const;
+
+/** Link de navegação da sidebar — fecha o menu mobile ao navegar (senão o Sheet fica aberto por cima da tela nova). */
+function NavLink({
+  to,
+  className,
+  children,
+}: {
+  to: ComponentProps<typeof Link>["to"];
+  className?: string;
+  children: ReactNode;
+}) {
+  const { isMobile, setOpenMobile } = useSidebar();
+  return (
+    <Link to={to} className={className} onClick={() => isMobile && setOpenMobile(false)}>
+      {children}
+    </Link>
+  );
+}
 
 interface PainelShellProps {
   title: string;
@@ -91,12 +110,12 @@ export function PainelShell({ title, description, children, fullWidth }: PainelS
     <SidebarProvider>
       <Sidebar>
         <SidebarHeader className="px-3 py-4">
-          <Link to="/painel" className="flex items-center gap-2.5 px-1">
+          <NavLink to="/painel" className="flex items-center gap-2.5 px-1">
             <img src="/logo.png" alt="" className="size-8 shrink-0" aria-hidden />
             <span className="min-w-0 font-display text-sm font-semibold text-sidebar-foreground">
               Painel do professor
             </span>
-          </Link>
+          </NavLink>
         </SidebarHeader>
         <SidebarContent>
           <SidebarGroup>
@@ -109,10 +128,10 @@ export function PainelShell({ title, description, children, fullWidth }: PainelS
                 return (
                   <SidebarMenuItem key={item.to}>
                     <SidebarMenuButton asChild isActive={isActive}>
-                      <Link to={item.to}>
+                      <NavLink to={item.to}>
                         <item.icon />
                         <span>{item.label}</span>
-                      </Link>
+                      </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );

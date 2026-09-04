@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useState, type ComponentProps, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
@@ -29,10 +29,21 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { getCurrentStudentFn, studentLogoutFn } from "@/functions/studentAuth";
 import { toDisplayFirstName } from "@/lib/formatName";
 import { cn } from "@/lib/utils";
+
+/** Link de navegação da sidebar — fecha o menu mobile ao navegar (senão o Sheet fica aberto por cima da tela nova). */
+function NavLink({ to, children }: { to: ComponentProps<typeof Link>["to"]; children: ReactNode }) {
+  const { isMobile, setOpenMobile } = useSidebar();
+  return (
+    <Link to={to} onClick={() => isMobile && setOpenMobile(false)}>
+      {children}
+    </Link>
+  );
+}
 
 interface PortalShellProps {
   title: string;
@@ -98,10 +109,10 @@ export function PortalShell({ title, description, children, fullWidth }: PortalS
                 return (
                   <SidebarMenuItem key={item.to}>
                     <SidebarMenuButton asChild isActive={isActive}>
-                      <Link to={item.to}>
+                      <NavLink to={item.to}>
                         <item.icon />
                         <span>{item.label}</span>
-                      </Link>
+                      </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );
