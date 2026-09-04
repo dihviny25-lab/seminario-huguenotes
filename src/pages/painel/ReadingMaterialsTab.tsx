@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BookOpen, Download, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
+import { BookOpen, Download, Loader2, Pencil, Plus, Share2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { getCurrentTeacherFn } from "@/functions/auth";
+import {
+  listMaterialSharesFn,
+  shareMaterialFn,
+  unshareMaterialFn,
+} from "@/functions/materialSharing";
 import {
   createMaterialFn,
   deleteMaterialFn,
@@ -22,6 +29,7 @@ import {
   updateMaterialFn,
   type ReadingMaterial,
 } from "@/functions/readingMaterials";
+import { listTeacherAccountsFn } from "@/functions/teacherAccounts";
 import { uploadFile } from "@/lib/blobUpload";
 
 function materialsKey(disciplineId: string) {
@@ -36,6 +44,7 @@ export function ReadingMaterialsTab({ disciplineId }: { disciplineId: string }) 
   });
   const [createOpen, setCreateOpen] = useState(false);
   const [editMaterial, setEditMaterial] = useState<ReadingMaterial | null>(null);
+  const [shareMaterial, setShareMaterial] = useState<ReadingMaterial | null>(null);
 
   function invalidate() {
     return queryClient.invalidateQueries({ queryKey: materialsKey(disciplineId) });
@@ -116,6 +125,14 @@ export function ReadingMaterialsTab({ disciplineId }: { disciplineId: string }) 
                 <Button
                   variant="ghost"
                   size="icon"
+                  title="Compartilhar"
+                  onClick={() => setShareMaterial(material)}
+                >
+                  <Share2 className="size-4" aria-hidden />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
                   title="Excluir"
                   onClick={() => deleteMutation.mutate(material.id)}
                 >
@@ -138,6 +155,10 @@ export function ReadingMaterialsTab({ disciplineId }: { disciplineId: string }) 
         material={editMaterial}
         onOpenChange={(open) => !open && setEditMaterial(null)}
         onUpdated={invalidate}
+      />
+      <ShareMaterialDialog
+        material={shareMaterial}
+        onOpenChange={(open) => !open && setShareMaterial(null)}
       />
     </div>
   );
@@ -333,6 +354,83 @@ function CreateMaterialDialog({
             </Button>
           </DialogFooter>
         </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ShareMaterialDialog({
+  material,
+  onOpenChange,
+}: {
+  material: ReadingMaterial | null;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const queryClient = useQueryClient();
+  const { data: me } = useQuery({
+    queryKey: ["current-teacher"],
+    queryFn: () => getCurrentTeacherFn(),
+  });
+  const { data: teacherAccounts } = useQuery({
+    queryKey: ["teacher-accounts"],
+    queryFn: () => listTeacherAccountsFn(),
+  });
+  const sharesKey = ["material-shares", material?.id] as const;
+  const { data: shares, isLoading } = useQuery({
+    queryKey: sharesKey,
+    queryFn: () => listMaterialSharesFn({ data: { materialId: material!.id } }),
+    enabled: material !== null,
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: ({ teacherId, shared }: { teacherId: string; shared: boolean }) =>
+      shared
+        ? unshareMaterialFn({ data: { materialId: material!.id, teacherId } })
+        : shareMaterialFn({ data: { materialId: material!.id, teacherId } }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: sharesKey }),
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Não foi possível atualizar."),
+  });
+
+  const sharedIds = new Set((shares ?? []).map((s) => s.teacherId));
+  const otherTeachers = (teacherAccounts ?? []).filter((t) => t.id !== me?.id);
+
+  return (
+    <Dialog open={material !== null} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Compartilhar "{material?.title}"</DialogTitle>
+        </DialogHeader>
+        <div className="grid max-h-80 gap-1.5 overflow-y-auto">
+          {isLoading ? (
+            <>
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+            </>
+          ) : otherTeachers.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhum outro professor cadastrado.</p>
+          ) : (
+            otherTeachers.map((teacher) => {
+              const shared = sharedIds.has(teacher.id);
+              return (
+                <div
+                  key={teacher.id}
+                  className="flex items-center justify-between rounded-md border border-border/70 p-3"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-foreground">{teacher.name}</p>
+                    <p className="truncate text-xs text-muted-foreground">{teacher.email}</p>
+                  </div>
+                  <Switch
+                    checked={shared}
+                    disabled={toggleMutation.isPending}
+                    onCheckedChange={() => toggleMutation.mutate({ teacherId: teacher.id, shared })}
+                  />
+                </div>
+              );
+            })
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );

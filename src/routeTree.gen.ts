@@ -52,6 +52,7 @@ import { Route as PainelTarefasIndexRouteImport } from './routes/painel/tarefas/
 import { Route as PainelProvasIndexRouteImport } from './routes/painel/provas/index'
 import { Route as PainelForumIndexRouteImport } from './routes/painel/forum/index'
 import { Route as PainelForumInternoIndexRouteImport } from './routes/painel/forum-interno/index'
+import { Route as PainelApostilasCompartilhadasIndexRouteImport } from './routes/painel/apostilas-compartilhadas/index'
 import { Route as PortalTarefasAssignmentIdRouteImport } from './routes/portal/tarefas/$assignmentId'
 import { Route as PortalProvasExamIdRouteImport } from './routes/portal/provas/$examId'
 import { Route as PortalForumThreadIdRouteImport } from './routes/portal/forum/$threadId'
@@ -64,6 +65,7 @@ import { Route as PainelProvasExamIdRouteImport } from './routes/painel/provas/$
 import { Route as PainelForumThreadIdRouteImport } from './routes/painel/forum/$threadId'
 import { Route as PainelForumInternoThreadIdRouteImport } from './routes/painel/forum-interno/$threadId'
 import { Route as PainelDisciplinasDisciplineIdRouteImport } from './routes/painel/disciplinas/$disciplineId'
+import { Route as PainelApostilasCompartilhadasMaterialIdRouteImport } from './routes/painel/apostilas-compartilhadas/$materialId'
 import { Route as ApiMercadopagoWebhookRouteImport } from './routes/api/mercadopago/webhook'
 import { Route as ApiCronPaymentRemindersRouteImport } from './routes/api/cron/payment-reminders'
 import { Route as ApiCronFinalizeExpiredExamsRouteImport } from './routes/api/cron/finalize-expired-exams'
@@ -296,6 +298,12 @@ const PainelForumInternoIndexRoute = PainelForumInternoIndexRouteImport.update({
   path: '/forum-interno/',
   getParentRoute: () => PainelRouteRoute,
 } as any)
+const PainelApostilasCompartilhadasIndexRoute =
+  PainelApostilasCompartilhadasIndexRouteImport.update({
+    id: '/apostilas-compartilhadas/',
+    path: '/apostilas-compartilhadas/',
+    getParentRoute: () => PainelRouteRoute,
+  } as any)
 const PortalTarefasAssignmentIdRoute =
   PortalTarefasAssignmentIdRouteImport.update({
     id: '/tarefas/$assignmentId',
@@ -366,6 +374,12 @@ const PainelDisciplinasDisciplineIdRoute =
   PainelDisciplinasDisciplineIdRouteImport.update({
     id: '/disciplinas/$disciplineId',
     path: '/disciplinas/$disciplineId',
+    getParentRoute: () => PainelRouteRoute,
+  } as any)
+const PainelApostilasCompartilhadasMaterialIdRoute =
+  PainelApostilasCompartilhadasMaterialIdRouteImport.update({
+    id: '/apostilas-compartilhadas/$materialId',
+    path: '/apostilas-compartilhadas/$materialId',
     getParentRoute: () => PainelRouteRoute,
   } as any)
 const ApiMercadopagoWebhookRoute = ApiMercadopagoWebhookRouteImport.update({
@@ -452,6 +466,7 @@ export interface FileRoutesByFullPath {
   '/api/cron/finalize-expired-exams': typeof ApiCronFinalizeExpiredExamsRoute
   '/api/cron/payment-reminders': typeof ApiCronPaymentRemindersRoute
   '/api/mercadopago/webhook': typeof ApiMercadopagoWebhookRoute
+  '/painel/apostilas-compartilhadas/$materialId': typeof PainelApostilasCompartilhadasMaterialIdRoute
   '/painel/disciplinas/$disciplineId': typeof PainelDisciplinasDisciplineIdRoute
   '/painel/forum-interno/$threadId': typeof PainelForumInternoThreadIdRoute
   '/painel/forum/$threadId': typeof PainelForumThreadIdRoute
@@ -464,6 +479,7 @@ export interface FileRoutesByFullPath {
   '/portal/forum/$threadId': typeof PortalForumThreadIdRoute
   '/portal/provas/$examId': typeof PortalProvasExamIdRoute
   '/portal/tarefas/$assignmentId': typeof PortalTarefasAssignmentIdRoute
+  '/painel/apostilas-compartilhadas/': typeof PainelApostilasCompartilhadasIndexRoute
   '/painel/forum-interno/': typeof PainelForumInternoIndexRoute
   '/painel/forum/': typeof PainelForumIndexRoute
   '/painel/provas/': typeof PainelProvasIndexRoute
@@ -515,6 +531,7 @@ export interface FileRoutesByTo {
   '/api/cron/finalize-expired-exams': typeof ApiCronFinalizeExpiredExamsRoute
   '/api/cron/payment-reminders': typeof ApiCronPaymentRemindersRoute
   '/api/mercadopago/webhook': typeof ApiMercadopagoWebhookRoute
+  '/painel/apostilas-compartilhadas/$materialId': typeof PainelApostilasCompartilhadasMaterialIdRoute
   '/painel/disciplinas/$disciplineId': typeof PainelDisciplinasDisciplineIdRoute
   '/painel/forum-interno/$threadId': typeof PainelForumInternoThreadIdRoute
   '/painel/forum/$threadId': typeof PainelForumThreadIdRoute
@@ -527,6 +544,7 @@ export interface FileRoutesByTo {
   '/portal/forum/$threadId': typeof PortalForumThreadIdRoute
   '/portal/provas/$examId': typeof PortalProvasExamIdRoute
   '/portal/tarefas/$assignmentId': typeof PortalTarefasAssignmentIdRoute
+  '/painel/apostilas-compartilhadas': typeof PainelApostilasCompartilhadasIndexRoute
   '/painel/forum-interno': typeof PainelForumInternoIndexRoute
   '/painel/forum': typeof PainelForumIndexRoute
   '/painel/provas': typeof PainelProvasIndexRoute
@@ -581,6 +599,7 @@ export interface FileRoutesById {
   '/api/cron/finalize-expired-exams': typeof ApiCronFinalizeExpiredExamsRoute
   '/api/cron/payment-reminders': typeof ApiCronPaymentRemindersRoute
   '/api/mercadopago/webhook': typeof ApiMercadopagoWebhookRoute
+  '/painel/apostilas-compartilhadas/$materialId': typeof PainelApostilasCompartilhadasMaterialIdRoute
   '/painel/disciplinas/$disciplineId': typeof PainelDisciplinasDisciplineIdRoute
   '/painel/forum-interno/$threadId': typeof PainelForumInternoThreadIdRoute
   '/painel/forum/$threadId': typeof PainelForumThreadIdRoute
@@ -593,6 +612,7 @@ export interface FileRoutesById {
   '/portal/forum/$threadId': typeof PortalForumThreadIdRoute
   '/portal/provas/$examId': typeof PortalProvasExamIdRoute
   '/portal/tarefas/$assignmentId': typeof PortalTarefasAssignmentIdRoute
+  '/painel/apostilas-compartilhadas/': typeof PainelApostilasCompartilhadasIndexRoute
   '/painel/forum-interno/': typeof PainelForumInternoIndexRoute
   '/painel/forum/': typeof PainelForumIndexRoute
   '/painel/provas/': typeof PainelProvasIndexRoute
@@ -648,6 +668,7 @@ export interface FileRouteTypes {
     | '/api/cron/finalize-expired-exams'
     | '/api/cron/payment-reminders'
     | '/api/mercadopago/webhook'
+    | '/painel/apostilas-compartilhadas/$materialId'
     | '/painel/disciplinas/$disciplineId'
     | '/painel/forum-interno/$threadId'
     | '/painel/forum/$threadId'
@@ -660,6 +681,7 @@ export interface FileRouteTypes {
     | '/portal/forum/$threadId'
     | '/portal/provas/$examId'
     | '/portal/tarefas/$assignmentId'
+    | '/painel/apostilas-compartilhadas/'
     | '/painel/forum-interno/'
     | '/painel/forum/'
     | '/painel/provas/'
@@ -711,6 +733,7 @@ export interface FileRouteTypes {
     | '/api/cron/finalize-expired-exams'
     | '/api/cron/payment-reminders'
     | '/api/mercadopago/webhook'
+    | '/painel/apostilas-compartilhadas/$materialId'
     | '/painel/disciplinas/$disciplineId'
     | '/painel/forum-interno/$threadId'
     | '/painel/forum/$threadId'
@@ -723,6 +746,7 @@ export interface FileRouteTypes {
     | '/portal/forum/$threadId'
     | '/portal/provas/$examId'
     | '/portal/tarefas/$assignmentId'
+    | '/painel/apostilas-compartilhadas'
     | '/painel/forum-interno'
     | '/painel/forum'
     | '/painel/provas'
@@ -776,6 +800,7 @@ export interface FileRouteTypes {
     | '/api/cron/finalize-expired-exams'
     | '/api/cron/payment-reminders'
     | '/api/mercadopago/webhook'
+    | '/painel/apostilas-compartilhadas/$materialId'
     | '/painel/disciplinas/$disciplineId'
     | '/painel/forum-interno/$threadId'
     | '/painel/forum/$threadId'
@@ -788,6 +813,7 @@ export interface FileRouteTypes {
     | '/portal/forum/$threadId'
     | '/portal/provas/$examId'
     | '/portal/tarefas/$assignmentId'
+    | '/painel/apostilas-compartilhadas/'
     | '/painel/forum-interno/'
     | '/painel/forum/'
     | '/painel/provas/'
@@ -1126,6 +1152,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PainelForumInternoIndexRouteImport
       parentRoute: typeof PainelRouteRoute
     }
+    '/painel/apostilas-compartilhadas/': {
+      id: '/painel/apostilas-compartilhadas/'
+      path: '/apostilas-compartilhadas'
+      fullPath: '/painel/apostilas-compartilhadas/'
+      preLoaderRoute: typeof PainelApostilasCompartilhadasIndexRouteImport
+      parentRoute: typeof PainelRouteRoute
+    }
     '/portal/tarefas/$assignmentId': {
       id: '/portal/tarefas/$assignmentId'
       path: '/tarefas/$assignmentId'
@@ -1208,6 +1241,13 @@ declare module '@tanstack/react-router' {
       path: '/disciplinas/$disciplineId'
       fullPath: '/painel/disciplinas/$disciplineId'
       preLoaderRoute: typeof PainelDisciplinasDisciplineIdRouteImport
+      parentRoute: typeof PainelRouteRoute
+    }
+    '/painel/apostilas-compartilhadas/$materialId': {
+      id: '/painel/apostilas-compartilhadas/$materialId'
+      path: '/apostilas-compartilhadas/$materialId'
+      fullPath: '/painel/apostilas-compartilhadas/$materialId'
+      preLoaderRoute: typeof PainelApostilasCompartilhadasMaterialIdRouteImport
       parentRoute: typeof PainelRouteRoute
     }
     '/api/mercadopago/webhook': {
@@ -1309,11 +1349,13 @@ interface PainelRouteRouteChildren {
   PainelRelatorioModuloRoute: typeof PainelRelatorioModuloRoute
   PainelTrocarSenhaRoute: typeof PainelTrocarSenhaRoute
   PainelIndexRoute: typeof PainelIndexRoute
+  PainelApostilasCompartilhadasMaterialIdRoute: typeof PainelApostilasCompartilhadasMaterialIdRoute
   PainelDisciplinasDisciplineIdRoute: typeof PainelDisciplinasDisciplineIdRoute
   PainelForumInternoThreadIdRoute: typeof PainelForumInternoThreadIdRoute
   PainelForumThreadIdRoute: typeof PainelForumThreadIdRoute
   PainelProvasExamIdRoute: typeof PainelProvasExamIdRoute
   PainelTarefasAssignmentIdRoute: typeof PainelTarefasAssignmentIdRoute
+  PainelApostilasCompartilhadasIndexRoute: typeof PainelApostilasCompartilhadasIndexRoute
   PainelForumInternoIndexRoute: typeof PainelForumInternoIndexRoute
   PainelForumIndexRoute: typeof PainelForumIndexRoute
   PainelProvasIndexRoute: typeof PainelProvasIndexRoute
@@ -1334,11 +1376,15 @@ const PainelRouteRouteChildren: PainelRouteRouteChildren = {
   PainelRelatorioModuloRoute: PainelRelatorioModuloRoute,
   PainelTrocarSenhaRoute: PainelTrocarSenhaRoute,
   PainelIndexRoute: PainelIndexRoute,
+  PainelApostilasCompartilhadasMaterialIdRoute:
+    PainelApostilasCompartilhadasMaterialIdRoute,
   PainelDisciplinasDisciplineIdRoute: PainelDisciplinasDisciplineIdRoute,
   PainelForumInternoThreadIdRoute: PainelForumInternoThreadIdRoute,
   PainelForumThreadIdRoute: PainelForumThreadIdRoute,
   PainelProvasExamIdRoute: PainelProvasExamIdRoute,
   PainelTarefasAssignmentIdRoute: PainelTarefasAssignmentIdRoute,
+  PainelApostilasCompartilhadasIndexRoute:
+    PainelApostilasCompartilhadasIndexRoute,
   PainelForumInternoIndexRoute: PainelForumInternoIndexRoute,
   PainelForumIndexRoute: PainelForumIndexRoute,
   PainelProvasIndexRoute: PainelProvasIndexRoute,

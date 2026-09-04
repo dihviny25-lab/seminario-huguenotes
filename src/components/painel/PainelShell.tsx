@@ -16,6 +16,7 @@ import {
   MessagesSquare,
   PackageOpen,
   Receipt,
+  Share2,
   ShieldCheck,
   Users,
   Wallet,
@@ -35,6 +36,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { getCurrentTeacherFn, logoutFn } from "@/functions/auth";
+import { cn } from "@/lib/utils";
 
 const painelNavItems = [
   { to: "/painel", label: "Painel", icon: LayoutGrid },
@@ -46,6 +48,7 @@ const painelNavItems = [
   { to: "/painel/forum", label: "Fórum", icon: MessageCircle },
   { to: "/painel/forum-interno", label: "Fórum interno", icon: MessagesSquare },
   { to: "/painel/biblioteca", label: "Biblioteca virtual", icon: Library },
+  { to: "/painel/apostilas-compartilhadas", label: "Apostilas compartilhadas", icon: Share2 },
   { to: "/painel/relatorio", label: "Boletim do aluno", icon: FileText },
   { to: "/painel/relatorio-modulo", label: "Relatório por módulo", icon: Layers },
   { to: "/painel/pagamentos", label: "Pagamentos", icon: Wallet },
@@ -62,10 +65,12 @@ interface PainelShellProps {
   title: string;
   description?: string;
   children: ReactNode;
+  /** Usa a largura toda da tela — pra conteúdo que precisa de mais espaço, como o leitor de apostilas. */
+  fullWidth?: boolean;
 }
 
 /** Estrutura comum das telas internas (protegidas por login): sidebar + conteúdo. */
-export function PainelShell({ title, description, children }: PainelShellProps) {
+export function PainelShell({ title, description, children, fullWidth }: PainelShellProps) {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [signingOut, setSigningOut] = useState(false);
@@ -135,7 +140,12 @@ export function PainelShell({ title, description, children }: PainelShellProps) 
           </span>
         </header>
 
-        <main className="mx-auto w-full max-w-6xl px-4 pb-24 pt-10 sm:px-6 sm:pt-10 print:p-0">
+        <main
+          className={cn(
+            "mx-auto w-full px-4 pb-24 pt-10 sm:px-6 sm:pt-10 print:p-0",
+            fullWidth ? "max-w-7xl" : "max-w-6xl",
+          )}
+        >
           <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground print:hidden">
             {title}
           </h1>
