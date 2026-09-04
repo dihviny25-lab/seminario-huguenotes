@@ -63,20 +63,16 @@ const adminOnlyNavItems = [
 ] as const;
 
 /** Link de navegação da sidebar — fecha o menu mobile ao navegar (senão o Sheet fica aberto por cima da tela nova). */
-function NavLink({
-  to,
-  className,
-  children,
-}: {
-  to: ComponentProps<typeof Link>["to"];
-  className?: string;
-  children: ReactNode;
-}) {
+function NavLink({ onClick, ...props }: ComponentProps<typeof Link>) {
   const { isMobile, setOpenMobile } = useSidebar();
   return (
-    <Link to={to} className={className} onClick={() => isMobile && setOpenMobile(false)}>
-      {children}
-    </Link>
+    <Link
+      {...props}
+      onClick={(event) => {
+        onClick?.(event);
+        if (!event.defaultPrevented && isMobile) setOpenMobile(false);
+      }}
+    />
   );
 }
 
