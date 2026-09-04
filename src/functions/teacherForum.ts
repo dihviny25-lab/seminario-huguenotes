@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { asc, desc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
-import { canDeleteThread } from "@/lib/forumPermissions";
+import { canDeletePost, canDeleteThread } from "@/lib/forumPermissions";
 import { logAudit } from "@/server/audit";
 import { requireTeacherId } from "@/server/auth/guard";
 import { db } from "@/server/db/client";
@@ -263,29 +263,29 @@ export const deleteTeacherPostFn = createServerFn({ method: "POST" })
       .where(eq(teacherForumPosts.threadId, post.threadId))
       .orderBy(asc(teacherForumPosts.createdAt), asc(teacherForumPosts.id))
       .limit(1);
-    if (initialPost?.id === post.id) {
-      throw new Error(
-        "A mensagem inicial faz parte do tópico e não pode ser apagada separadamente.",
-      );
-    }
-
     const isAuthor = post.authorTeacherId === teacherId;
-    let isAdminModeration = false;
+    let isModerator = false;
     if (!isAuthor) {
       const [teacher] = await db
         .select({ role: teachers.role })
         .from(teachers)
         .where(eq(teachers.id, teacherId))
         .limit(1);
-      if (teacher?.role !== "admin") {
-        throw new Error("Você só pode apagar a própria mensagem.");
-      }
-      isAdminModeration = true;
+      isModerator = teacher?.role === "admin";
+    }
+
+    const isOpeningPost = initialPost?.id === post.id;
+    if (!canDeletePost({ isOpeningPost, isAuthor, isModerator })) {
+      throw new Error(
+        isOpeningPost
+          ? "A mensagem inicial faz parte do tópico e não pode ser apagada separadamente."
+          : "Você só pode apagar a própria mensagem.",
+      );
     }
 
     await db.delete(teacherForumPosts).where(eq(teacherForumPosts.id, data.postId));
 
-    if (isAdminModeration) {
+    if (isModerator && !isAuthor) {
       await logAudit(
         "forum_interno.apagar_mensagem",
         `Apagou uma mensagem de ${post.authorName} no fórum interno.`,

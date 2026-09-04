@@ -4,6 +4,7 @@ import { PainelShell } from "@/components/painel/PainelShell";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getMyDisciplineFn } from "@/functions/disciplines";
 import { AttendanceTab } from "@/pages/painel/AttendanceTab";
+import { DisciplineOverviewTab } from "@/pages/painel/DisciplineOverviewTab";
 import { GradesTab } from "@/pages/painel/GradesTab";
 import { ReadingMaterialsTab } from "@/pages/painel/ReadingMaterialsTab";
 import { VideoLessonsTab } from "@/pages/painel/VideoLessonsTab";
@@ -19,13 +20,17 @@ export function DisciplineDetail({ disciplineId }: { disciplineId: string }) {
       title={discipline?.discipline ?? (isLoading ? "Carregando…" : "Disciplina")}
       description={discipline ? `${discipline.module} — ${discipline.term}` : undefined}
     >
-      <Tabs defaultValue="frequencia">
+      <Tabs defaultValue="acompanhamento">
         <TabsList>
+          <TabsTrigger value="acompanhamento">Acompanhamento</TabsTrigger>
           <TabsTrigger value="frequencia">Frequência</TabsTrigger>
           <TabsTrigger value="notas">Notas</TabsTrigger>
           <TabsTrigger value="videos">Vídeo-aulas</TabsTrigger>
           <TabsTrigger value="apostila">Apostila</TabsTrigger>
         </TabsList>
+        <TabsContent value="acompanhamento">
+          <DisciplineOverviewTab disciplineId={disciplineId} />
+        </TabsContent>
         <TabsContent value="frequencia">
           <AttendanceTab disciplineId={disciplineId} />
         </TabsContent>

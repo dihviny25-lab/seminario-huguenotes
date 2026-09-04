@@ -7,6 +7,15 @@ export type CanDeleteThreadInput = {
   postCount: number;
 };
 
+export type CanDeletePostInput = {
+  /** A mensagem é a abertura que dá origem ao tópico. */
+  isOpeningPost: boolean;
+  /** Quem pede a exclusão escreveu a mensagem. */
+  isAuthor: boolean;
+  /** Professor dono da disciplina do tópico. */
+  isModerator: boolean;
+};
+
 /**
  * Quem pode apagar um tópico de fórum. Moderador sempre pode; o próprio
  * autor só pode se ainda não houver nenhuma resposta — apagar um tópico
@@ -20,4 +29,18 @@ export function canDeleteThread({
 }: CanDeleteThreadInput): boolean {
   if (isModerator) return true;
   return isAuthor && postCount === 0;
+}
+
+/**
+ * A abertura não pode ser apagada isoladamente, pois ela é a referência
+ * usada para distinguir um tópico vazio de uma discussão com respostas.
+ * Para removê-la, deve-se apagar o tópico inteiro pelas regras acima.
+ */
+export function canDeletePost({
+  isOpeningPost,
+  isAuthor,
+  isModerator,
+}: CanDeletePostInput): boolean {
+  if (isOpeningPost) return false;
+  return isAuthor || isModerator;
 }

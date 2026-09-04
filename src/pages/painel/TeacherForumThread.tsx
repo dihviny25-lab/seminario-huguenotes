@@ -25,7 +25,7 @@ import {
   deleteTeacherThreadFn,
   getTeacherThreadFn,
 } from "@/functions/teacherForum";
-import { canDeleteThread } from "@/lib/forumPermissions";
+import { canDeletePost, canDeleteThread } from "@/lib/forumPermissions";
 
 import { teacherThreadsKey } from "./TeacherForumHome";
 
@@ -146,7 +146,11 @@ export function TeacherForumThread({ threadId }: { threadId: string }) {
                       })}
                     </p>
                   </div>
-                  {!post.isInitial && (post.mine || isModerator) ? (
+                  {canDeletePost({
+                    isOpeningPost: post.isInitial,
+                    isAuthor: post.mine,
+                    isModerator,
+                  }) ? (
                     <Button
                       variant="ghost"
                       size="icon"
