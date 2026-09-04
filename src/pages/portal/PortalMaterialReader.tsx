@@ -5,6 +5,7 @@ import { ArrowLeft, Lock } from "lucide-react";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { Skeleton } from "@/components/ui/skeleton";
 import { listAllReadingMaterialsFn } from "@/functions/readingMaterials";
+import { getEmbeddableViewerUrl } from "@/lib/documentViewer";
 
 function formatDate(iso: string): string {
   const [year, month, day] = iso.split("-");
@@ -42,7 +43,7 @@ export function PortalMaterialReader({ materialId }: { materialId: string }) {
       ) : (
         <div className="animate-in overflow-hidden rounded-md border border-border/70 bg-card/70 shadow-soft fade-in duration-300">
           <iframe
-            src={`${material.fileUrl}#toolbar=0&navpanes=0`}
+            src={getEmbeddableViewerUrl(material.fileUrl)}
             title={material.title}
             className="h-[85vh] w-full"
           />
