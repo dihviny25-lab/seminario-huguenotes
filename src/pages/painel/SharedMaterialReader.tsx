@@ -15,6 +15,7 @@ import {
   listMaterialCommentsFn,
   listSharedWithMeFn,
 } from "@/functions/materialSharing";
+import { getEmbeddableViewerUrl } from "@/lib/documentViewer";
 
 function commentsKey(materialId: string) {
   return ["material-comments", materialId] as const;
@@ -84,7 +85,7 @@ export function SharedMaterialReader({ materialId }: { materialId: string }) {
         <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
           <div className="overflow-hidden rounded-md border border-border/70 bg-card/70 shadow-soft">
             <iframe
-              src={`${material.fileUrl}#toolbar=0&navpanes=0`}
+              src={getEmbeddableViewerUrl(material.fileUrl)}
               title={material.title}
               className="h-[70vh] w-full"
             />

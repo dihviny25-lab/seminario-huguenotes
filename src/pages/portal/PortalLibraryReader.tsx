@@ -5,6 +5,7 @@ import { ArrowLeft } from "lucide-react";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { Skeleton } from "@/components/ui/skeleton";
 import { listLibraryBooksFn } from "@/functions/library";
+import { getEmbeddableViewerUrl } from "@/lib/documentViewer";
 
 /** Leitor online — sem link de download, só o PDF embutido pra leitura na hora. */
 export function PortalLibraryReader({ bookId }: { bookId: string }) {
@@ -30,7 +31,7 @@ export function PortalLibraryReader({ bookId }: { bookId: string }) {
       ) : (
         <div className="animate-in overflow-hidden rounded-md border border-border/70 bg-card/70 shadow-soft fade-in duration-300">
           <iframe
-            src={`${book.fileUrl}#toolbar=0&navpanes=0`}
+            src={getEmbeddableViewerUrl(book.fileUrl)}
             title={book.title}
             className="h-[85vh] w-full"
           />
