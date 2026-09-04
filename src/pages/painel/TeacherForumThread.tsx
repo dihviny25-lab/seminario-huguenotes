@@ -40,7 +40,12 @@ export function TeacherForumThread({ threadId }: { threadId: string }) {
     queryKey: ["current-teacher"],
     queryFn: () => getCurrentTeacherFn(),
   });
-  const { data: thread, isLoading } = useQuery({
+  const {
+    data: thread,
+    error: threadError,
+    isError,
+    isLoading,
+  } = useQuery({
     queryKey: teacherThreadKey(threadId),
     queryFn: () => getTeacherThreadFn({ data: { threadId } }),
   });
@@ -89,11 +94,23 @@ export function TeacherForumThread({ threadId }: { threadId: string }) {
     });
 
   return (
-    <PainelShell title={thread?.title ?? "Carregando…"}>
-      {isLoading || !thread ? (
+    <PainelShell title={thread?.title ?? (isError ? "Tópico indisponível" : "Carregando…")}>
+      {isLoading ? (
         <div className="space-y-3">
           <Skeleton className="h-16 w-full" />
           <Skeleton className="h-16 w-full" />
+        </div>
+      ) : isError || !thread ? (
+        <div className="rounded-md border border-destructive/30 bg-destructive/5 p-6">
+          <h2 className="font-semibold text-foreground">Não foi possível abrir este tópico</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {threadError instanceof Error
+              ? threadError.message
+              : "O tópico pode ter sido apagado ou o endereço é inválido."}
+          </p>
+          <Button asChild variant="outline" className="mt-4">
+            <Link to="/painel/forum-interno">Voltar para o fórum interno</Link>
+          </Button>
         </div>
       ) : (
         <div>
@@ -129,7 +146,7 @@ export function TeacherForumThread({ threadId }: { threadId: string }) {
                       })}
                     </p>
                   </div>
-                  {post.mine || isModerator ? (
+                  {!post.isInitial && (post.mine || isModerator) ? (
                     <Button
                       variant="ghost"
                       size="icon"
