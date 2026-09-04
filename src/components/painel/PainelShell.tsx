@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   BarChart3,
+  BookOpen,
   CalendarRange,
   ClipboardList,
   FileText,
@@ -46,6 +47,7 @@ const painelNavItems = [
   { to: "/painel/alunos", label: "Alunos", icon: GraduationCap },
   { to: "/painel/provas", label: "Provas", icon: ClipboardList },
   { to: "/painel/tarefas", label: "Tarefas", icon: ListChecks },
+  { to: "/painel/minhas-materias", label: "Minhas Matérias", icon: BookOpen },
   { to: "/painel/forum", label: "Fórum", icon: MessageCircle },
   { to: "/painel/forum-interno", label: "Fórum interno", icon: MessagesSquare },
   { to: "/painel/biblioteca", label: "Biblioteca virtual", icon: Library },

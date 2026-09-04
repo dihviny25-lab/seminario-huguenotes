@@ -50,6 +50,7 @@ import { Route as PortalBibliotecaIndexRouteImport } from './routes/portal/bibli
 import { Route as PortalApostilasIndexRouteImport } from './routes/portal/apostilas/index'
 import { Route as PainelTarefasIndexRouteImport } from './routes/painel/tarefas/index'
 import { Route as PainelProvasIndexRouteImport } from './routes/painel/provas/index'
+import { Route as PainelMinhasMateriasIndexRouteImport } from './routes/painel/minhas-materias/index'
 import { Route as PainelForumIndexRouteImport } from './routes/painel/forum/index'
 import { Route as PainelForumInternoIndexRouteImport } from './routes/painel/forum-interno/index'
 import { Route as PainelApostilasCompartilhadasIndexRouteImport } from './routes/painel/apostilas-compartilhadas/index'
@@ -288,6 +289,12 @@ const PainelProvasIndexRoute = PainelProvasIndexRouteImport.update({
   path: '/provas/',
   getParentRoute: () => PainelRouteRoute,
 } as any)
+const PainelMinhasMateriasIndexRoute =
+  PainelMinhasMateriasIndexRouteImport.update({
+    id: '/minhas-materias/',
+    path: '/minhas-materias/',
+    getParentRoute: () => PainelRouteRoute,
+  } as any)
 const PainelForumIndexRoute = PainelForumIndexRouteImport.update({
   id: '/forum/',
   path: '/forum/',
@@ -482,6 +489,7 @@ export interface FileRoutesByFullPath {
   '/painel/apostilas-compartilhadas/': typeof PainelApostilasCompartilhadasIndexRoute
   '/painel/forum-interno/': typeof PainelForumInternoIndexRoute
   '/painel/forum/': typeof PainelForumIndexRoute
+  '/painel/minhas-materias/': typeof PainelMinhasMateriasIndexRoute
   '/painel/provas/': typeof PainelProvasIndexRoute
   '/painel/tarefas/': typeof PainelTarefasIndexRoute
   '/portal/apostilas/': typeof PortalApostilasIndexRoute
@@ -547,6 +555,7 @@ export interface FileRoutesByTo {
   '/painel/apostilas-compartilhadas': typeof PainelApostilasCompartilhadasIndexRoute
   '/painel/forum-interno': typeof PainelForumInternoIndexRoute
   '/painel/forum': typeof PainelForumIndexRoute
+  '/painel/minhas-materias': typeof PainelMinhasMateriasIndexRoute
   '/painel/provas': typeof PainelProvasIndexRoute
   '/painel/tarefas': typeof PainelTarefasIndexRoute
   '/portal/apostilas': typeof PortalApostilasIndexRoute
@@ -615,6 +624,7 @@ export interface FileRoutesById {
   '/painel/apostilas-compartilhadas/': typeof PainelApostilasCompartilhadasIndexRoute
   '/painel/forum-interno/': typeof PainelForumInternoIndexRoute
   '/painel/forum/': typeof PainelForumIndexRoute
+  '/painel/minhas-materias/': typeof PainelMinhasMateriasIndexRoute
   '/painel/provas/': typeof PainelProvasIndexRoute
   '/painel/tarefas/': typeof PainelTarefasIndexRoute
   '/portal/apostilas/': typeof PortalApostilasIndexRoute
@@ -684,6 +694,7 @@ export interface FileRouteTypes {
     | '/painel/apostilas-compartilhadas/'
     | '/painel/forum-interno/'
     | '/painel/forum/'
+    | '/painel/minhas-materias/'
     | '/painel/provas/'
     | '/painel/tarefas/'
     | '/portal/apostilas/'
@@ -749,6 +760,7 @@ export interface FileRouteTypes {
     | '/painel/apostilas-compartilhadas'
     | '/painel/forum-interno'
     | '/painel/forum'
+    | '/painel/minhas-materias'
     | '/painel/provas'
     | '/painel/tarefas'
     | '/portal/apostilas'
@@ -816,6 +828,7 @@ export interface FileRouteTypes {
     | '/painel/apostilas-compartilhadas/'
     | '/painel/forum-interno/'
     | '/painel/forum/'
+    | '/painel/minhas-materias/'
     | '/painel/provas/'
     | '/painel/tarefas/'
     | '/portal/apostilas/'
@@ -1138,6 +1151,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PainelProvasIndexRouteImport
       parentRoute: typeof PainelRouteRoute
     }
+    '/painel/minhas-materias/': {
+      id: '/painel/minhas-materias/'
+      path: '/minhas-materias'
+      fullPath: '/painel/minhas-materias/'
+      preLoaderRoute: typeof PainelMinhasMateriasIndexRouteImport
+      parentRoute: typeof PainelRouteRoute
+    }
     '/painel/forum/': {
       id: '/painel/forum/'
       path: '/forum'
@@ -1358,6 +1378,7 @@ interface PainelRouteRouteChildren {
   PainelApostilasCompartilhadasIndexRoute: typeof PainelApostilasCompartilhadasIndexRoute
   PainelForumInternoIndexRoute: typeof PainelForumInternoIndexRoute
   PainelForumIndexRoute: typeof PainelForumIndexRoute
+  PainelMinhasMateriasIndexRoute: typeof PainelMinhasMateriasIndexRoute
   PainelProvasIndexRoute: typeof PainelProvasIndexRoute
   PainelTarefasIndexRoute: typeof PainelTarefasIndexRoute
 }
@@ -1387,6 +1408,7 @@ const PainelRouteRouteChildren: PainelRouteRouteChildren = {
     PainelApostilasCompartilhadasIndexRoute,
   PainelForumInternoIndexRoute: PainelForumInternoIndexRoute,
   PainelForumIndexRoute: PainelForumIndexRoute,
+  PainelMinhasMateriasIndexRoute: PainelMinhasMateriasIndexRoute,
   PainelProvasIndexRoute: PainelProvasIndexRoute,
   PainelTarefasIndexRoute: PainelTarefasIndexRoute,
 }
