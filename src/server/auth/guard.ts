@@ -1,8 +1,8 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import { toDisplayName } from "@/lib/formatName";
 import { db } from "@/server/db/client";
-import { disciplines, students, teachers } from "@/server/db/schema";
+import { disciplines, lessons, students, teachers } from "@/server/db/schema";
 
 import { readAppSession } from "./session";
 import { readAppStudentSession } from "./studentSession";
@@ -138,4 +138,57 @@ export async function requireOwnDiscipline(disciplineId: string) {
     throw new Error("Disciplina não encontrada.");
   }
   return discipline;
+}
+
+/**
+ * Autoriza ações limitadas a uma aula para seu professor efetivo: o override,
+ * quando existe, ou o professor responsável pela disciplina por herança.
+ * Também confirma que lessonId pertence à disciplineId informada.
+ */
+export async function requireAssignedLesson(disciplineId: string, lessonId: string) {
+  const teacherId = await requireTeacherId();
+  const [row] = await db
+    .select({
+      lesson: lessons,
+      discipline: disciplines,
+    })
+    .from(lessons)
+    .innerJoin(disciplines, eq(lessons.disciplineId, disciplines.id))
+    .where(eq(lessons.id, lessonId))
+    .limit(1);
+
+  if (
+    !row ||
+    row.lesson.disciplineId !== disciplineId ||
+    (row.lesson.teacherId ?? row.discipline.teacherId) !== teacherId
+  ) {
+    throw new Error("Aula não encontrada.");
+  }
+  return row;
+}
+
+/**
+ * Autoriza a grade de chamada para o responsável padrão da disciplina ou um
+ * professor com ao menos uma aula atribuída nela. O consumidor ainda deve
+ * filtrar as aulas pelo professor efetivo antes de devolvê-las ao cliente.
+ */
+export async function requireAttendanceDiscipline(disciplineId: string) {
+  const teacherId = await requireTeacherId();
+  const [discipline] = await db
+    .select()
+    .from(disciplines)
+    .where(eq(disciplines.id, disciplineId))
+    .limit(1);
+
+  if (!discipline) throw new Error("Disciplina não encontrada.");
+  if (discipline.teacherId === teacherId) return { discipline, teacherId };
+
+  const [assignedLesson] = await db
+    .select({ id: lessons.id })
+    .from(lessons)
+    .where(and(eq(lessons.disciplineId, disciplineId), eq(lessons.teacherId, teacherId)))
+    .limit(1);
+  if (!assignedLesson) throw new Error("Disciplina não encontrada.");
+
+  return { discipline, teacherId };
 }

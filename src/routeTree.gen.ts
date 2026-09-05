@@ -40,6 +40,7 @@ import { Route as PainelFinanceiroRouteImport } from './routes/painel/financeiro
 import { Route as PainelDespesasRouteImport } from './routes/painel/despesas'
 import { Route as PainelBibliotecaRouteImport } from './routes/painel/biblioteca'
 import { Route as PainelAuditoriaRouteImport } from './routes/painel/auditoria'
+import { Route as PainelAtribuicoesRouteImport } from './routes/painel/atribuicoes'
 import { Route as PainelAlunosRouteImport } from './routes/painel/alunos'
 import { Route as PainelAgendaRouteImport } from './routes/painel/agenda'
 import { Route as PortalTarefasIndexRouteImport } from './routes/portal/tarefas/index'
@@ -238,6 +239,11 @@ const PainelAuditoriaRoute = PainelAuditoriaRouteImport.update({
 } as any).lazy(() =>
   import('./routes/painel/auditoria.lazy').then((d) => d.Route),
 )
+const PainelAtribuicoesRoute = PainelAtribuicoesRouteImport.update({
+  id: '/atribuicoes',
+  path: '/atribuicoes',
+  getParentRoute: () => PainelRouteRoute,
+} as any)
 const PainelAlunosRoute = PainelAlunosRouteImport.update({
   id: '/alunos',
   path: '/alunos',
@@ -442,6 +448,7 @@ export interface FileRoutesByFullPath {
   '/redefinir-senha-aluno': typeof RedefinirSenhaAlunoRoute
   '/painel/agenda': typeof PainelAgendaRoute
   '/painel/alunos': typeof PainelAlunosRoute
+  '/painel/atribuicoes': typeof PainelAtribuicoesRoute
   '/painel/auditoria': typeof PainelAuditoriaRoute
   '/painel/biblioteca': typeof PainelBibliotecaRoute
   '/painel/despesas': typeof PainelDespesasRoute
@@ -507,6 +514,7 @@ export interface FileRoutesByTo {
   '/redefinir-senha-aluno': typeof RedefinirSenhaAlunoRoute
   '/painel/agenda': typeof PainelAgendaRoute
   '/painel/alunos': typeof PainelAlunosRoute
+  '/painel/atribuicoes': typeof PainelAtribuicoesRoute
   '/painel/auditoria': typeof PainelAuditoriaRoute
   '/painel/biblioteca': typeof PainelBibliotecaRoute
   '/painel/despesas': typeof PainelDespesasRoute
@@ -575,6 +583,7 @@ export interface FileRoutesById {
   '/redefinir-senha-aluno': typeof RedefinirSenhaAlunoRoute
   '/painel/agenda': typeof PainelAgendaRoute
   '/painel/alunos': typeof PainelAlunosRoute
+  '/painel/atribuicoes': typeof PainelAtribuicoesRoute
   '/painel/auditoria': typeof PainelAuditoriaRoute
   '/painel/biblioteca': typeof PainelBibliotecaRoute
   '/painel/despesas': typeof PainelDespesasRoute
@@ -644,6 +653,7 @@ export interface FileRouteTypes {
     | '/redefinir-senha-aluno'
     | '/painel/agenda'
     | '/painel/alunos'
+    | '/painel/atribuicoes'
     | '/painel/auditoria'
     | '/painel/biblioteca'
     | '/painel/despesas'
@@ -709,6 +719,7 @@ export interface FileRouteTypes {
     | '/redefinir-senha-aluno'
     | '/painel/agenda'
     | '/painel/alunos'
+    | '/painel/atribuicoes'
     | '/painel/auditoria'
     | '/painel/biblioteca'
     | '/painel/despesas'
@@ -776,6 +787,7 @@ export interface FileRouteTypes {
     | '/redefinir-senha-aluno'
     | '/painel/agenda'
     | '/painel/alunos'
+    | '/painel/atribuicoes'
     | '/painel/auditoria'
     | '/painel/biblioteca'
     | '/painel/despesas'
@@ -1068,6 +1080,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PainelAuditoriaRouteImport
       parentRoute: typeof PainelRouteRoute
     }
+    '/painel/atribuicoes': {
+      id: '/painel/atribuicoes'
+      path: '/atribuicoes'
+      fullPath: '/painel/atribuicoes'
+      preLoaderRoute: typeof PainelAtribuicoesRouteImport
+      parentRoute: typeof PainelRouteRoute
+    }
     '/painel/alunos': {
       id: '/painel/alunos'
       path: '/alunos'
@@ -1338,6 +1357,7 @@ const PainelRelatorioRouteWithChildren = PainelRelatorioRoute._addFileChildren(
 interface PainelRouteRouteChildren {
   PainelAgendaRoute: typeof PainelAgendaRoute
   PainelAlunosRoute: typeof PainelAlunosRoute
+  PainelAtribuicoesRoute: typeof PainelAtribuicoesRoute
   PainelAuditoriaRoute: typeof PainelAuditoriaRoute
   PainelBibliotecaRoute: typeof PainelBibliotecaRoute
   PainelDespesasRoute: typeof PainelDespesasRoute
@@ -1365,6 +1385,7 @@ interface PainelRouteRouteChildren {
 const PainelRouteRouteChildren: PainelRouteRouteChildren = {
   PainelAgendaRoute: PainelAgendaRoute,
   PainelAlunosRoute: PainelAlunosRoute,
+  PainelAtribuicoesRoute: PainelAtribuicoesRoute,
   PainelAuditoriaRoute: PainelAuditoriaRoute,
   PainelBibliotecaRoute: PainelBibliotecaRoute,
   PainelDespesasRoute: PainelDespesasRoute,

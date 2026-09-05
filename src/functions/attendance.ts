@@ -2,8 +2,14 @@ import { createServerFn } from "@tanstack/react-start";
 import { asc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
+import { effectiveTeacherId } from "@/lib/teachingAssignments";
 import { logAudit } from "@/server/audit";
-import { requireOwnDiscipline, requireStudentId } from "@/server/auth/guard";
+import {
+  requireAssignedLesson,
+  requireAttendanceDiscipline,
+  requireOwnDiscipline,
+  requireStudentId,
+} from "@/server/auth/guard";
 import { attendance, disciplines, lessons, students } from "@/server/db/schema";
 import { db } from "@/server/db/client";
 
@@ -26,7 +32,7 @@ export type AttendanceBoard = {
 export const getAttendanceBoardFn = createServerFn({ method: "GET" })
   .validator(disciplineIdSchema)
   .handler(async ({ data }): Promise<AttendanceBoard> => {
-    await requireOwnDiscipline(data.disciplineId);
+    const { discipline, teacherId } = await requireAttendanceDiscipline(data.disciplineId);
 
     const [studentRows, lessonRows] = await Promise.all([
       db
@@ -39,6 +45,7 @@ export const getAttendanceBoardFn = createServerFn({ method: "GET" })
           id: lessons.id,
           date: lessons.date,
           sequence: lessons.sequence,
+          teacherId: lessons.teacherId,
           checkInOpen: lessons.checkInOpen,
           checkInToken: lessons.checkInToken,
           givenAt: lessons.givenAt,
@@ -48,7 +55,10 @@ export const getAttendanceBoardFn = createServerFn({ method: "GET" })
         .orderBy(asc(lessons.sequence)),
     ]);
 
-    const lessonIds = lessonRows.map((l) => l.id);
+    const visibleLessons = lessonRows.filter(
+      (lesson) => effectiveTeacherId(lesson.teacherId, discipline.teacherId) === teacherId,
+    );
+    const lessonIds = visibleLessons.map((l) => l.id);
     const attendanceRows =
       lessonIds.length === 0
         ? []
@@ -63,7 +73,7 @@ export const getAttendanceBoardFn = createServerFn({ method: "GET" })
 
     return {
       students: studentRows,
-      lessons: lessonRows.map((lesson) => ({
+      lessons: visibleLessons.map(({ teacherId: _teacherId, ...lesson }) => ({
         ...lesson,
         givenAt: lesson.givenAt ? lesson.givenAt.toISOString() : null,
       })),
@@ -102,6 +112,14 @@ export const deleteLessonFn = createServerFn({ method: "POST" })
   .validator(deleteLessonSchema)
   .handler(async ({ data }) => {
     const discipline = await requireOwnDiscipline(data.disciplineId);
+    const [lesson] = await db
+      .select({ disciplineId: lessons.disciplineId })
+      .from(lessons)
+      .where(eq(lessons.id, data.lessonId))
+      .limit(1);
+    if (!lesson || lesson.disciplineId !== data.disciplineId) {
+      throw new Error("Aula não encontrada.");
+    }
     await db.delete(lessons).where(eq(lessons.id, data.lessonId));
     await logAudit("aula.apagar", `Apagou uma aula de ${discipline.discipline}.`);
   });
@@ -116,7 +134,7 @@ const setAttendanceSchema = z.object({
 export const setAttendanceFn = createServerFn({ method: "POST" })
   .validator(setAttendanceSchema)
   .handler(async ({ data }) => {
-    await requireOwnDiscipline(data.disciplineId);
+    await requireAssignedLesson(data.disciplineId, data.lessonId);
     await db
       .insert(attendance)
       .values({ lessonId: data.lessonId, studentId: data.studentId, present: data.present })
@@ -136,7 +154,7 @@ const setLessonAttendanceAllSchema = z.object({
 export const setLessonAttendanceAllFn = createServerFn({ method: "POST" })
   .validator(setLessonAttendanceAllSchema)
   .handler(async ({ data }) => {
-    const discipline = await requireOwnDiscipline(data.disciplineId);
+    const { discipline } = await requireAssignedLesson(data.disciplineId, data.lessonId);
     const activeStudents = await db
       .select({ id: students.id })
       .from(students)
@@ -170,7 +188,7 @@ const launchLessonAttendanceSchema = z.object({
 export const launchLessonAttendanceFn = createServerFn({ method: "POST" })
   .validator(launchLessonAttendanceSchema)
   .handler(async ({ data }) => {
-    const discipline = await requireOwnDiscipline(data.disciplineId);
+    const { discipline } = await requireAssignedLesson(data.disciplineId, data.lessonId);
     await db.update(lessons).set({ givenAt: new Date() }).where(eq(lessons.id, data.lessonId));
     await logAudit(
       "frequencia.lancar",
@@ -182,7 +200,7 @@ export const launchLessonAttendanceFn = createServerFn({ method: "POST" })
 export const reopenLessonAttendanceFn = createServerFn({ method: "POST" })
   .validator(launchLessonAttendanceSchema)
   .handler(async ({ data }) => {
-    await requireOwnDiscipline(data.disciplineId);
+    await requireAssignedLesson(data.disciplineId, data.lessonId);
     await db.update(lessons).set({ givenAt: null }).where(eq(lessons.id, data.lessonId));
   });
 
@@ -195,7 +213,7 @@ const lessonCheckInSchema = z.object({
 export const openLessonCheckInFn = createServerFn({ method: "POST" })
   .validator(lessonCheckInSchema)
   .handler(async ({ data }): Promise<{ token: string }> => {
-    await requireOwnDiscipline(data.disciplineId);
+    await requireAssignedLesson(data.disciplineId, data.lessonId);
     const token = crypto.randomUUID();
     await db
       .update(lessons)
@@ -208,7 +226,7 @@ export const openLessonCheckInFn = createServerFn({ method: "POST" })
 export const closeLessonCheckInFn = createServerFn({ method: "POST" })
   .validator(lessonCheckInSchema)
   .handler(async ({ data }) => {
-    await requireOwnDiscipline(data.disciplineId);
+    await requireAssignedLesson(data.disciplineId, data.lessonId);
     const [current] = await db
       .select({ givenAt: lessons.givenAt })
       .from(lessons)

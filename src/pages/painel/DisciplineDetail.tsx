@@ -20,29 +20,44 @@ export function DisciplineDetail({ disciplineId }: { disciplineId: string }) {
       title={discipline?.discipline ?? (isLoading ? "Carregando…" : "Disciplina")}
       description={discipline ? `${discipline.module} — ${discipline.term}` : undefined}
     >
-      <Tabs defaultValue="acompanhamento">
+      <Tabs
+        key={discipline?.canManageDiscipline === false ? "assigned" : "owner"}
+        defaultValue={discipline?.canManageDiscipline === false ? "frequencia" : "acompanhamento"}
+      >
         <TabsList>
-          <TabsTrigger value="acompanhamento">Acompanhamento</TabsTrigger>
+          {discipline?.canManageDiscipline !== false ? (
+            <TabsTrigger value="acompanhamento">Acompanhamento</TabsTrigger>
+          ) : null}
           <TabsTrigger value="frequencia">Frequência</TabsTrigger>
-          <TabsTrigger value="notas">Notas</TabsTrigger>
-          <TabsTrigger value="videos">Vídeo-aulas</TabsTrigger>
-          <TabsTrigger value="apostila">Apostila</TabsTrigger>
+          {discipline?.canManageDiscipline !== false ? (
+            <>
+              <TabsTrigger value="notas">Notas</TabsTrigger>
+              <TabsTrigger value="videos">Vídeo-aulas</TabsTrigger>
+              <TabsTrigger value="apostila">Apostila</TabsTrigger>
+            </>
+          ) : null}
         </TabsList>
-        <TabsContent value="acompanhamento">
-          <DisciplineOverviewTab disciplineId={disciplineId} />
-        </TabsContent>
+        {discipline?.canManageDiscipline !== false ? (
+          <TabsContent value="acompanhamento">
+            <DisciplineOverviewTab disciplineId={disciplineId} />
+          </TabsContent>
+        ) : null}
         <TabsContent value="frequencia">
           <AttendanceTab disciplineId={disciplineId} />
         </TabsContent>
-        <TabsContent value="notas">
-          <GradesTab disciplineId={disciplineId} />
-        </TabsContent>
-        <TabsContent value="videos">
-          <VideoLessonsTab disciplineId={disciplineId} />
-        </TabsContent>
-        <TabsContent value="apostila">
-          <ReadingMaterialsTab disciplineId={disciplineId} />
-        </TabsContent>
+        {discipline?.canManageDiscipline !== false ? (
+          <>
+            <TabsContent value="notas">
+              <GradesTab disciplineId={disciplineId} />
+            </TabsContent>
+            <TabsContent value="videos">
+              <VideoLessonsTab disciplineId={disciplineId} />
+            </TabsContent>
+            <TabsContent value="apostila">
+              <ReadingMaterialsTab disciplineId={disciplineId} />
+            </TabsContent>
+          </>
+        ) : null}
       </Tabs>
     </PainelShell>
   );
