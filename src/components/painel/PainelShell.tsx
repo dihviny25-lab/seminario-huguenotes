@@ -16,6 +16,7 @@ import {
   MessagesSquare,
   PackageOpen,
   Receipt,
+  Replace,
   Share2,
   ShieldCheck,
   Users,
@@ -56,6 +57,7 @@ const painelNavItems = [
 ] as const;
 
 const adminOnlyNavItems = [
+  { to: "/painel/atribuicoes", label: "Atribuição de professores", icon: Replace },
   { to: "/painel/financeiro", label: "Financeiro", icon: BarChart3 },
   { to: "/painel/materiais", label: "Materiais", icon: PackageOpen },
   { to: "/painel/despesas", label: "Despesas", icon: Receipt },
