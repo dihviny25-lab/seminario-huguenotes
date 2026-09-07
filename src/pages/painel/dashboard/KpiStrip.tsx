@@ -23,16 +23,18 @@ export function KpiStrip({
 }) {
   if (isLoading) {
     return (
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 divide-x divide-y divide-border/70 overflow-hidden rounded-md border border-border/70 bg-card/70 shadow-soft lg:grid-cols-4 lg:divide-y-0">
         {KPIS.map((k) => (
-          <Skeleton key={k.key} className="h-24 w-full" />
+          <div key={k.key} className="p-4">
+            <Skeleton className="h-16 w-full" />
+          </div>
         ))}
       </div>
     );
   }
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid grid-cols-2 divide-x divide-y divide-border/70 overflow-hidden rounded-md border border-border/70 bg-card/70 shadow-soft lg:grid-cols-4 lg:divide-y-0">
       {KPIS.map((k) => {
         const value = counts[k.key];
         const danger = k.alarm && value > 0;
@@ -40,15 +42,17 @@ export function KpiStrip({
           <a
             key={k.key}
             href={`#card-${k.key}`}
-            className={cn(
-              "rounded-md border border-t-2 border-border/70 bg-card/70 p-4 shadow-soft transition-colors",
-              danger ? "border-t-destructive" : "border-t-accent",
-            )}
+            className="p-4 transition-colors hover:bg-muted/40"
           >
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-              {k.label}
+            <p className="text-sm text-muted-foreground">{k.label}</p>
+            <p
+              className={cn(
+                "mt-2 font-display text-2xl font-semibold",
+                danger ? "text-destructive" : "text-foreground",
+              )}
+            >
+              {value}
             </p>
-            <p className="mt-2 font-display text-2xl font-semibold text-foreground">{value}</p>
             <p className="mt-1 text-xs text-muted-foreground">{SUFFIX}</p>
           </a>
         );
