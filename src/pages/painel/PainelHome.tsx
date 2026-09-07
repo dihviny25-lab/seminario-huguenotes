@@ -7,7 +7,7 @@ import { PainelShell } from "@/components/painel/PainelShell";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getTeacherDashboardFn } from "@/functions/teacherDashboard";
 import { listMyDisciplinesFn } from "@/functions/disciplines";
-import { DashboardCards } from "@/pages/painel/dashboard/cards";
+import { ActionCards, InfoCards } from "@/pages/painel/dashboard/cards";
 import { KpiStrip } from "@/pages/painel/dashboard/KpiStrip";
 
 const shortcuts = [
@@ -57,6 +57,17 @@ export function PainelHome() {
     dashboard.upcomingLessons.length === 0 &&
     dashboard.atRiskStudents.length === 0;
 
+  const pendingCount = dashboard
+    ? dashboard.counts.pendingGrading +
+      dashboard.counts.endingDisciplines +
+      dashboard.counts.atRiskStudents +
+      dashboard.counts.lessonsWithoutAttendance
+    : 0;
+  const heroMessage =
+    pendingCount === 0
+      ? "Tudo em dia — nenhuma pendência agora."
+      : `Você tem ${pendingCount} ${pendingCount === 1 ? "pendência" : "pendências"} pra resolver hoje.`;
+
   return (
     <PainelShell
       title="Painel do professor"
@@ -72,6 +83,14 @@ export function PainelHome() {
         </p>
       ) : (
         <>
+          {loadingDashboard ? (
+            <Skeleton className="mb-6 h-9 w-2/3" />
+          ) : (
+            <p className="mb-6 font-display text-2xl font-semibold text-foreground sm:text-3xl">
+              {heroMessage}
+            </p>
+          )}
+
           <KpiStrip
             counts={
               dashboard?.counts ?? {
@@ -84,13 +103,10 @@ export function PainelHome() {
             isLoading={loadingDashboard}
           />
 
-          {allClear ? (
-            <p className="mt-8 rounded-md border border-t-2 border-border/70 border-t-accent bg-card/70 p-6 text-center text-sm text-muted-foreground shadow-soft">
-              Nenhuma pendência — tudo em dia.
-            </p>
-          ) : (
-            <div className="mt-8 grid gap-4 lg:grid-cols-3">
-              <DashboardCards data={dashboard} isLoading={loadingDashboard} />
+          {allClear ? null : (
+            <div className="mt-8 space-y-10">
+              <ActionCards data={dashboard} isLoading={loadingDashboard} />
+              <InfoCards data={dashboard} isLoading={loadingDashboard} />
             </div>
           )}
         </>
