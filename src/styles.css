@@ -202,3 +202,31 @@
     }
   }
 }
+
+/* Revelação por blur, caractere a caractere — usada pelo componente BlurReveal.
+   Uso pontual (título do hero). A guarda de prefers-reduced-motion acima já
+   encolhe a animação; a regra abaixo zera também o stagger por caractere. */
+@keyframes blur-reveal-char {
+  from {
+    opacity: 0;
+    filter: blur(10px);
+    transform: translateY(0.25rem);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: none;
+  }
+}
+
+.blur-reveal-char {
+  display: inline-block;
+  animation: blur-reveal-char var(--blur-reveal-duration, 320ms) cubic-bezier(0.2, 0, 0, 1) both;
+  animation-delay: var(--blur-reveal-delay, 0ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blur-reveal-char {
+    animation-delay: 0ms !important;
+  }
+}
