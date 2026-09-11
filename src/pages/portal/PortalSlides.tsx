@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getPublicDisciplinesFn } from "@/functions/schedule";
 import {
   listAllPresentationSlidesFn,
-  type PresentationSlide,
+  type PortalPresentationSlide,
 } from "@/functions/presentationSlides";
 import { groupBySemester, semesterLabel } from "@/lib/schedule-utils";
 
@@ -23,7 +23,7 @@ export function PortalSlides() {
   });
 
   const isLoading = loadingDisciplines || loadingSlides;
-  const slidesByDiscipline = new Map<string, Array<PresentationSlide>>();
+  const slidesByDiscipline = new Map<string, Array<PortalPresentationSlide>>();
   for (const slide of slides ?? []) {
     const list = slidesByDiscipline.get(slide.disciplineId) ?? [];
     list.push(slide);
