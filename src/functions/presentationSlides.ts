@@ -30,7 +30,7 @@ const disciplineIdSchema = z.object({ disciplineId: z.string().uuid() });
 /** Slides de uma disciplina — só o professor dono dela gerencia. */
 export const listMyDisciplineSlidesFn = createServerFn({ method: "GET" })
   .validator(disciplineIdSchema)
-  .handler(async ({ data }): Promise<Array<PortalPresentationSlide>> => {
+  .handler(async ({ data }): Promise<Array<PresentationSlide>> => {
     await requireOwnDiscipline(data.disciplineId);
     const rows = await db
       .select()
@@ -169,7 +169,7 @@ export const listAllPresentationSlidesFn = createServerFn({ method: "GET" }).han
 /** Slides de UMA disciplina — pra página do curso no portal (qualquer aluno/professor). */
 export const listDisciplinePresentationSlidesFn = createServerFn({ method: "GET" })
   .validator(disciplineIdSchema)
-  .handler(async ({ data }): Promise<Array<PresentationSlide>> => {
+  .handler(async ({ data }): Promise<Array<PortalPresentationSlide>> => {
     await requireAnyLogin();
     const rows = await db
       .select(selectSlideColumns())
