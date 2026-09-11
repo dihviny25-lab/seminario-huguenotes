@@ -66,10 +66,7 @@ export function applyScholarship(fullValue: number, scholarshipPercent: number):
 }
 
 /** Data civil (YYYY-MM-DD) no fuso informado, sem depender do UTC do servidor. */
-export function dateToIsoInTimeZone(
-  date: Date,
-  timeZone = "America/Sao_Paulo",
-): string {
+export function dateToIsoInTimeZone(date: Date, timeZone = "America/Sao_Paulo"): string {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone,
     year: "numeric",
