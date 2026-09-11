@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { Lock, MonitorPlay } from "lucide-react";
 
-import type { PresentationSlide } from "@/functions/presentationSlides";
+import type { PortalPresentationSlide } from "@/functions/presentationSlides";
 
 function formatDate(iso: string): string {
   const [year, month, day] = iso.split("-");
@@ -9,7 +9,7 @@ function formatDate(iso: string): string {
 }
 
 /** Card de slide — bloqueado (sem link) se a disciplina ainda não começou. */
-export function SlideCard({ slide }: { slide: PresentationSlide }) {
+export function SlideCard({ slide }: { slide: PortalPresentationSlide }) {
   const content = (
     <>
       {slide.availableAt ? (
