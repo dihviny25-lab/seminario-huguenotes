@@ -65,6 +65,21 @@ export function applyScholarship(fullValue: number, scholarshipPercent: number):
   return Math.round(fullValue * (1 - scholarshipPercent / 100) * 100) / 100;
 }
 
+/** Data civil (YYYY-MM-DD) no fuso informado, sem depender do UTC do servidor. */
+export function dateToIsoInTimeZone(
+  date: Date,
+  timeZone = "America/Sao_Paulo",
+): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
 export type CurrentAmountInput = {
   fullAmount: number;
   discountPercent: number;
