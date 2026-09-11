@@ -15,7 +15,10 @@ import { Document, Page, pdfjs } from "react-pdf";
 import { Button } from "@/components/ui/button";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { Skeleton } from "@/components/ui/skeleton";
-import { listAllPresentationSlidesFn } from "@/functions/presentationSlides";
+import {
+  getPresentationSlideFileFn,
+  listAllPresentationSlidesFn,
+} from "@/functions/presentationSlides";
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.mjs",
@@ -35,6 +38,15 @@ export function PortalSlideReader({ slideId }: { slideId: string }) {
   });
 
   const slide = slides?.find((s) => s.id === slideId);
+  const {
+    data: slideFile,
+    isLoading: isFileLoading,
+    isError: isFileError,
+  } = useQuery({
+    queryKey: ["presentation-slide-file", slideId],
+    queryFn: () => getPresentationSlideFileFn({ data: { slideId } }),
+    enabled: Boolean(slide && !slide.availableAt),
+  });
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(0);
@@ -106,6 +118,12 @@ export function PortalSlideReader({ slideId }: { slideId: string }) {
             Esses slides ficam disponíveis a partir de {formatDate(slide.availableAt)}.
           </p>
         </div>
+      ) : isFileLoading ? (
+        <Skeleton className="h-[85vh] w-full" />
+      ) : isFileError || !slideFile ? (
+        <div className="flex h-[50vh] items-center justify-center rounded-md border border-border/70 bg-card/70 text-center shadow-soft">
+          <p className="text-muted-foreground">Não foi possível liberar o arquivo deste slide.</p>
+        </div>
       ) : (
         <div
           ref={containerRef}
@@ -128,7 +146,7 @@ export function PortalSlideReader({ slideId }: { slideId: string }) {
           ) : (
             <Document
               key={documentKey}
-              file={slide.fileUrl}
+              file={slideFile.fileUrl}
               onLoadSuccess={({ numPages: total }) => {
                 setNumPages(total);
                 setCurrent(1);
@@ -136,7 +154,12 @@ export function PortalSlideReader({ slideId }: { slideId: string }) {
               onLoadError={() => setLoadError(true)}
               loading={<Skeleton className="h-[70vh] w-full" />}
             >
-              <Page pageNumber={current} width={containerWidth || undefined} />
+              <Page
+                pageNumber={current}
+                width={containerWidth || undefined}
+                renderTextLayer={false}
+                renderAnnotationLayer={false}
+              />
             </Document>
           )}
 
