@@ -142,7 +142,7 @@ function selectSlideColumns() {
 }
 
 function withAvailability(
-  row: PortalPresentationSlide & { startDate: string | null },
+  row: Omit<PortalPresentationSlide, "availableAt"> & { startDate: string | null },
 ): PortalPresentationSlide {
   const { startDate, ...slide } = row;
   const available = startDate === null || startDate <= todayIso();
