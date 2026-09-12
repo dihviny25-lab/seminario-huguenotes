@@ -70,7 +70,7 @@ export function BlurReveal({
                   } as CSSProperties
                 }
               >
-                {" "}
+                {"\u00a0"}
               </span>
             ) : null}
           </span>
