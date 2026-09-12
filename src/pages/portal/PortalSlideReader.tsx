@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import {
@@ -48,7 +48,7 @@ export function PortalSlideReader({ slideId }: { slideId: string }) {
     enabled: Boolean(slide && !slide.availableAt),
   });
 
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [container, setContainer] = useState<HTMLDivElement | null>(null);
   const [containerWidth, setContainerWidth] = useState(0);
   const [current, setCurrent] = useState(1);
   const [numPages, setNumPages] = useState(0);
@@ -57,7 +57,7 @@ export function PortalSlideReader({ slideId }: { slideId: string }) {
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
-    const element = containerRef.current;
+    const element = container;
     if (!element) return;
     const observer = new ResizeObserver((entries) => {
       const width = entries[0]?.contentRect.width;
@@ -65,7 +65,7 @@ export function PortalSlideReader({ slideId }: { slideId: string }) {
     });
     observer.observe(element);
     return () => observer.disconnect();
-  }, []);
+  }, [container]);
 
   useEffect(() => {
     function handleFullscreenChange() {
@@ -77,18 +77,19 @@ export function PortalSlideReader({ slideId }: { slideId: string }) {
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
+      if (numPages < 1 || loadError) return;
       if (event.key === "ArrowLeft") setCurrent((page) => Math.max(1, page - 1));
       if (event.key === "ArrowRight") setCurrent((page) => Math.min(numPages, page + 1));
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [numPages]);
+  }, [numPages, loadError]);
 
   function toggleFullscreen() {
     if (document.fullscreenElement) {
       document.exitFullscreen().catch(() => {});
-    } else if (containerRef.current) {
-      containerRef.current.requestFullscreen().catch(() => {});
+    } else if (container) {
+      container.requestFullscreen().catch(() => {});
     }
   }
 
@@ -126,7 +127,7 @@ export function PortalSlideReader({ slideId }: { slideId: string }) {
         </div>
       ) : (
         <div
-          ref={containerRef}
+          ref={setContainer}
           className="animate-in mx-auto flex max-w-7xl flex-col items-center gap-4 rounded-md border border-border/70 bg-card/70 p-4 shadow-soft fade-in duration-300"
         >
           {loadError ? (
@@ -167,7 +168,7 @@ export function PortalSlideReader({ slideId }: { slideId: string }) {
             <Button
               variant="outline"
               size="icon"
-              disabled={current === 1}
+              disabled={numPages < 1 || loadError || current <= 1}
               onClick={() => setCurrent((page) => Math.max(1, page - 1))}
               title="Anterior"
             >
@@ -179,7 +180,7 @@ export function PortalSlideReader({ slideId }: { slideId: string }) {
             <Button
               variant="outline"
               size="icon"
-              disabled={current === numPages}
+              disabled={numPages < 1 || loadError || current >= numPages}
               onClick={() => setCurrent((page) => Math.min(numPages, page + 1))}
               title="Próximo"
             >
