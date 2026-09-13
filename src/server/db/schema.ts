@@ -397,6 +397,19 @@ export const readingMaterialComments = pgTable("reading_material_comments", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const presentationSlides = pgTable("presentation_slides", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  disciplineId: uuid("discipline_id")
+    .notNull()
+    .references(() => disciplines.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  description: text("description"),
+  fileUrl: text("file_url").notNull(),
+  fileName: text("file_name").notNull(),
+  sequence: integer("sequence").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const assignments = pgTable("assignments", {
   id: uuid("id").primaryKey().defaultRandom(),
   disciplineId: uuid("discipline_id")
