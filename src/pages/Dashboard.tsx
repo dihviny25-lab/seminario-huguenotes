@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 
 import { BackToTopButton } from "@/components/BackToTopButton";
+import { BlurReveal } from "@/components/blur-reveal";
 import { Navigation } from "@/components/Navigation";
 import { SemesterCard } from "@/components/SemesterCard";
 import { getScheduleStatistics, groupBySemester } from "@/lib/schedule-utils";
@@ -51,9 +52,12 @@ export function Dashboard({ disciplines }: { disciplines: Discipline[] }) {
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-accent">
               Cronograma acadêmico · Turma 2026
             </p>
-            <h1 className="mt-4 text-balance font-display text-4xl font-semibold leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl">
+            <BlurReveal
+              as="h1"
+              className="mt-4 text-balance font-display text-4xl font-semibold leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl"
+            >
               Seu caminho teológico, semestre a semestre.
-            </h1>
+            </BlurReveal>
             <p className="mt-5 max-w-xl text-pretty leading-relaxed text-primary-foreground/80">
               Acompanhe todos os módulos, disciplinas, professores e horários do curso — organizados
               por semestre, com as datas confirmadas pela coordenação.
