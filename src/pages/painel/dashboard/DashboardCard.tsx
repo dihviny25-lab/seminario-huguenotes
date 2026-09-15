@@ -3,10 +3,12 @@ import { Link } from "@tanstack/react-router";
 import type { LucideIcon } from "lucide-react";
 
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
 export function DashboardCard({
   title,
   icon: Icon,
+  tone,
   viewAll,
   isLoading,
   isEmpty,
@@ -15,6 +17,8 @@ export function DashboardCard({
 }: {
   title: string;
   icon: LucideIcon;
+  /** "action" pede atenção do professor agora; "info" é só panorama. */
+  tone: "action" | "info";
   viewAll?: { to: string; params?: Record<string, string> };
   isLoading: boolean;
   isEmpty: boolean;
@@ -24,8 +28,19 @@ export function DashboardCard({
   return (
     <div className="min-w-0">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="flex items-center gap-1.5 font-display text-base font-semibold text-foreground">
-          <Icon className="size-4 shrink-0 text-accent" aria-hidden />
+        <h2
+          className={cn(
+            "flex items-center gap-1.5 font-display text-base",
+            tone === "action" ? "font-semibold text-foreground" : "font-medium text-foreground/80",
+          )}
+        >
+          <Icon
+            className={cn(
+              "size-4 shrink-0",
+              tone === "action" ? "text-accent" : "text-muted-foreground",
+            )}
+            aria-hidden
+          />
           {title}
         </h2>
         {viewAll ? (
@@ -38,7 +53,7 @@ export function DashboardCard({
           </Link>
         ) : null}
       </div>
-      <div className="space-y-2">
+      <div className={tone === "action" ? "space-y-2" : "divide-y divide-border/50"}>
         {isLoading ? (
           <>
             <Skeleton className="h-16 w-full" />

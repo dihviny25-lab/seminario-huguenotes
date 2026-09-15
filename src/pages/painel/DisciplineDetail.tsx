@@ -7,6 +7,7 @@ import { AttendanceTab } from "@/pages/painel/AttendanceTab";
 import { DisciplineOverviewTab } from "@/pages/painel/DisciplineOverviewTab";
 import { GradesTab } from "@/pages/painel/GradesTab";
 import { ReadingMaterialsTab } from "@/pages/painel/ReadingMaterialsTab";
+import { SlidesTab } from "@/pages/painel/SlidesTab";
 import { VideoLessonsTab } from "@/pages/painel/VideoLessonsTab";
 
 export function DisciplineDetail({ disciplineId }: { disciplineId: string }) {
@@ -34,6 +35,7 @@ export function DisciplineDetail({ disciplineId }: { disciplineId: string }) {
               <TabsTrigger value="notas">Notas</TabsTrigger>
               <TabsTrigger value="videos">Vídeo-aulas</TabsTrigger>
               <TabsTrigger value="apostila">Apostila</TabsTrigger>
+              <TabsTrigger value="slides">Slides</TabsTrigger>
             </>
           ) : null}
         </TabsList>
@@ -55,6 +57,9 @@ export function DisciplineDetail({ disciplineId }: { disciplineId: string }) {
             </TabsContent>
             <TabsContent value="apostila">
               <ReadingMaterialsTab disciplineId={disciplineId} />
+            </TabsContent>
+            <TabsContent value="slides">
+              <SlidesTab disciplineId={disciplineId} />
             </TabsContent>
           </>
         ) : null}
