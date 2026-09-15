@@ -1,6 +1,7 @@
 import {
   boolean,
   date,
+  index,
   integer,
   numeric,
   pgEnum,
@@ -129,23 +130,30 @@ export const grades = pgTable(
   (table) => [unique().on(table.assessmentId, table.studentId)],
 );
 
-export const lessons = pgTable("lessons", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  disciplineId: uuid("discipline_id")
-    .notNull()
-    .references(() => disciplines.id, { onDelete: "cascade" }),
-  date: date("date"),
-  sequence: integer("sequence").notNull(),
-  // Chamada por QR code: enquanto aberta, o token na URL escaneada
-  // confirma a presença do próprio aluno logado automaticamente.
-  checkInOpen: boolean("check_in_open").notNull().default(false),
-  checkInToken: text("check_in_token"),
-  // Nulo = aula agendada, chamada ainda em rascunho (não conta pra frequência).
-  // Preenchido = professor lançou a chamada como realizada — só a partir daí
-  // as presenças/faltas dessa aula entram no boletim.
-  givenAt: timestamp("given_at", { withTimezone: true }),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+export const lessons = pgTable(
+  "lessons",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    disciplineId: uuid("discipline_id")
+      .notNull()
+      .references(() => disciplines.id, { onDelete: "cascade" }),
+    date: date("date"),
+    sequence: integer("sequence").notNull(),
+    // Nulo = herda o professor responsável da disciplina. Preenchido =
+    // substituição pontual para esta aula, sem conceder acesso à disciplina inteira.
+    teacherId: uuid("teacher_id").references(() => teachers.id, { onDelete: "set null" }),
+    // Chamada por QR code: enquanto aberta, o token na URL escaneada
+    // confirma a presença do próprio aluno logado automaticamente.
+    checkInOpen: boolean("check_in_open").notNull().default(false),
+    checkInToken: text("check_in_token"),
+    // Nulo = aula agendada, chamada ainda em rascunho (não conta pra frequência).
+    // Preenchido = professor lançou a chamada como realizada — só a partir daí
+    // as presenças/faltas dessa aula entram no boletim.
+    givenAt: timestamp("given_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("lessons_teacher_date_idx").on(table.teacherId, table.date)],
+);
 
 export const attendance = pgTable(
   "attendance",
