@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -118,8 +119,13 @@ export function SlidesTab({ disciplineId }: { disciplineId: string }) {
                   size="icon"
                   title="Excluir"
                   onClick={() => deleteMutation.mutate(slide.id)}
+                  disabled={deleteMutation.isPending && deleteMutation.variables === slide.id}
                 >
-                  <Trash2 className="size-4" aria-hidden />
+                  {deleteMutation.isPending && deleteMutation.variables === slide.id ? (
+                    <Loader2 className="size-4 animate-spin" aria-hidden />
+                  ) : (
+                    <Trash2 className="size-4" aria-hidden />
+                  )}
                 </Button>
               </div>
             </div>
@@ -241,7 +247,7 @@ function CreateSlideDialog({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [file, setFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
   function reset() {
     setTitle("");
@@ -253,9 +259,9 @@ function CreateSlideDialog({
   const mutation = useMutation({
     mutationFn: async () => {
       if (!file) throw new Error("Escolha um arquivo.");
-      setUploading(true);
+      setUploadProgress(0);
       try {
-        const uploaded = await uploadFile(file, "slide");
+        const uploaded = await uploadFile(file, "slide", setUploadProgress);
         return createSlideFn({
           data: {
             disciplineId,
@@ -266,7 +272,7 @@ function CreateSlideDialog({
           },
         });
       } finally {
-        setUploading(false);
+        setUploadProgress(null);
       }
     },
     onSuccess: async () => {
@@ -320,13 +326,24 @@ function CreateSlideDialog({
               ref={fileInputRef}
               accept="application/pdf,.pdf"
               onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+              disabled={uploadProgress !== null}
               required
             />
+            {uploadProgress !== null ? (
+              <div className="space-y-1">
+                <Progress value={uploadProgress} />
+                <p className="text-xs text-muted-foreground">
+                  Enviando… {Math.round(uploadProgress)}%
+                </p>
+              </div>
+            ) : null}
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={mutation.isPending || uploading}>
-              {uploading ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
-              {uploading ? "Enviando…" : "Adicionar"}
+            <Button type="submit" disabled={mutation.isPending || uploadProgress !== null}>
+              {uploadProgress !== null ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden />
+              ) : null}
+              {uploadProgress !== null ? "Enviando…" : "Adicionar"}
             </Button>
           </DialogFooter>
         </form>

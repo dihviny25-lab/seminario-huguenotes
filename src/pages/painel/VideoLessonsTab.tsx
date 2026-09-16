@@ -114,8 +114,13 @@ export function VideoLessonsTab({ disciplineId }: { disciplineId: string }) {
                     size="icon"
                     title="Excluir"
                     onClick={() => deleteMutation.mutate(video.id)}
+                    disabled={deleteMutation.isPending && deleteMutation.variables === video.id}
                   >
-                    <Trash2 className="size-4" aria-hidden />
+                    {deleteMutation.isPending && deleteMutation.variables === video.id ? (
+                      <Loader2 className="size-4 animate-spin" aria-hidden />
+                    ) : (
+                      <Trash2 className="size-4" aria-hidden />
+                    )}
                   </Button>
                 </div>
                 <div className="border-t border-border/70 px-3 py-2">
