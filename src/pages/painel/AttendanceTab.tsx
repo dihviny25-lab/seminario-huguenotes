@@ -211,6 +211,10 @@ export function AttendanceTab({ disciplineId }: { disciplineId: string }) {
                         <Checkbox
                           checked={allPresent ? true : nonePresent ? false : "indeterminate"}
                           title={allPresent ? "Desmarcar todos" : "Marcar todos presentes"}
+                          disabled={
+                            attendanceAllMutation.isPending &&
+                            attendanceAllMutation.variables?.lessonId === lesson.id
+                          }
                           onCheckedChange={() =>
                             attendanceAllMutation.mutate({
                               lessonId: lesson.id,
@@ -234,8 +238,17 @@ export function AttendanceTab({ disciplineId }: { disciplineId: string }) {
                           className="size-6"
                           title="Remover aula"
                           onClick={() => deleteLessonMutation.mutate(lesson.id)}
+                          disabled={
+                            deleteLessonMutation.isPending &&
+                            deleteLessonMutation.variables === lesson.id
+                          }
                         >
-                          <Trash2 className="size-3.5" aria-hidden />
+                          {deleteLessonMutation.isPending &&
+                          deleteLessonMutation.variables === lesson.id ? (
+                            <Loader2 className="size-3.5 animate-spin" aria-hidden />
+                          ) : (
+                            <Trash2 className="size-3.5" aria-hidden />
+                          )}
                         </Button>
                       </div>
                       {lesson.givenAt ? (
@@ -299,6 +312,11 @@ export function AttendanceTab({ disciplineId }: { disciplineId: string }) {
                         <TableCell key={lesson.id} className="text-center">
                           <Checkbox
                             checked={present}
+                            disabled={
+                              attendanceMutation.isPending &&
+                              attendanceMutation.variables?.lessonId === lesson.id &&
+                              attendanceMutation.variables?.studentId === student.id
+                            }
                             onCheckedChange={(checked) =>
                               attendanceMutation.mutate({
                                 lessonId: lesson.id,

@@ -301,8 +301,16 @@ export function Payments({ initialStudentId }: { initialStudentId?: string } = {
                               size="icon"
                               title="Cancelar"
                               onClick={() => cancelMutation.mutate(charge.id)}
+                              disabled={
+                                cancelMutation.isPending && cancelMutation.variables === charge.id
+                              }
                             >
-                              <Ban className="size-4" aria-hidden />
+                              {cancelMutation.isPending &&
+                              cancelMutation.variables === charge.id ? (
+                                <Loader2 className="size-4 animate-spin" aria-hidden />
+                              ) : (
+                                <Ban className="size-4" aria-hidden />
+                              )}
                             </Button>
                           </div>
                         ) : isAdmin && charge.status === "paid" ? (

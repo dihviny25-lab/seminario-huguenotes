@@ -66,11 +66,32 @@ export function GradesTab({ disciplineId }: { disciplineId: string }) {
     onError: () => toast.error("Não foi possível remover a avaliação."),
   });
 
+  // Edições locais em voo, por "assessmentId:studentId" — o Input é controlado por
+  // isso pra dar pra reverter visualmente se o salvamento falhar (sem isso o campo
+  // ficava mostrando o número digitado mesmo quando o servidor rejeitava a nota).
+  const [localScores, setLocalScores] = useState<Record<string, string>>({});
+
   const gradeMutation = useMutation({
-    mutationFn: (input: { assessmentId: string; studentId: string; score: number }) =>
+    mutationFn: (input: { assessmentId: string; studentId: string; score: number; key: string }) =>
       setGradeFn({ data: { disciplineId, ...input } }),
-    onSuccess: () => invalidate(),
-    onError: () => toast.error("Não foi possível salvar a nota."),
+    onSuccess: (_, variables) => {
+      setLocalScores((prev) => {
+        const next = { ...prev };
+        delete next[variables.key];
+        return next;
+      });
+      invalidate();
+    },
+    onError: (_, variables) => {
+      // Rollback: o campo volta a refletir o que está salvo no servidor —
+      // sem isso a nota parecia salva mesmo tendo falhado.
+      setLocalScores((prev) => {
+        const next = { ...prev };
+        delete next[variables.key];
+        return next;
+      });
+      toast.error("Não foi possível salvar a nota. Confira e tente de novo.");
+    },
   });
 
   if (isLoading || !data) {
@@ -126,8 +147,13 @@ export function GradesTab({ disciplineId }: { disciplineId: string }) {
                         className="size-6"
                         title="Remover avaliação"
                         onClick={() => deleteMutation.mutate(a.id)}
+                        disabled={deleteMutation.isPending && deleteMutation.variables === a.id}
                       >
-                        <Trash2 className="size-3.5" aria-hidden />
+                        {deleteMutation.isPending && deleteMutation.variables === a.id ? (
+                          <Loader2 className="size-3.5 animate-spin" aria-hidden />
+                        ) : (
+                          <Trash2 className="size-3.5" aria-hidden />
+                        )}
                       </Button>
                     </div>
                   </TableHead>
@@ -165,22 +191,35 @@ export function GradesTab({ disciplineId }: { disciplineId: string }) {
                       <TableCell className="font-medium text-foreground">{student.name}</TableCell>
                       {data.assessments.map((a) => {
                         const key = `${a.id}:${student.id}`;
-                        const value = gradeByKey.get(key);
+                        const savedValue = gradeByKey.get(key);
+                        const displayValue = localScores[key] ?? savedValue ?? "";
+                        const failed =
+                          gradeMutation.isError && gradeMutation.variables?.key === key;
                         return (
                           <TableCell key={a.id} className="text-center">
                             <Input
                               type="number"
                               min={0}
                               step="0.1"
-                              defaultValue={value ?? ""}
-                              className="mx-auto h-8 w-20 text-center"
+                              value={displayValue}
+                              className={
+                                failed
+                                  ? "mx-auto h-8 w-20 border-destructive text-center"
+                                  : "mx-auto h-8 w-20 text-center"
+                              }
+                              onChange={(event) =>
+                                setLocalScores((prev) => ({ ...prev, [key]: event.target.value }))
+                              }
                               onBlur={(event) => {
-                                const parsed = Number(event.target.value);
-                                if (event.target.value === "" || Number.isNaN(parsed)) return;
+                                const raw = event.target.value;
+                                if (raw === String(savedValue ?? "")) return;
+                                const parsed = Number(raw);
+                                if (raw === "" || Number.isNaN(parsed)) return;
                                 gradeMutation.mutate({
                                   assessmentId: a.id,
                                   studentId: student.id,
                                   score: parsed,
+                                  key,
                                 });
                               }}
                             />
