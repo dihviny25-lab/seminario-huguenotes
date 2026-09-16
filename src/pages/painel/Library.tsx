@@ -105,8 +105,13 @@ export function Library() {
                   size="icon"
                   title="Excluir"
                   onClick={() => deleteMutation.mutate(book.id)}
+                  disabled={deleteMutation.isPending && deleteMutation.variables === book.id}
                 >
-                  <Trash2 className="size-4" aria-hidden />
+                  {deleteMutation.isPending && deleteMutation.variables === book.id ? (
+                    <Loader2 className="size-4 animate-spin" aria-hidden />
+                  ) : (
+                    <Trash2 className="size-4" aria-hidden />
+                  )}
                 </Button>
               </div>
             </div>

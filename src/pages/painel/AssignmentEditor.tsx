@@ -193,8 +193,17 @@ export function AssignmentEditor({ assignmentId }: { assignmentId: string }) {
                           size="icon"
                           title="Remover pergunta"
                           onClick={() => deleteQuestionMutation.mutate(question.id)}
+                          disabled={
+                            deleteQuestionMutation.isPending &&
+                            deleteQuestionMutation.variables === question.id
+                          }
                         >
-                          <Trash2 className="size-4" aria-hidden />
+                          {deleteQuestionMutation.isPending &&
+                          deleteQuestionMutation.variables === question.id ? (
+                            <Loader2 className="size-4 animate-spin" aria-hidden />
+                          ) : (
+                            <Trash2 className="size-4" aria-hidden />
+                          )}
                         </Button>
                       ) : null}
                     </div>

@@ -6,6 +6,16 @@ import { Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -51,6 +61,10 @@ export function GradesTab({ disciplineId }: { disciplineId: string }) {
     queryFn: () => getGradesBoardFn({ data: { disciplineId } }),
   });
   const [createOpen, setCreateOpen] = useState(false);
+  const [deletingAssessment, setDeletingAssessment] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
 
   function invalidate() {
     return queryClient.invalidateQueries({ queryKey: gradesKey(disciplineId) });
@@ -61,16 +75,38 @@ export function GradesTab({ disciplineId }: { disciplineId: string }) {
       deleteAssessmentFn({ data: { disciplineId, assessmentId } }),
     onSuccess: async () => {
       toast.success("Avaliação removida.");
+      setDeletingAssessment(null);
       await invalidate();
     },
     onError: () => toast.error("Não foi possível remover a avaliação."),
   });
 
+  // Edições locais em voo, por "assessmentId:studentId" — o Input é controlado por
+  // isso pra dar pra reverter visualmente se o salvamento falhar (sem isso o campo
+  // ficava mostrando o número digitado mesmo quando o servidor rejeitava a nota).
+  const [localScores, setLocalScores] = useState<Record<string, string>>({});
+
   const gradeMutation = useMutation({
-    mutationFn: (input: { assessmentId: string; studentId: string; score: number }) =>
+    mutationFn: (input: { assessmentId: string; studentId: string; score: number; key: string }) =>
       setGradeFn({ data: { disciplineId, ...input } }),
-    onSuccess: () => invalidate(),
-    onError: () => toast.error("Não foi possível salvar a nota."),
+    onSuccess: (_, variables) => {
+      setLocalScores((prev) => {
+        const next = { ...prev };
+        delete next[variables.key];
+        return next;
+      });
+      invalidate();
+    },
+    onError: (_, variables) => {
+      // Rollback: o campo volta a refletir o que está salvo no servidor —
+      // sem isso a nota parecia salva mesmo tendo falhado.
+      setLocalScores((prev) => {
+        const next = { ...prev };
+        delete next[variables.key];
+        return next;
+      });
+      toast.error("Não foi possível salvar a nota. Confira e tente de novo.");
+    },
   });
 
   if (isLoading || !data) {
@@ -125,7 +161,7 @@ export function GradesTab({ disciplineId }: { disciplineId: string }) {
                         size="icon"
                         className="size-6"
                         title="Remover avaliação"
-                        onClick={() => deleteMutation.mutate(a.id)}
+                        onClick={() => setDeletingAssessment({ id: a.id, title: a.title })}
                       >
                         <Trash2 className="size-3.5" aria-hidden />
                       </Button>
@@ -165,22 +201,35 @@ export function GradesTab({ disciplineId }: { disciplineId: string }) {
                       <TableCell className="font-medium text-foreground">{student.name}</TableCell>
                       {data.assessments.map((a) => {
                         const key = `${a.id}:${student.id}`;
-                        const value = gradeByKey.get(key);
+                        const savedValue = gradeByKey.get(key);
+                        const displayValue = localScores[key] ?? savedValue ?? "";
+                        const failed =
+                          gradeMutation.isError && gradeMutation.variables?.key === key;
                         return (
                           <TableCell key={a.id} className="text-center">
                             <Input
                               type="number"
                               min={0}
                               step="0.1"
-                              defaultValue={value ?? ""}
-                              className="mx-auto h-8 w-20 text-center"
+                              value={displayValue}
+                              className={
+                                failed
+                                  ? "mx-auto h-8 w-20 border-destructive text-center"
+                                  : "mx-auto h-8 w-20 text-center"
+                              }
+                              onChange={(event) =>
+                                setLocalScores((prev) => ({ ...prev, [key]: event.target.value }))
+                              }
                               onBlur={(event) => {
-                                const parsed = Number(event.target.value);
-                                if (event.target.value === "" || Number.isNaN(parsed)) return;
+                                const raw = event.target.value;
+                                if (raw === String(savedValue ?? "")) return;
+                                const parsed = Number(raw);
+                                if (raw === "" || Number.isNaN(parsed)) return;
                                 gradeMutation.mutate({
                                   assessmentId: a.id,
                                   studentId: student.id,
                                   score: parsed,
+                                  key,
                                 });
                               }}
                             />
@@ -205,6 +254,33 @@ export function GradesTab({ disciplineId }: { disciplineId: string }) {
         onOpenChange={setCreateOpen}
         onCreated={invalidate}
       />
+
+      <AlertDialog
+        open={deletingAssessment !== null}
+        onOpenChange={(open) => !open && setDeletingAssessment(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover {deletingAssessment?.title}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Isso apaga a avaliação e as notas de todos os alunos lançadas nela. Essa ação não pode
+              ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deletingAssessment && deleteMutation.mutate(deletingAssessment.id)}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden />
+              ) : null}
+              Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

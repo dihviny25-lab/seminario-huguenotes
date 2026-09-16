@@ -17,6 +17,16 @@ import { toast } from "sonner";
 import { z } from "zod";
 
 import { PainelShell } from "@/components/painel/PainelShell";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -104,6 +114,7 @@ export function Payments({ initialStudentId }: { initialStudentId?: string } = {
   const [generateOpen, setGenerateOpen] = useState(false);
   const [materialOpen, setMaterialOpen] = useState(false);
   const [editingCharge, setEditingCharge] = useState<Charge | null>(null);
+  const [cancelingCharge, setCancelingCharge] = useState<Charge | null>(null);
   const queryClient = useQueryClient();
 
   const { data: students } = useQuery({
@@ -140,6 +151,7 @@ export function Payments({ initialStudentId }: { initialStudentId?: string } = {
     mutationFn: (chargeId: string) => cancelChargeFn({ data: { chargeId } }),
     onSuccess: async () => {
       toast.success("Cobrança cancelada.");
+      setCancelingCharge(null);
       await invalidate();
     },
     onError: (error) => toast.error(errorMessage(error, "Não foi possível cancelar.")),
@@ -300,7 +312,7 @@ export function Payments({ initialStudentId }: { initialStudentId?: string } = {
                               variant="ghost"
                               size="icon"
                               title="Cancelar"
-                              onClick={() => cancelMutation.mutate(charge.id)}
+                              onClick={() => setCancelingCharge(charge)}
                             >
                               <Ban className="size-4" aria-hidden />
                             </Button>
@@ -364,6 +376,32 @@ export function Payments({ initialStudentId }: { initialStudentId?: string } = {
             onOpenChange={(open) => !open && setEditingCharge(null)}
             onSaved={invalidate}
           />
+
+          <AlertDialog
+            open={cancelingCharge !== null}
+            onOpenChange={(open) => !open && setCancelingCharge(null)}
+          >
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Cancelar {cancelingCharge?.description}?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  A cobrança deixa de valer para o aluno. Essa ação não pode ser desfeita.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Voltar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => cancelingCharge && cancelMutation.mutate(cancelingCharge.id)}
+                  disabled={cancelMutation.isPending}
+                >
+                  {cancelMutation.isPending ? (
+                    <Loader2 className="size-4 animate-spin" aria-hidden />
+                  ) : null}
+                  Cancelar cobrança
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       ) : null}
     </PainelShell>

@@ -113,8 +113,17 @@ export function SharedMaterialReader({ materialId }: { materialId: string }) {
                           size="icon"
                           className="size-6 shrink-0 text-muted-foreground hover:text-destructive"
                           onClick={() => deleteCommentMutation.mutate(comment.id)}
+                          disabled={
+                            deleteCommentMutation.isPending &&
+                            deleteCommentMutation.variables === comment.id
+                          }
                         >
-                          <Trash2 className="size-3.5" aria-hidden />
+                          {deleteCommentMutation.isPending &&
+                          deleteCommentMutation.variables === comment.id ? (
+                            <Loader2 className="size-3.5 animate-spin" aria-hidden />
+                          ) : (
+                            <Trash2 className="size-3.5" aria-hidden />
+                          )}
                           <span className="sr-only">Apagar comentário</span>
                         </Button>
                       ) : null}
