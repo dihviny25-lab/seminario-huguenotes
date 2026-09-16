@@ -6,6 +6,16 @@ import { Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -51,6 +61,10 @@ export function GradesTab({ disciplineId }: { disciplineId: string }) {
     queryFn: () => getGradesBoardFn({ data: { disciplineId } }),
   });
   const [createOpen, setCreateOpen] = useState(false);
+  const [deletingAssessment, setDeletingAssessment] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
 
   function invalidate() {
     return queryClient.invalidateQueries({ queryKey: gradesKey(disciplineId) });
@@ -61,6 +75,7 @@ export function GradesTab({ disciplineId }: { disciplineId: string }) {
       deleteAssessmentFn({ data: { disciplineId, assessmentId } }),
     onSuccess: async () => {
       toast.success("Avaliação removida.");
+      setDeletingAssessment(null);
       await invalidate();
     },
     onError: () => toast.error("Não foi possível remover a avaliação."),
@@ -146,14 +161,9 @@ export function GradesTab({ disciplineId }: { disciplineId: string }) {
                         size="icon"
                         className="size-6"
                         title="Remover avaliação"
-                        onClick={() => deleteMutation.mutate(a.id)}
-                        disabled={deleteMutation.isPending && deleteMutation.variables === a.id}
+                        onClick={() => setDeletingAssessment({ id: a.id, title: a.title })}
                       >
-                        {deleteMutation.isPending && deleteMutation.variables === a.id ? (
-                          <Loader2 className="size-3.5 animate-spin" aria-hidden />
-                        ) : (
-                          <Trash2 className="size-3.5" aria-hidden />
-                        )}
+                        <Trash2 className="size-3.5" aria-hidden />
                       </Button>
                     </div>
                   </TableHead>
@@ -244,6 +254,33 @@ export function GradesTab({ disciplineId }: { disciplineId: string }) {
         onOpenChange={setCreateOpen}
         onCreated={invalidate}
       />
+
+      <AlertDialog
+        open={deletingAssessment !== null}
+        onOpenChange={(open) => !open && setDeletingAssessment(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover {deletingAssessment?.title}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Isso apaga a avaliação e as notas de todos os alunos lançadas nela. Essa ação não pode
+              ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deletingAssessment && deleteMutation.mutate(deletingAssessment.id)}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden />
+              ) : null}
+              Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
