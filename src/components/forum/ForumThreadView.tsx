@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Trash2 } from "lucide-react";
+import { ArrowLeft, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -142,8 +142,15 @@ export function ForumThreadView({
                   size="icon"
                   className="size-8 shrink-0 text-muted-foreground hover:text-destructive"
                   onClick={() => deletePostMutation.mutate(post.id)}
+                  disabled={
+                    deletePostMutation.isPending && deletePostMutation.variables === post.id
+                  }
                 >
-                  <Trash2 className="size-4" aria-hidden />
+                  {deletePostMutation.isPending && deletePostMutation.variables === post.id ? (
+                    <Loader2 className="size-4 animate-spin" aria-hidden />
+                  ) : (
+                    <Trash2 className="size-4" aria-hidden />
+                  )}
                   <span className="sr-only">Apagar mensagem</span>
                 </Button>
               ) : null}
@@ -182,7 +189,13 @@ export function ForumThreadView({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={() => deleteThreadMutation.mutate()}>
+            <AlertDialogAction
+              onClick={() => deleteThreadMutation.mutate()}
+              disabled={deleteThreadMutation.isPending}
+            >
+              {deleteThreadMutation.isPending ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden />
+              ) : null}
               Apagar
             </AlertDialogAction>
           </AlertDialogFooter>

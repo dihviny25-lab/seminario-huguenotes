@@ -67,8 +67,25 @@ export function TakeExam({ examId }: { examId: string }) {
   }
 
   const saveAnswerMutation = useMutation({
-    mutationFn: (input: { questionId: string; optionId: string }) =>
-      saveExamAnswerFn({ data: { examId, ...input } }),
+    mutationFn: (input: { questionId: string; optionId: string; previousOptionId?: string }) =>
+      saveExamAnswerFn({
+        data: { examId, questionId: input.questionId, optionId: input.optionId },
+      }),
+    onError: (err, variables) => {
+      // Rollback: a UI já marcou a alternativa otimisticamente, mas o servidor
+      // não confirmou o salvamento — sem isso o aluno acha que respondeu e não respondeu.
+      setAnswers((prev) => {
+        const next = { ...prev };
+        if (variables.previousOptionId) next[variables.questionId] = variables.previousOptionId;
+        else delete next[variables.questionId];
+        return next;
+      });
+      toast.error(
+        err instanceof Error
+          ? `Não foi possível salvar a resposta: ${err.message}. Marque de novo.`
+          : "Não foi possível salvar a resposta. Marque de novo.",
+      );
+    },
   });
 
   const submitMutation = useMutation({
@@ -100,8 +117,9 @@ export function TakeExam({ examId }: { examId: string }) {
   }, [attempt?.examId, attempt?.submitted, attempt?.deadline]);
 
   function selectOption(questionId: string, optionId: string) {
+    const previousOptionId = answers[questionId];
     setAnswers((prev) => ({ ...prev, [questionId]: optionId }));
-    saveAnswerMutation.mutate({ questionId, optionId });
+    saveAnswerMutation.mutate({ questionId, optionId, previousOptionId });
   }
 
   if (!pledgeAccepted) {
@@ -211,6 +229,13 @@ export function TakeExam({ examId }: { examId: string }) {
                   </label>
                 ))}
               </RadioGroup>
+              {saveAnswerMutation.isPending &&
+              saveAnswerMutation.variables?.questionId === question.id ? (
+                <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Loader2 className="size-3 animate-spin" aria-hidden />
+                  Salvando…
+                </p>
+              ) : null}
             </div>
           ))}
         </div>
