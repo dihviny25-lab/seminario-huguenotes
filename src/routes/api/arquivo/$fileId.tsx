@@ -11,7 +11,9 @@ import { canReadPrivateFile, loadPrivateFile } from "@/server/files/privateFileA
 type GetCommandOptionsWithHeaders = GetCommandOptions & { headers?: Record<string, string> };
 
 /**
- * Única forma de ler um arquivo privado do Vercel Blob. Revalida a
+ * Única forma de ler um arquivo protegido. A store do Blob é `access:
+ * "public"` (Vercel não permite misturar público/privado na mesma store),
+ * mas a URL real nunca é exposta ao cliente — só essa rota, que revalida a
  * permissão a cada requisição (não confia em URL assinada guardada pelo
  * cliente) e nunca revela se o recurso existe quando o acesso é negado —
  * sempre 404, tanto pra "não existe" quanto pra "existe mas você não pode".
@@ -35,7 +37,7 @@ export const Route = createFileRoute("/api/arquivo/$fileId")({
 
         const range = request.headers.get("range");
         const blob = await getBlob(file.blobPath, {
-          access: "private",
+          access: "public",
           ...(range ? { headers: { Range: range } } : {}),
         } satisfies GetCommandOptionsWithHeaders);
         if (!blob || blob.stream === null) return new Response(null, { status: 404 });

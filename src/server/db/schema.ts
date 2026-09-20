@@ -43,10 +43,12 @@ export const privateFileOwnerType = pgEnum("private_file_owner_type", [
   "video_lesson",
 ]);
 
-// Referência de arquivo privado no Vercel Blob (access: "private"). O objeto só é
-// acessível via /api/arquivo/$fileId, depois de checar canReadPrivateFile — nunca pela
-// URL do Blob diretamente. ownerType/ownerId são polimórficos (apontam pra linha
-// dona do arquivo); não têm FK porque cada dono está em tabela diferente.
+// Referência de arquivo protegido. A store do Blob deste projeto é `access:
+// "public"` (Vercel não deixa misturar público/privado na mesma store) —
+// a proteção é da aplicação: a URL nunca é exposta ao cliente, só acessível
+// via /api/arquivo/$fileId, depois de checar canReadPrivateFile. ownerType/
+// ownerId são polimórficos (apontam pra linha dona do arquivo); não têm FK
+// porque cada dono está em tabela diferente.
 export const privateFiles = pgTable("private_files", {
   id: uuid("id").primaryKey().defaultRandom(),
   blobPath: text("blob_path").notNull(),
