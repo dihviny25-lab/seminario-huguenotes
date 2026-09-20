@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { eq } from "drizzle-orm";
 
-import { computeCurrentAmount, getReminderToSend } from "@/lib/payments";
+import { computeCurrentAmount, dateToIsoInTimeZone, getReminderToSend } from "@/lib/payments";
 import { db } from "@/server/db/client";
 import { charges, students } from "@/server/db/schema";
 import { sendEmail } from "@/server/email/resend";
@@ -16,7 +16,7 @@ function formatDate(iso: string): string {
 }
 
 function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
+  return dateToIsoInTimeZone(new Date());
 }
 
 /**

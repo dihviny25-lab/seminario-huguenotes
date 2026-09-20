@@ -1,4 +1,4 @@
-import { computeCurrentAmount } from "@/lib/payments";
+import { computeCurrentAmount, dateToIsoInTimeZone } from "@/lib/payments";
 
 export type ChargeForWebhook = {
   status: "pending" | "paid" | "canceled";
@@ -22,7 +22,7 @@ export type WebhookDecision =
   | { action: "mark-paid"; paidAmount: number };
 
 function paymentDateIso(approvedAt: string | null): string {
-  return approvedAt?.slice(0, 10) ?? new Date().toISOString().slice(0, 10);
+  return dateToIsoInTimeZone(approvedAt ? new Date(approvedAt) : new Date());
 }
 
 export function decidePaymentWebhook(
