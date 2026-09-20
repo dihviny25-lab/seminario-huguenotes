@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -41,7 +42,7 @@ export function PortalAssignmentDetail({ assignmentId }: { assignmentId: string 
   });
   const [textContent, setTextContent] = useState("");
   const [file, setFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
 
   const submitAnswersMutation = useMutation({
@@ -67,11 +68,11 @@ export function PortalAssignmentDetail({ assignmentId }: { assignmentId: string 
     mutationFn: async () => {
       let uploaded: { url: string; fileName: string } | null = null;
       if (file) {
-        setUploading(true);
+        setUploadProgress(0);
         try {
-          uploaded = await uploadFile(file);
+          uploaded = await uploadFile(file, setUploadProgress);
         } finally {
-          setUploading(false);
+          setUploadProgress(null);
         }
       }
       return submitAssignmentFn({
@@ -232,7 +233,16 @@ export function PortalAssignmentDetail({ assignmentId }: { assignmentId: string 
                 type="file"
                 accept=".pdf,.doc,.docx,.ppt,.pptx,image/png,image/jpeg"
                 onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+                disabled={uploadProgress !== null}
               />
+              {uploadProgress !== null ? (
+                <div className="mt-2 space-y-1">
+                  <Progress value={uploadProgress} />
+                  <p className="text-xs text-muted-foreground">
+                    Enviando… {Math.round(uploadProgress)}%
+                  </p>
+                </div>
+              ) : null}
               {submission.fileUrl ? (
                 <a
                   href={submission.fileUrl}
@@ -250,12 +260,16 @@ export function PortalAssignmentDetail({ assignmentId }: { assignmentId: string 
           <Button
             className="mt-4"
             onClick={() => mutation.mutate()}
-            disabled={mutation.isPending || uploading}
+            disabled={mutation.isPending || uploadProgress !== null}
           >
-            {mutation.isPending || uploading ? (
+            {mutation.isPending || uploadProgress !== null ? (
               <Loader2 className="size-4 animate-spin" aria-hidden />
             ) : null}
-            {uploading ? "Enviando arquivo…" : alreadySubmitted ? "Reenviar" : "Entregar"}
+            {uploadProgress !== null
+              ? "Enviando arquivo…"
+              : alreadySubmitted
+                ? "Reenviar"
+                : "Entregar"}
           </Button>
         </div>
       )}

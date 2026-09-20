@@ -40,9 +40,11 @@ import { Route as PainelFinanceiroRouteImport } from './routes/painel/financeiro
 import { Route as PainelDespesasRouteImport } from './routes/painel/despesas'
 import { Route as PainelBibliotecaRouteImport } from './routes/painel/biblioteca'
 import { Route as PainelAuditoriaRouteImport } from './routes/painel/auditoria'
+import { Route as PainelAtribuicoesRouteImport } from './routes/painel/atribuicoes'
 import { Route as PainelAlunosRouteImport } from './routes/painel/alunos'
 import { Route as PainelAgendaRouteImport } from './routes/painel/agenda'
 import { Route as PortalTarefasIndexRouteImport } from './routes/portal/tarefas/index'
+import { Route as PortalSlidesIndexRouteImport } from './routes/portal/slides/index'
 import { Route as PortalProvasIndexRouteImport } from './routes/portal/provas/index'
 import { Route as PortalForumIndexRouteImport } from './routes/portal/forum/index'
 import { Route as PortalDisciplinasIndexRouteImport } from './routes/portal/disciplinas/index'
@@ -50,10 +52,12 @@ import { Route as PortalBibliotecaIndexRouteImport } from './routes/portal/bibli
 import { Route as PortalApostilasIndexRouteImport } from './routes/portal/apostilas/index'
 import { Route as PainelTarefasIndexRouteImport } from './routes/painel/tarefas/index'
 import { Route as PainelProvasIndexRouteImport } from './routes/painel/provas/index'
+import { Route as PainelMinhasMateriasIndexRouteImport } from './routes/painel/minhas-materias/index'
 import { Route as PainelForumIndexRouteImport } from './routes/painel/forum/index'
 import { Route as PainelForumInternoIndexRouteImport } from './routes/painel/forum-interno/index'
 import { Route as PainelApostilasCompartilhadasIndexRouteImport } from './routes/painel/apostilas-compartilhadas/index'
 import { Route as PortalTarefasAssignmentIdRouteImport } from './routes/portal/tarefas/$assignmentId'
+import { Route as PortalSlidesSlideIdRouteImport } from './routes/portal/slides/$slideId'
 import { Route as PortalProvasExamIdRouteImport } from './routes/portal/provas/$examId'
 import { Route as PortalForumThreadIdRouteImport } from './routes/portal/forum/$threadId'
 import { Route as PortalDisciplinasDisciplineIdRouteImport } from './routes/portal/disciplinas/$disciplineId'
@@ -238,6 +242,11 @@ const PainelAuditoriaRoute = PainelAuditoriaRouteImport.update({
 } as any).lazy(() =>
   import('./routes/painel/auditoria.lazy').then((d) => d.Route),
 )
+const PainelAtribuicoesRoute = PainelAtribuicoesRouteImport.update({
+  id: '/atribuicoes',
+  path: '/atribuicoes',
+  getParentRoute: () => PainelRouteRoute,
+} as any)
 const PainelAlunosRoute = PainelAlunosRouteImport.update({
   id: '/alunos',
   path: '/alunos',
@@ -251,6 +260,11 @@ const PainelAgendaRoute = PainelAgendaRouteImport.update({
 const PortalTarefasIndexRoute = PortalTarefasIndexRouteImport.update({
   id: '/tarefas/',
   path: '/tarefas/',
+  getParentRoute: () => PortalRouteRoute,
+} as any)
+const PortalSlidesIndexRoute = PortalSlidesIndexRouteImport.update({
+  id: '/slides/',
+  path: '/slides/',
   getParentRoute: () => PortalRouteRoute,
 } as any)
 const PortalProvasIndexRoute = PortalProvasIndexRouteImport.update({
@@ -288,6 +302,12 @@ const PainelProvasIndexRoute = PainelProvasIndexRouteImport.update({
   path: '/provas/',
   getParentRoute: () => PainelRouteRoute,
 } as any)
+const PainelMinhasMateriasIndexRoute =
+  PainelMinhasMateriasIndexRouteImport.update({
+    id: '/minhas-materias/',
+    path: '/minhas-materias/',
+    getParentRoute: () => PainelRouteRoute,
+  } as any)
 const PainelForumIndexRoute = PainelForumIndexRouteImport.update({
   id: '/forum/',
   path: '/forum/',
@@ -310,6 +330,11 @@ const PortalTarefasAssignmentIdRoute =
     path: '/tarefas/$assignmentId',
     getParentRoute: () => PortalRouteRoute,
   } as any)
+const PortalSlidesSlideIdRoute = PortalSlidesSlideIdRouteImport.update({
+  id: '/slides/$slideId',
+  path: '/slides/$slideId',
+  getParentRoute: () => PortalRouteRoute,
+} as any)
 const PortalProvasExamIdRoute = PortalProvasExamIdRouteImport.update({
   id: '/provas/$examId',
   path: '/provas/$examId',
@@ -442,6 +467,7 @@ export interface FileRoutesByFullPath {
   '/redefinir-senha-aluno': typeof RedefinirSenhaAlunoRoute
   '/painel/agenda': typeof PainelAgendaRoute
   '/painel/alunos': typeof PainelAlunosRoute
+  '/painel/atribuicoes': typeof PainelAtribuicoesRoute
   '/painel/auditoria': typeof PainelAuditoriaRoute
   '/painel/biblioteca': typeof PainelBibliotecaRoute
   '/painel/despesas': typeof PainelDespesasRoute
@@ -478,10 +504,12 @@ export interface FileRoutesByFullPath {
   '/portal/disciplinas/$disciplineId': typeof PortalDisciplinasDisciplineIdRoute
   '/portal/forum/$threadId': typeof PortalForumThreadIdRoute
   '/portal/provas/$examId': typeof PortalProvasExamIdRoute
+  '/portal/slides/$slideId': typeof PortalSlidesSlideIdRoute
   '/portal/tarefas/$assignmentId': typeof PortalTarefasAssignmentIdRoute
   '/painel/apostilas-compartilhadas/': typeof PainelApostilasCompartilhadasIndexRoute
   '/painel/forum-interno/': typeof PainelForumInternoIndexRoute
   '/painel/forum/': typeof PainelForumIndexRoute
+  '/painel/minhas-materias/': typeof PainelMinhasMateriasIndexRoute
   '/painel/provas/': typeof PainelProvasIndexRoute
   '/painel/tarefas/': typeof PainelTarefasIndexRoute
   '/portal/apostilas/': typeof PortalApostilasIndexRoute
@@ -489,6 +517,7 @@ export interface FileRoutesByFullPath {
   '/portal/disciplinas/': typeof PortalDisciplinasIndexRoute
   '/portal/forum/': typeof PortalForumIndexRoute
   '/portal/provas/': typeof PortalProvasIndexRoute
+  '/portal/slides/': typeof PortalSlidesIndexRoute
   '/portal/tarefas/': typeof PortalTarefasIndexRoute
   '/painel/pagamentos/$chargeId/recibo': typeof PainelPagamentosChargeIdReciboRoute
   '/painel/relatorio/$studentId/pdf': typeof PainelRelatorioStudentIdPdfRoute
@@ -507,6 +536,7 @@ export interface FileRoutesByTo {
   '/redefinir-senha-aluno': typeof RedefinirSenhaAlunoRoute
   '/painel/agenda': typeof PainelAgendaRoute
   '/painel/alunos': typeof PainelAlunosRoute
+  '/painel/atribuicoes': typeof PainelAtribuicoesRoute
   '/painel/auditoria': typeof PainelAuditoriaRoute
   '/painel/biblioteca': typeof PainelBibliotecaRoute
   '/painel/despesas': typeof PainelDespesasRoute
@@ -543,10 +573,12 @@ export interface FileRoutesByTo {
   '/portal/disciplinas/$disciplineId': typeof PortalDisciplinasDisciplineIdRoute
   '/portal/forum/$threadId': typeof PortalForumThreadIdRoute
   '/portal/provas/$examId': typeof PortalProvasExamIdRoute
+  '/portal/slides/$slideId': typeof PortalSlidesSlideIdRoute
   '/portal/tarefas/$assignmentId': typeof PortalTarefasAssignmentIdRoute
   '/painel/apostilas-compartilhadas': typeof PainelApostilasCompartilhadasIndexRoute
   '/painel/forum-interno': typeof PainelForumInternoIndexRoute
   '/painel/forum': typeof PainelForumIndexRoute
+  '/painel/minhas-materias': typeof PainelMinhasMateriasIndexRoute
   '/painel/provas': typeof PainelProvasIndexRoute
   '/painel/tarefas': typeof PainelTarefasIndexRoute
   '/portal/apostilas': typeof PortalApostilasIndexRoute
@@ -554,6 +586,7 @@ export interface FileRoutesByTo {
   '/portal/disciplinas': typeof PortalDisciplinasIndexRoute
   '/portal/forum': typeof PortalForumIndexRoute
   '/portal/provas': typeof PortalProvasIndexRoute
+  '/portal/slides': typeof PortalSlidesIndexRoute
   '/portal/tarefas': typeof PortalTarefasIndexRoute
   '/painel/pagamentos/$chargeId/recibo': typeof PainelPagamentosChargeIdReciboRoute
   '/painel/relatorio/$studentId/pdf': typeof PainelRelatorioStudentIdPdfRoute
@@ -575,6 +608,7 @@ export interface FileRoutesById {
   '/redefinir-senha-aluno': typeof RedefinirSenhaAlunoRoute
   '/painel/agenda': typeof PainelAgendaRoute
   '/painel/alunos': typeof PainelAlunosRoute
+  '/painel/atribuicoes': typeof PainelAtribuicoesRoute
   '/painel/auditoria': typeof PainelAuditoriaRoute
   '/painel/biblioteca': typeof PainelBibliotecaRoute
   '/painel/despesas': typeof PainelDespesasRoute
@@ -611,10 +645,12 @@ export interface FileRoutesById {
   '/portal/disciplinas/$disciplineId': typeof PortalDisciplinasDisciplineIdRoute
   '/portal/forum/$threadId': typeof PortalForumThreadIdRoute
   '/portal/provas/$examId': typeof PortalProvasExamIdRoute
+  '/portal/slides/$slideId': typeof PortalSlidesSlideIdRoute
   '/portal/tarefas/$assignmentId': typeof PortalTarefasAssignmentIdRoute
   '/painel/apostilas-compartilhadas/': typeof PainelApostilasCompartilhadasIndexRoute
   '/painel/forum-interno/': typeof PainelForumInternoIndexRoute
   '/painel/forum/': typeof PainelForumIndexRoute
+  '/painel/minhas-materias/': typeof PainelMinhasMateriasIndexRoute
   '/painel/provas/': typeof PainelProvasIndexRoute
   '/painel/tarefas/': typeof PainelTarefasIndexRoute
   '/portal/apostilas/': typeof PortalApostilasIndexRoute
@@ -622,6 +658,7 @@ export interface FileRoutesById {
   '/portal/disciplinas/': typeof PortalDisciplinasIndexRoute
   '/portal/forum/': typeof PortalForumIndexRoute
   '/portal/provas/': typeof PortalProvasIndexRoute
+  '/portal/slides/': typeof PortalSlidesIndexRoute
   '/portal/tarefas/': typeof PortalTarefasIndexRoute
   '/painel/pagamentos/$chargeId/recibo': typeof PainelPagamentosChargeIdReciboRoute
   '/painel/relatorio/$studentId/pdf': typeof PainelRelatorioStudentIdPdfRoute
@@ -644,6 +681,7 @@ export interface FileRouteTypes {
     | '/redefinir-senha-aluno'
     | '/painel/agenda'
     | '/painel/alunos'
+    | '/painel/atribuicoes'
     | '/painel/auditoria'
     | '/painel/biblioteca'
     | '/painel/despesas'
@@ -680,10 +718,12 @@ export interface FileRouteTypes {
     | '/portal/disciplinas/$disciplineId'
     | '/portal/forum/$threadId'
     | '/portal/provas/$examId'
+    | '/portal/slides/$slideId'
     | '/portal/tarefas/$assignmentId'
     | '/painel/apostilas-compartilhadas/'
     | '/painel/forum-interno/'
     | '/painel/forum/'
+    | '/painel/minhas-materias/'
     | '/painel/provas/'
     | '/painel/tarefas/'
     | '/portal/apostilas/'
@@ -691,6 +731,7 @@ export interface FileRouteTypes {
     | '/portal/disciplinas/'
     | '/portal/forum/'
     | '/portal/provas/'
+    | '/portal/slides/'
     | '/portal/tarefas/'
     | '/painel/pagamentos/$chargeId/recibo'
     | '/painel/relatorio/$studentId/pdf'
@@ -709,6 +750,7 @@ export interface FileRouteTypes {
     | '/redefinir-senha-aluno'
     | '/painel/agenda'
     | '/painel/alunos'
+    | '/painel/atribuicoes'
     | '/painel/auditoria'
     | '/painel/biblioteca'
     | '/painel/despesas'
@@ -745,10 +787,12 @@ export interface FileRouteTypes {
     | '/portal/disciplinas/$disciplineId'
     | '/portal/forum/$threadId'
     | '/portal/provas/$examId'
+    | '/portal/slides/$slideId'
     | '/portal/tarefas/$assignmentId'
     | '/painel/apostilas-compartilhadas'
     | '/painel/forum-interno'
     | '/painel/forum'
+    | '/painel/minhas-materias'
     | '/painel/provas'
     | '/painel/tarefas'
     | '/portal/apostilas'
@@ -756,6 +800,7 @@ export interface FileRouteTypes {
     | '/portal/disciplinas'
     | '/portal/forum'
     | '/portal/provas'
+    | '/portal/slides'
     | '/portal/tarefas'
     | '/painel/pagamentos/$chargeId/recibo'
     | '/painel/relatorio/$studentId/pdf'
@@ -776,6 +821,7 @@ export interface FileRouteTypes {
     | '/redefinir-senha-aluno'
     | '/painel/agenda'
     | '/painel/alunos'
+    | '/painel/atribuicoes'
     | '/painel/auditoria'
     | '/painel/biblioteca'
     | '/painel/despesas'
@@ -812,10 +858,12 @@ export interface FileRouteTypes {
     | '/portal/disciplinas/$disciplineId'
     | '/portal/forum/$threadId'
     | '/portal/provas/$examId'
+    | '/portal/slides/$slideId'
     | '/portal/tarefas/$assignmentId'
     | '/painel/apostilas-compartilhadas/'
     | '/painel/forum-interno/'
     | '/painel/forum/'
+    | '/painel/minhas-materias/'
     | '/painel/provas/'
     | '/painel/tarefas/'
     | '/portal/apostilas/'
@@ -823,6 +871,7 @@ export interface FileRouteTypes {
     | '/portal/disciplinas/'
     | '/portal/forum/'
     | '/portal/provas/'
+    | '/portal/slides/'
     | '/portal/tarefas/'
     | '/painel/pagamentos/$chargeId/recibo'
     | '/painel/relatorio/$studentId/pdf'
@@ -1068,6 +1117,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PainelAuditoriaRouteImport
       parentRoute: typeof PainelRouteRoute
     }
+    '/painel/atribuicoes': {
+      id: '/painel/atribuicoes'
+      path: '/atribuicoes'
+      fullPath: '/painel/atribuicoes'
+      preLoaderRoute: typeof PainelAtribuicoesRouteImport
+      parentRoute: typeof PainelRouteRoute
+    }
     '/painel/alunos': {
       id: '/painel/alunos'
       path: '/alunos'
@@ -1087,6 +1143,13 @@ declare module '@tanstack/react-router' {
       path: '/tarefas'
       fullPath: '/portal/tarefas/'
       preLoaderRoute: typeof PortalTarefasIndexRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
+    '/portal/slides/': {
+      id: '/portal/slides/'
+      path: '/slides'
+      fullPath: '/portal/slides/'
+      preLoaderRoute: typeof PortalSlidesIndexRouteImport
       parentRoute: typeof PortalRouteRoute
     }
     '/portal/provas/': {
@@ -1138,6 +1201,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PainelProvasIndexRouteImport
       parentRoute: typeof PainelRouteRoute
     }
+    '/painel/minhas-materias/': {
+      id: '/painel/minhas-materias/'
+      path: '/minhas-materias'
+      fullPath: '/painel/minhas-materias/'
+      preLoaderRoute: typeof PainelMinhasMateriasIndexRouteImport
+      parentRoute: typeof PainelRouteRoute
+    }
     '/painel/forum/': {
       id: '/painel/forum/'
       path: '/forum'
@@ -1164,6 +1234,13 @@ declare module '@tanstack/react-router' {
       path: '/tarefas/$assignmentId'
       fullPath: '/portal/tarefas/$assignmentId'
       preLoaderRoute: typeof PortalTarefasAssignmentIdRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
+    '/portal/slides/$slideId': {
+      id: '/portal/slides/$slideId'
+      path: '/slides/$slideId'
+      fullPath: '/portal/slides/$slideId'
+      preLoaderRoute: typeof PortalSlidesSlideIdRouteImport
       parentRoute: typeof PortalRouteRoute
     }
     '/portal/provas/$examId': {
@@ -1338,6 +1415,7 @@ const PainelRelatorioRouteWithChildren = PainelRelatorioRoute._addFileChildren(
 interface PainelRouteRouteChildren {
   PainelAgendaRoute: typeof PainelAgendaRoute
   PainelAlunosRoute: typeof PainelAlunosRoute
+  PainelAtribuicoesRoute: typeof PainelAtribuicoesRoute
   PainelAuditoriaRoute: typeof PainelAuditoriaRoute
   PainelBibliotecaRoute: typeof PainelBibliotecaRoute
   PainelDespesasRoute: typeof PainelDespesasRoute
@@ -1358,6 +1436,7 @@ interface PainelRouteRouteChildren {
   PainelApostilasCompartilhadasIndexRoute: typeof PainelApostilasCompartilhadasIndexRoute
   PainelForumInternoIndexRoute: typeof PainelForumInternoIndexRoute
   PainelForumIndexRoute: typeof PainelForumIndexRoute
+  PainelMinhasMateriasIndexRoute: typeof PainelMinhasMateriasIndexRoute
   PainelProvasIndexRoute: typeof PainelProvasIndexRoute
   PainelTarefasIndexRoute: typeof PainelTarefasIndexRoute
 }
@@ -1365,6 +1444,7 @@ interface PainelRouteRouteChildren {
 const PainelRouteRouteChildren: PainelRouteRouteChildren = {
   PainelAgendaRoute: PainelAgendaRoute,
   PainelAlunosRoute: PainelAlunosRoute,
+  PainelAtribuicoesRoute: PainelAtribuicoesRoute,
   PainelAuditoriaRoute: PainelAuditoriaRoute,
   PainelBibliotecaRoute: PainelBibliotecaRoute,
   PainelDespesasRoute: PainelDespesasRoute,
@@ -1387,6 +1467,7 @@ const PainelRouteRouteChildren: PainelRouteRouteChildren = {
     PainelApostilasCompartilhadasIndexRoute,
   PainelForumInternoIndexRoute: PainelForumInternoIndexRoute,
   PainelForumIndexRoute: PainelForumIndexRoute,
+  PainelMinhasMateriasIndexRoute: PainelMinhasMateriasIndexRoute,
   PainelProvasIndexRoute: PainelProvasIndexRoute,
   PainelTarefasIndexRoute: PainelTarefasIndexRoute,
 }
@@ -1421,12 +1502,14 @@ interface PortalRouteRouteChildren {
   PortalDisciplinasDisciplineIdRoute: typeof PortalDisciplinasDisciplineIdRoute
   PortalForumThreadIdRoute: typeof PortalForumThreadIdRoute
   PortalProvasExamIdRoute: typeof PortalProvasExamIdRoute
+  PortalSlidesSlideIdRoute: typeof PortalSlidesSlideIdRoute
   PortalTarefasAssignmentIdRoute: typeof PortalTarefasAssignmentIdRoute
   PortalApostilasIndexRoute: typeof PortalApostilasIndexRoute
   PortalBibliotecaIndexRoute: typeof PortalBibliotecaIndexRoute
   PortalDisciplinasIndexRoute: typeof PortalDisciplinasIndexRoute
   PortalForumIndexRoute: typeof PortalForumIndexRoute
   PortalProvasIndexRoute: typeof PortalProvasIndexRoute
+  PortalSlidesIndexRoute: typeof PortalSlidesIndexRoute
   PortalTarefasIndexRoute: typeof PortalTarefasIndexRoute
 }
 
@@ -1445,12 +1528,14 @@ const PortalRouteRouteChildren: PortalRouteRouteChildren = {
   PortalDisciplinasDisciplineIdRoute: PortalDisciplinasDisciplineIdRoute,
   PortalForumThreadIdRoute: PortalForumThreadIdRoute,
   PortalProvasExamIdRoute: PortalProvasExamIdRoute,
+  PortalSlidesSlideIdRoute: PortalSlidesSlideIdRoute,
   PortalTarefasAssignmentIdRoute: PortalTarefasAssignmentIdRoute,
   PortalApostilasIndexRoute: PortalApostilasIndexRoute,
   PortalBibliotecaIndexRoute: PortalBibliotecaIndexRoute,
   PortalDisciplinasIndexRoute: PortalDisciplinasIndexRoute,
   PortalForumIndexRoute: PortalForumIndexRoute,
   PortalProvasIndexRoute: PortalProvasIndexRoute,
+  PortalSlidesIndexRoute: PortalSlidesIndexRoute,
   PortalTarefasIndexRoute: PortalTarefasIndexRoute,
 }
 

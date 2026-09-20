@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2 } from "lucide-react";
+import { toast } from "sonner";
 
 import { PortalShell } from "@/components/portal/PortalShell";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -36,6 +37,7 @@ export function PortalVideos() {
   const markWatchedMutation = useMutation({
     mutationFn: (videoLessonId: string) => markVideoWatchedFn({ data: { videoLessonId } }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: WATCHED_KEY }),
+    onError: () => toast.error("Não foi possível marcar o vídeo como assistido."),
   });
 
   const isLoading = loadingDisciplines || loadingVideos;

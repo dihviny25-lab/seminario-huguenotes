@@ -285,8 +285,15 @@ export function Students() {
                             size="icon"
                             title="Remover login do portal"
                             onClick={() => revokeMutation.mutate(student.id)}
+                            disabled={
+                              revokeMutation.isPending && revokeMutation.variables === student.id
+                            }
                           >
-                            <ShieldOff className="size-4" aria-hidden />
+                            {revokeMutation.isPending && revokeMutation.variables === student.id ? (
+                              <Loader2 className="size-4 animate-spin" aria-hidden />
+                            ) : (
+                              <ShieldOff className="size-4" aria-hidden />
+                            )}
                           </Button>
                         ) : null}
                         <Button
@@ -294,8 +301,17 @@ export function Students() {
                           size="icon"
                           title={student.active ? "Inativar" : "Reativar"}
                           onClick={() => toggleActiveMutation.mutate(student)}
+                          disabled={
+                            toggleActiveMutation.isPending &&
+                            toggleActiveMutation.variables?.id === student.id
+                          }
                         >
-                          <Undo2 className="size-4" aria-hidden />
+                          {toggleActiveMutation.isPending &&
+                          toggleActiveMutation.variables?.id === student.id ? (
+                            <Loader2 className="size-4 animate-spin" aria-hidden />
+                          ) : (
+                            <Undo2 className="size-4" aria-hidden />
+                          )}
                         </Button>
                         <Button
                           variant="ghost"

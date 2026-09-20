@@ -1,4 +1,4 @@
-export type UploadPurpose = "assignment" | "material" | "library" | "video";
+export type UploadPurpose = "assignment" | "material" | "library" | "video" | "slide";
 
 const MB = 1024 * 1024;
 const GB = 1024 * MB;
@@ -39,7 +39,8 @@ export function parseUploadPurpose(clientPayload: string | null | undefined): Up
     purpose !== "assignment" &&
     purpose !== "material" &&
     purpose !== "library" &&
-    purpose !== "video"
+    purpose !== "video" &&
+    purpose !== "slide"
   ) {
     throw new Error("Finalidade do upload inválida.");
   }
@@ -72,6 +73,12 @@ export function getUploadPolicy(purpose: UploadPurpose): UploadPolicy {
         requiresTeacher: true,
         allowedContentTypes: ["video/mp4", "video/webm", "video/quicktime"],
         maximumSizeInBytes: 2 * GB,
+      };
+    case "slide":
+      return {
+        requiresTeacher: true,
+        allowedContentTypes: ["application/pdf"],
+        maximumSizeInBytes: 100 * MB,
       };
   }
 }

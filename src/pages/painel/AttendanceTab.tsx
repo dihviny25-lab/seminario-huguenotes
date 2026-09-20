@@ -4,6 +4,16 @@ import { CheckCircle2, Loader2, Plus, QrCode, RotateCcw, Trash2 } from "lucide-r
 import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -58,6 +68,9 @@ export function AttendanceTab({ disciplineId }: { disciplineId: string }) {
     refetchInterval: checkInDialogLessonId ? 3000 : false,
   });
   const [newDate, setNewDate] = useState("");
+  const [deletingLesson, setDeletingLesson] = useState<AttendanceBoard["lessons"][number] | null>(
+    null,
+  );
 
   function invalidate() {
     return queryClient.invalidateQueries({ queryKey: attendanceKey(disciplineId) });
@@ -90,6 +103,7 @@ export function AttendanceTab({ disciplineId }: { disciplineId: string }) {
     mutationFn: (lessonId: string) => deleteLessonFn({ data: { disciplineId, lessonId } }),
     onSuccess: async () => {
       toast.success("Aula removida.");
+      setDeletingLesson(null);
       await invalidate();
     },
     onError: () => toast.error("Não foi possível remover a aula."),
@@ -211,6 +225,10 @@ export function AttendanceTab({ disciplineId }: { disciplineId: string }) {
                         <Checkbox
                           checked={allPresent ? true : nonePresent ? false : "indeterminate"}
                           title={allPresent ? "Desmarcar todos" : "Marcar todos presentes"}
+                          disabled={
+                            attendanceAllMutation.isPending &&
+                            attendanceAllMutation.variables?.lessonId === lesson.id
+                          }
                           onCheckedChange={() =>
                             attendanceAllMutation.mutate({
                               lessonId: lesson.id,
@@ -233,7 +251,7 @@ export function AttendanceTab({ disciplineId }: { disciplineId: string }) {
                           size="icon"
                           className="size-6"
                           title="Remover aula"
-                          onClick={() => deleteLessonMutation.mutate(lesson.id)}
+                          onClick={() => setDeletingLesson(lesson)}
                         >
                           <Trash2 className="size-3.5" aria-hidden />
                         </Button>
@@ -299,6 +317,11 @@ export function AttendanceTab({ disciplineId }: { disciplineId: string }) {
                         <TableCell key={lesson.id} className="text-center">
                           <Checkbox
                             checked={present}
+                            disabled={
+                              attendanceMutation.isPending &&
+                              attendanceMutation.variables?.lessonId === lesson.id &&
+                              attendanceMutation.variables?.studentId === student.id
+                            }
                             onCheckedChange={(checked) =>
                               attendanceMutation.mutate({
                                 lessonId: lesson.id,
@@ -328,6 +351,35 @@ export function AttendanceTab({ disciplineId }: { disciplineId: string }) {
         onOpenChange={(open) => !open && setCheckInDialogLessonId(null)}
         onChanged={invalidate}
       />
+
+      <AlertDialog
+        open={deletingLesson !== null}
+        onOpenChange={(open) => !open && setDeletingLesson(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Remover {deletingLesson ? formatLessonLabel(deletingLesson) : "esta aula"}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Isso apaga a aula e toda a frequência já lançada nela. Essa ação não pode ser
+              desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deletingLesson && deleteLessonMutation.mutate(deletingLesson.id)}
+              disabled={deleteLessonMutation.isPending}
+            >
+              {deleteLessonMutation.isPending ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden />
+              ) : null}
+              Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

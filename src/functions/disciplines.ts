@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { asc, eq } from "drizzle-orm";
 import { z } from "zod";
 
-import { requireOwnDiscipline, requireTeacherId } from "@/server/auth/guard";
+import { requireAttendanceDiscipline, requireTeacherId } from "@/server/auth/guard";
 import { db } from "@/server/db/client";
 import { disciplines } from "@/server/db/schema";
 
@@ -36,12 +36,13 @@ const disciplineIdSchema = z.object({ disciplineId: z.string().uuid() });
 export const getMyDisciplineFn = createServerFn({ method: "GET" })
   .validator(disciplineIdSchema)
   .handler(async ({ data }) => {
-    const discipline = await requireOwnDiscipline(data.disciplineId);
+    const { discipline, teacherId } = await requireAttendanceDiscipline(data.disciplineId);
     return {
       id: discipline.id,
       semester: discipline.semester,
       term: discipline.term,
       module: discipline.module,
       discipline: discipline.discipline,
+      canManageDiscipline: discipline.teacherId === teacherId,
     };
   });

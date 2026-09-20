@@ -184,8 +184,15 @@ export function TeacherAccounts() {
                             size="icon"
                             title="Remover login"
                             onClick={() => revokeMutation.mutate(teacher.id)}
+                            disabled={
+                              revokeMutation.isPending && revokeMutation.variables === teacher.id
+                            }
                           >
-                            <ShieldOff className="size-4" aria-hidden />
+                            {revokeMutation.isPending && revokeMutation.variables === teacher.id ? (
+                              <Loader2 className="size-4 animate-spin" aria-hidden />
+                            ) : (
+                              <ShieldOff className="size-4" aria-hidden />
+                            )}
                           </Button>
                         ) : null}
                         {isAdmin ? (
