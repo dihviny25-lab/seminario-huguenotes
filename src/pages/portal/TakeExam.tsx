@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { CheckCircle2, Clock, Loader2 } from "lucide-react";
@@ -25,6 +25,7 @@ import {
   submitExamAttemptFn,
 } from "@/functions/examAttempts";
 import { getCurrentStudentFn } from "@/functions/studentAuth";
+import { createKeyedSerialExecutor, replaceValueIfLatestRevision } from "@/lib/optimisticState";
 import { cn } from "@/lib/utils";
 
 function examAttemptKey(examId: string) {
@@ -55,6 +56,9 @@ export function TakeExam({ examId }: { examId: string }) {
   });
 
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const answerRevisions = useRef<Record<string, number>>({});
+  const answerSaveQueue = useRef<ReturnType<typeof createKeyedSerialExecutor> | null>(null);
+  if (!answerSaveQueue.current) answerSaveQueue.current = createKeyedSerialExecutor();
   const [seededExamId, setSeededExamId] = useState<string | null>(null);
   if (attempt && seededExamId !== examId) {
     // Semeia as respostas locais só uma vez por prova (não sobrescreve cliques em andamento).
@@ -67,19 +71,30 @@ export function TakeExam({ examId }: { examId: string }) {
   }
 
   const saveAnswerMutation = useMutation({
-    mutationFn: (input: { questionId: string; optionId: string; previousOptionId?: string }) =>
-      saveExamAnswerFn({
-        data: { examId, questionId: input.questionId, optionId: input.optionId },
-      }),
+    mutationFn: (input: {
+      questionId: string;
+      optionId: string;
+      previousOptionId?: string;
+      revision: number;
+    }) =>
+      answerSaveQueue.current!(input.questionId, () =>
+        saveExamAnswerFn({
+          data: { examId, questionId: input.questionId, optionId: input.optionId },
+        }),
+      ),
     onError: (err, variables) => {
       // Rollback: a UI já marcou a alternativa otimisticamente, mas o servidor
       // não confirmou o salvamento — sem isso o aluno acha que respondeu e não respondeu.
       setAnswers((prev) => {
-        const next = { ...prev };
-        if (variables.previousOptionId) next[variables.questionId] = variables.previousOptionId;
-        else delete next[variables.questionId];
-        return next;
+        return replaceValueIfLatestRevision(
+          prev,
+          variables.questionId,
+          variables.revision,
+          answerRevisions.current[variables.questionId] ?? 0,
+          variables.previousOptionId,
+        );
       });
+      if ((answerRevisions.current[variables.questionId] ?? 0) !== variables.revision) return;
       toast.error(
         err instanceof Error
           ? `Não foi possível salvar a resposta: ${err.message}. Marque de novo.`
@@ -118,8 +133,10 @@ export function TakeExam({ examId }: { examId: string }) {
 
   function selectOption(questionId: string, optionId: string) {
     const previousOptionId = answers[questionId];
+    const revision = (answerRevisions.current[questionId] ?? 0) + 1;
+    answerRevisions.current[questionId] = revision;
     setAnswers((prev) => ({ ...prev, [questionId]: optionId }));
-    saveAnswerMutation.mutate({ questionId, optionId, previousOptionId });
+    saveAnswerMutation.mutate({ questionId, optionId, previousOptionId, revision });
   }
 
   if (!pledgeAccepted) {
