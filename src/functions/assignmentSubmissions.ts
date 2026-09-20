@@ -306,7 +306,7 @@ const submitSchema = z
     fileUrl: z.string().trim().url().optional(),
     fileName: z.string().trim().optional(),
     // Presentes só quando um arquivo novo foi subido nesta chamada — vêm
-    // do resultado de `uploadFile` (Blob `access: "private"`).
+    // do resultado de `uploadFile`.
     filePathname: z.string().trim().optional(),
     fileContentType: z.string().trim().optional(),
   })

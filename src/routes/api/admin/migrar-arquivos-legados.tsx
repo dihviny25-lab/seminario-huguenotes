@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { put } from "@vercel/blob";
 import { and, eq, isNull, isNotNull } from "drizzle-orm";
 
 import { requireAdminId } from "@/server/auth/guard";
@@ -17,11 +16,12 @@ import { registerPrivateFile } from "@/server/files/privateFileAccess";
 type LegacyRow = { id: string; fileUrl: string; fileName: string };
 
 /**
- * Migra pro Blob privado os arquivos enviados antes da Task 1 de LGPD
- * (access: "public" → "private"). Idempotente e resumível: só olha linhas
- * com `file_id` nulo, então rodar de novo depois de uma falha parcial só
- * retoma de onde parou — nunca reprocessa o que já migrou. Não apaga o
- * blob público antigo (fica pra revisão administrativa separada).
+ * Registra em `private_files` os arquivos enviados antes da Task 1 de LGPD
+ * — o Blob deste projeto é `access: "public"` (não dá pra converter em
+ * privado sem trocar de store), então não há re-upload: a URL pública
+ * antiga vira `blobPath` (o SDK do Blob aceita URL direto em `get()`) e a
+ * proteção passa a ser só a aplicação, nunca mais expondo essa URL ao
+ * cliente. Idempotente e resumível: só olha linhas com `file_id` nulo.
  */
 async function migrateOwnerType(
   ownerType: FileOwnerType,
@@ -33,21 +33,10 @@ async function migrateOwnerType(
 
   for (const row of rows) {
     try {
-      const response = await fetch(row.fileUrl);
-      if (!response.ok || !response.body) {
-        throw new Error(`download falhou: ${response.status}`);
-      }
-      const safeName = row.fileName.replace(/[/\\]/g, "_");
-      const pathname = `migrated/${ownerType}/${row.id}-${safeName}`;
-      const blob = await put(pathname, response.body, {
-        access: "private",
-        contentType: response.headers.get("content-type") ?? undefined,
-        addRandomSuffix: false,
-      });
       const fileId = await registerPrivateFile({
-        pathname: blob.pathname,
+        pathname: row.fileUrl,
         originalName: row.fileName,
-        contentType: blob.contentType,
+        contentType: null,
         ownerType,
         ownerId: row.id,
       });

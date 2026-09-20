@@ -1,10 +1,11 @@
 import { upload } from "@vercel/blob/client";
 
-// `url`/`downloadUrl` não são mais publicamente acessíveis (blob é
-// `access: "private"`) — servem só de referência legada. `pathname` é o
-// que a função que cria o registro dono (tarefa, material, etc.) usa pra
-// registrar o arquivo em `private_files` e liberar leitura autorizada via
-// `/api/arquivo/$fileId`.
+// A store do Blob deste projeto é `access: "public"` (Vercel não permite
+// misturar público/privado na mesma store). A proteção real é na aplicação:
+// `url`/`downloadUrl` nunca são expostos ao cliente — só `pathname`, que a
+// função que cria o registro dono (tarefa, material, etc.) usa pra registrar
+// o arquivo em `private_files` e liberar leitura autorizada via
+// `/api/arquivo/$fileId`, sempre atrás de `canReadPrivateFile`.
 export type UploadedFile = {
   url: string;
   fileName: string;
@@ -35,7 +36,7 @@ export async function uploadFile(
   const progress = typeof purposeOrProgress === "function" ? purposeOrProgress : onProgress;
 
   const blob = await upload(file.name, file, {
-    access: "private",
+    access: "public",
     handleUploadUrl: "/api/blob/upload",
     clientPayload: JSON.stringify({ purpose }),
     multipart: true,
