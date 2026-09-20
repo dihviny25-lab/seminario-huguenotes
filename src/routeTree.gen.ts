@@ -75,6 +75,7 @@ import { Route as ApiCronPaymentRemindersRouteImport } from './routes/api/cron/p
 import { Route as ApiCronFinalizeExpiredExamsRouteImport } from './routes/api/cron/finalize-expired-exams'
 import { Route as ApiBlobUploadRouteImport } from './routes/api/blob/upload'
 import { Route as ApiArquivoFileIdRouteImport } from './routes/api/arquivo/$fileId'
+import { Route as ApiAdminMigrarArquivosLegadosRouteImport } from './routes/api/admin/migrar-arquivos-legados'
 import { Route as PortalMensalidadesChargeIdReciboRouteImport } from './routes/portal/mensalidades/$chargeId/recibo'
 import { Route as PainelRelatorioStudentIdPdfRouteImport } from './routes/painel/relatorio/$studentId/pdf'
 import { Route as PainelPagamentosChargeIdReciboRouteImport } from './routes/painel/pagamentos/$chargeId/recibo'
@@ -434,6 +435,12 @@ const ApiArquivoFileIdRoute = ApiArquivoFileIdRouteImport.update({
   path: '/api/arquivo/$fileId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAdminMigrarArquivosLegadosRoute =
+  ApiAdminMigrarArquivosLegadosRouteImport.update({
+    id: '/api/admin/migrar-arquivos-legados',
+    path: '/api/admin/migrar-arquivos-legados',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const PortalMensalidadesChargeIdReciboRoute =
   PortalMensalidadesChargeIdReciboRouteImport.update({
     id: '/$chargeId/recibo',
@@ -494,6 +501,7 @@ export interface FileRoutesByFullPath {
   '/semestre/$semester': typeof SemestreSemesterRoute
   '/painel/': typeof PainelIndexRoute
   '/portal/': typeof PortalIndexRoute
+  '/api/admin/migrar-arquivos-legados': typeof ApiAdminMigrarArquivosLegadosRoute
   '/api/arquivo/$fileId': typeof ApiArquivoFileIdRoute
   '/api/blob/upload': typeof ApiBlobUploadRoute
   '/api/cron/finalize-expired-exams': typeof ApiCronFinalizeExpiredExamsRoute
@@ -564,6 +572,7 @@ export interface FileRoutesByTo {
   '/semestre/$semester': typeof SemestreSemesterRoute
   '/painel': typeof PainelIndexRoute
   '/portal': typeof PortalIndexRoute
+  '/api/admin/migrar-arquivos-legados': typeof ApiAdminMigrarArquivosLegadosRoute
   '/api/arquivo/$fileId': typeof ApiArquivoFileIdRoute
   '/api/blob/upload': typeof ApiBlobUploadRoute
   '/api/cron/finalize-expired-exams': typeof ApiCronFinalizeExpiredExamsRoute
@@ -637,6 +646,7 @@ export interface FileRoutesById {
   '/semestre/$semester': typeof SemestreSemesterRoute
   '/painel/': typeof PainelIndexRoute
   '/portal/': typeof PortalIndexRoute
+  '/api/admin/migrar-arquivos-legados': typeof ApiAdminMigrarArquivosLegadosRoute
   '/api/arquivo/$fileId': typeof ApiArquivoFileIdRoute
   '/api/blob/upload': typeof ApiBlobUploadRoute
   '/api/cron/finalize-expired-exams': typeof ApiCronFinalizeExpiredExamsRoute
@@ -711,6 +721,7 @@ export interface FileRouteTypes {
     | '/semestre/$semester'
     | '/painel/'
     | '/portal/'
+    | '/api/admin/migrar-arquivos-legados'
     | '/api/arquivo/$fileId'
     | '/api/blob/upload'
     | '/api/cron/finalize-expired-exams'
@@ -781,6 +792,7 @@ export interface FileRouteTypes {
     | '/semestre/$semester'
     | '/painel'
     | '/portal'
+    | '/api/admin/migrar-arquivos-legados'
     | '/api/arquivo/$fileId'
     | '/api/blob/upload'
     | '/api/cron/finalize-expired-exams'
@@ -853,6 +865,7 @@ export interface FileRouteTypes {
     | '/semestre/$semester'
     | '/painel/'
     | '/portal/'
+    | '/api/admin/migrar-arquivos-legados'
     | '/api/arquivo/$fileId'
     | '/api/blob/upload'
     | '/api/cron/finalize-expired-exams'
@@ -904,6 +917,7 @@ export interface RootRouteChildren {
   RedefinirSenhaRoute: typeof RedefinirSenhaRoute
   RedefinirSenhaAlunoRoute: typeof RedefinirSenhaAlunoRoute
   SemestreSemesterRoute: typeof SemestreSemesterRoute
+  ApiAdminMigrarArquivosLegadosRoute: typeof ApiAdminMigrarArquivosLegadosRoute
   ApiArquivoFileIdRoute: typeof ApiArquivoFileIdRoute
   ApiBlobUploadRoute: typeof ApiBlobUploadRoute
   ApiCronFinalizeExpiredExamsRoute: typeof ApiCronFinalizeExpiredExamsRoute
@@ -1375,6 +1389,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiArquivoFileIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/admin/migrar-arquivos-legados': {
+      id: '/api/admin/migrar-arquivos-legados'
+      path: '/api/admin/migrar-arquivos-legados'
+      fullPath: '/api/admin/migrar-arquivos-legados'
+      preLoaderRoute: typeof ApiAdminMigrarArquivosLegadosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/portal/mensalidades/$chargeId/recibo': {
       id: '/portal/mensalidades/$chargeId/recibo'
       path: '/$chargeId/recibo'
@@ -1576,6 +1597,7 @@ const rootRouteChildren: RootRouteChildren = {
   RedefinirSenhaRoute: RedefinirSenhaRoute,
   RedefinirSenhaAlunoRoute: RedefinirSenhaAlunoRoute,
   SemestreSemesterRoute: SemestreSemesterRoute,
+  ApiAdminMigrarArquivosLegadosRoute: ApiAdminMigrarArquivosLegadosRoute,
   ApiArquivoFileIdRoute: ApiArquivoFileIdRoute,
   ApiBlobUploadRoute: ApiBlobUploadRoute,
   ApiCronFinalizeExpiredExamsRoute: ApiCronFinalizeExpiredExamsRoute,
