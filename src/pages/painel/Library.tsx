@@ -246,7 +246,7 @@ function CreateBookDialog({
       if (!file) throw new Error("Escolha um arquivo.");
       setUploading(true);
       try {
-        const uploaded = await uploadFile(file);
+        const uploaded = await uploadFile(file, "library");
         return createLibraryBookFn({
           data: {
             title,
@@ -254,6 +254,8 @@ function CreateBookDialog({
             description: description || undefined,
             fileUrl: uploaded.url,
             fileName: uploaded.fileName,
+            filePathname: uploaded.pathname,
+            fileContentType: uploaded.contentType ?? undefined,
           },
         });
       } finally {

@@ -3,6 +3,7 @@ import { CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { PortalShell } from "@/components/portal/PortalShell";
+import { PrivateVideoPlayer } from "@/components/PrivateVideoPlayer";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getPublicDisciplinesFn } from "@/functions/schedule";
 import {
@@ -155,9 +156,8 @@ function VideoCard({
     if (!video.fileUrl) return null;
     return (
       <div className={containerClass}>
-        <video
-          src={video.fileUrl}
-          controls
+        <PrivateVideoPlayer
+          fileId={video.fileId}
           className="aspect-video w-full bg-black"
           onEnded={onWatched}
         />

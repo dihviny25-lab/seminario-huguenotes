@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Download, Loader2, MonitorPlay, Pencil, Plus, Trash2 } from "lucide-react";
+import { Loader2, MonitorPlay, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { PrivateFileLink } from "@/components/PrivateFileLink";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -95,15 +96,12 @@ export function SlidesTab({ disciplineId }: { disciplineId: string }) {
                     {slide.description}
                   </span>
                 ) : null}
-                <a
-                  href={slide.fileUrl}
-                  target="_blank"
-                  rel="noreferrer"
+                <PrivateFileLink
+                  fileId={slide.fileId}
+                  fileUrl={slide.fileUrl}
+                  fileName={slide.fileName}
                   className="mt-1 inline-flex items-center gap-1 text-xs text-primary hover:underline"
-                >
-                  <Download className="size-3.5 shrink-0" aria-hidden />
-                  {slide.fileName}
-                </a>
+                />
               </span>
               <div className="flex shrink-0 flex-col gap-1">
                 <Button
@@ -269,6 +267,8 @@ function CreateSlideDialog({
             description: description || undefined,
             fileUrl: uploaded.url,
             fileName: uploaded.fileName,
+            filePathname: uploaded.pathname,
+            fileContentType: uploaded.contentType ?? undefined,
           },
         });
       } finally {

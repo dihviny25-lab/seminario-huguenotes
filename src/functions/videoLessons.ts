@@ -7,6 +7,7 @@ import { logAudit } from "@/server/audit";
 import { requireAnyLogin, requireOwnDiscipline, requireStudentId } from "@/server/auth/guard";
 import { db } from "@/server/db/client";
 import { students, videoLessons, videoWatches } from "@/server/db/schema";
+import { registerPrivateFile } from "@/server/files/privateFileAccess";
 
 export type VideoLesson = {
   id: string;
@@ -15,6 +16,7 @@ export type VideoLesson = {
   source: "youtube" | "upload";
   youtubeUrl: string | null;
   fileUrl: string | null;
+  fileId: string | null;
   sequence: number;
 };
 
@@ -85,12 +87,15 @@ const createSchema = z
     source: z.enum(["youtube", "upload"]),
     youtubeUrl: z.string().trim().optional(),
     fileUrl: z.string().trim().url().optional(),
+    fileName: z.string().trim().optional(),
+    filePathname: z.string().trim().optional(),
+    fileContentType: z.string().trim().optional(),
   })
   .refine(
     (data) =>
       data.source === "youtube"
         ? data.youtubeUrl !== undefined && extractYouTubeId(data.youtubeUrl) !== null
-        : data.fileUrl !== undefined,
+        : data.fileUrl !== undefined && data.filePathname !== undefined,
     { message: "Informe um link do YouTube válido ou envie um arquivo de vídeo." },
   );
 
@@ -116,6 +121,18 @@ export const createVideoLessonFn = createServerFn({ method: "POST" })
         sequence: nextSequence,
       })
       .returning({ id: videoLessons.id });
+
+    if (data.source === "upload" && data.filePathname && data.fileName) {
+      const fileId = await registerPrivateFile({
+        pathname: data.filePathname,
+        originalName: data.fileName,
+        contentType: data.fileContentType ?? null,
+        ownerType: "video_lesson",
+        ownerId: row.id,
+      });
+      await db.update(videoLessons).set({ fileId }).where(eq(videoLessons.id, row.id));
+    }
+
     await logAudit(
       "video.criar",
       `Adicionou a vídeo-aula "${data.title}" em ${discipline.discipline}.`,

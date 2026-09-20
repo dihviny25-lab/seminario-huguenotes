@@ -6,6 +6,7 @@ import { logAudit } from "@/server/audit";
 import { requireAnyLogin, requireOwnDiscipline } from "@/server/auth/guard";
 import { db } from "@/server/db/client";
 import { disciplines, readingMaterials } from "@/server/db/schema";
+import { registerPrivateFile } from "@/server/files/privateFileAccess";
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
@@ -18,6 +19,7 @@ export type ReadingMaterial = {
   description: string | null;
   fileUrl: string;
   fileName: string;
+  fileId: string | null;
   sequence: number;
   /** null = disponível já (ou disciplina sem data de início definida). */
   availableAt: string | null;
@@ -46,6 +48,8 @@ const createSchema = z.object({
   description: z.string().trim().optional(),
   fileUrl: z.string().trim().url("URL de arquivo inválida."),
   fileName: z.string().trim().min(1),
+  filePathname: z.string().trim().min(1),
+  fileContentType: z.string().trim().optional(),
 });
 
 export const createMaterialFn = createServerFn({ method: "POST" })
@@ -70,6 +74,16 @@ export const createMaterialFn = createServerFn({ method: "POST" })
         sequence: nextSequence,
       })
       .returning({ id: readingMaterials.id });
+
+    const fileId = await registerPrivateFile({
+      pathname: data.filePathname,
+      originalName: data.fileName,
+      contentType: data.fileContentType ?? null,
+      ownerType: "reading_material",
+      ownerId: row.id,
+    });
+    await db.update(readingMaterials).set({ fileId }).where(eq(readingMaterials.id, row.id));
+
     await logAudit(
       "apostila.criar",
       `Adicionou o material "${data.title}" em ${discipline.discipline}.`,
@@ -124,6 +138,7 @@ function selectMaterialColumns() {
     description: readingMaterials.description,
     fileUrl: readingMaterials.fileUrl,
     fileName: readingMaterials.fileName,
+    fileId: readingMaterials.fileId,
     sequence: readingMaterials.sequence,
     startDate: disciplines.startDate,
   };

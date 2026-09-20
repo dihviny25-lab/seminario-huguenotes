@@ -74,6 +74,7 @@ import { Route as ApiMercadopagoWebhookRouteImport } from './routes/api/mercadop
 import { Route as ApiCronPaymentRemindersRouteImport } from './routes/api/cron/payment-reminders'
 import { Route as ApiCronFinalizeExpiredExamsRouteImport } from './routes/api/cron/finalize-expired-exams'
 import { Route as ApiBlobUploadRouteImport } from './routes/api/blob/upload'
+import { Route as ApiArquivoFileIdRouteImport } from './routes/api/arquivo/$fileId'
 import { Route as PortalMensalidadesChargeIdReciboRouteImport } from './routes/portal/mensalidades/$chargeId/recibo'
 import { Route as PainelRelatorioStudentIdPdfRouteImport } from './routes/painel/relatorio/$studentId/pdf'
 import { Route as PainelPagamentosChargeIdReciboRouteImport } from './routes/painel/pagamentos/$chargeId/recibo'
@@ -428,6 +429,11 @@ const ApiBlobUploadRoute = ApiBlobUploadRouteImport.update({
   path: '/api/blob/upload',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiArquivoFileIdRoute = ApiArquivoFileIdRouteImport.update({
+  id: '/api/arquivo/$fileId',
+  path: '/api/arquivo/$fileId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PortalMensalidadesChargeIdReciboRoute =
   PortalMensalidadesChargeIdReciboRouteImport.update({
     id: '/$chargeId/recibo',
@@ -488,6 +494,7 @@ export interface FileRoutesByFullPath {
   '/semestre/$semester': typeof SemestreSemesterRoute
   '/painel/': typeof PainelIndexRoute
   '/portal/': typeof PortalIndexRoute
+  '/api/arquivo/$fileId': typeof ApiArquivoFileIdRoute
   '/api/blob/upload': typeof ApiBlobUploadRoute
   '/api/cron/finalize-expired-exams': typeof ApiCronFinalizeExpiredExamsRoute
   '/api/cron/payment-reminders': typeof ApiCronPaymentRemindersRoute
@@ -557,6 +564,7 @@ export interface FileRoutesByTo {
   '/semestre/$semester': typeof SemestreSemesterRoute
   '/painel': typeof PainelIndexRoute
   '/portal': typeof PortalIndexRoute
+  '/api/arquivo/$fileId': typeof ApiArquivoFileIdRoute
   '/api/blob/upload': typeof ApiBlobUploadRoute
   '/api/cron/finalize-expired-exams': typeof ApiCronFinalizeExpiredExamsRoute
   '/api/cron/payment-reminders': typeof ApiCronPaymentRemindersRoute
@@ -629,6 +637,7 @@ export interface FileRoutesById {
   '/semestre/$semester': typeof SemestreSemesterRoute
   '/painel/': typeof PainelIndexRoute
   '/portal/': typeof PortalIndexRoute
+  '/api/arquivo/$fileId': typeof ApiArquivoFileIdRoute
   '/api/blob/upload': typeof ApiBlobUploadRoute
   '/api/cron/finalize-expired-exams': typeof ApiCronFinalizeExpiredExamsRoute
   '/api/cron/payment-reminders': typeof ApiCronPaymentRemindersRoute
@@ -702,6 +711,7 @@ export interface FileRouteTypes {
     | '/semestre/$semester'
     | '/painel/'
     | '/portal/'
+    | '/api/arquivo/$fileId'
     | '/api/blob/upload'
     | '/api/cron/finalize-expired-exams'
     | '/api/cron/payment-reminders'
@@ -771,6 +781,7 @@ export interface FileRouteTypes {
     | '/semestre/$semester'
     | '/painel'
     | '/portal'
+    | '/api/arquivo/$fileId'
     | '/api/blob/upload'
     | '/api/cron/finalize-expired-exams'
     | '/api/cron/payment-reminders'
@@ -842,6 +853,7 @@ export interface FileRouteTypes {
     | '/semestre/$semester'
     | '/painel/'
     | '/portal/'
+    | '/api/arquivo/$fileId'
     | '/api/blob/upload'
     | '/api/cron/finalize-expired-exams'
     | '/api/cron/payment-reminders'
@@ -892,6 +904,7 @@ export interface RootRouteChildren {
   RedefinirSenhaRoute: typeof RedefinirSenhaRoute
   RedefinirSenhaAlunoRoute: typeof RedefinirSenhaAlunoRoute
   SemestreSemesterRoute: typeof SemestreSemesterRoute
+  ApiArquivoFileIdRoute: typeof ApiArquivoFileIdRoute
   ApiBlobUploadRoute: typeof ApiBlobUploadRoute
   ApiCronFinalizeExpiredExamsRoute: typeof ApiCronFinalizeExpiredExamsRoute
   ApiCronPaymentRemindersRoute: typeof ApiCronPaymentRemindersRoute
@@ -1355,6 +1368,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiBlobUploadRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/arquivo/$fileId': {
+      id: '/api/arquivo/$fileId'
+      path: '/api/arquivo/$fileId'
+      fullPath: '/api/arquivo/$fileId'
+      preLoaderRoute: typeof ApiArquivoFileIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/portal/mensalidades/$chargeId/recibo': {
       id: '/portal/mensalidades/$chargeId/recibo'
       path: '/$chargeId/recibo'
@@ -1556,6 +1576,7 @@ const rootRouteChildren: RootRouteChildren = {
   RedefinirSenhaRoute: RedefinirSenhaRoute,
   RedefinirSenhaAlunoRoute: RedefinirSenhaAlunoRoute,
   SemestreSemesterRoute: SemestreSemesterRoute,
+  ApiArquivoFileIdRoute: ApiArquivoFileIdRoute,
   ApiBlobUploadRoute: ApiBlobUploadRoute,
   ApiCronFinalizeExpiredExamsRoute: ApiCronFinalizeExpiredExamsRoute,
   ApiCronPaymentRemindersRoute: ApiCronPaymentRemindersRoute,

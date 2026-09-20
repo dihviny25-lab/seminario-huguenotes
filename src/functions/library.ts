@@ -6,6 +6,7 @@ import { logAudit } from "@/server/audit";
 import { requireAdminOrSelf, requireAnyLogin, requireTeacherId } from "@/server/auth/guard";
 import { db } from "@/server/db/client";
 import { libraryBooks, teachers } from "@/server/db/schema";
+import { registerPrivateFile } from "@/server/files/privateFileAccess";
 
 export type LibraryBook = {
   id: string;
@@ -14,6 +15,7 @@ export type LibraryBook = {
   description: string | null;
   fileUrl: string;
   fileName: string;
+  fileId: string | null;
   uploadedByName: string;
   createdAt: string;
 };
@@ -30,6 +32,7 @@ export const listLibraryBooksFn = createServerFn({ method: "GET" }).handler(
       description: row.description,
       fileUrl: row.fileUrl,
       fileName: row.fileName,
+      fileId: row.fileId,
       uploadedByName: row.uploadedByName,
       createdAt: row.createdAt.toISOString(),
     }));
@@ -42,6 +45,8 @@ const createSchema = z.object({
   description: z.string().trim().optional(),
   fileUrl: z.string().trim().url("URL de arquivo inválida."),
   fileName: z.string().trim().min(1),
+  filePathname: z.string().trim().min(1),
+  fileContentType: z.string().trim().optional(),
 });
 
 export const createLibraryBookFn = createServerFn({ method: "POST" })
@@ -66,6 +71,16 @@ export const createLibraryBookFn = createServerFn({ method: "POST" })
         uploadedByName: teacher?.name ?? "Professor",
       })
       .returning({ id: libraryBooks.id });
+
+    const fileId = await registerPrivateFile({
+      pathname: data.filePathname,
+      originalName: data.fileName,
+      contentType: data.fileContentType ?? null,
+      ownerType: "library_book",
+      ownerId: row.id,
+    });
+    await db.update(libraryBooks).set({ fileId }).where(eq(libraryBooks.id, row.id));
+
     await logAudit("biblioteca.criar", `Adicionou o livro "${data.title}" à biblioteca.`);
     return row;
   });

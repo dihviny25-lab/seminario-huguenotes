@@ -276,6 +276,7 @@ export type SubmissionRow = {
   textContent: string | null;
   fileUrl: string | null;
   fileName: string | null;
+  fileId: string | null;
   submittedAt: string | null;
   feedback: string | null;
   gradedAt: string | null;
@@ -317,6 +318,7 @@ export const getAssignmentSubmissionsFn = createServerFn({ method: "GET" })
         textContent: submission?.textContent ?? null,
         fileUrl: submission?.fileUrl ?? null,
         fileName: submission?.fileName ?? null,
+        fileId: submission?.fileId ?? null,
         submittedAt: submission?.submittedAt ? submission.submittedAt.toISOString() : null,
         feedback: submission?.feedback ?? null,
         gradedAt: submission?.gradedAt ? submission.gradedAt.toISOString() : null,

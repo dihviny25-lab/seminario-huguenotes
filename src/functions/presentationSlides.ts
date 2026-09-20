@@ -6,6 +6,7 @@ import { logAudit } from "@/server/audit";
 import { requireAnyLogin, requireOwnDiscipline } from "@/server/auth/guard";
 import { db } from "@/server/db/client";
 import { disciplines, presentationSlides } from "@/server/db/schema";
+import { registerPrivateFile } from "@/server/files/privateFileAccess";
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
@@ -18,6 +19,7 @@ export type PresentationSlide = {
   description: string | null;
   fileUrl: string;
   fileName: string;
+  fileId: string | null;
   sequence: number;
   /** null = disponível já (ou disciplina sem data de início definida). */
   availableAt: string | null;
@@ -54,6 +56,8 @@ const createSchema = z.object({
     .refine((name) => name.toLowerCase().endsWith(".pdf"), {
       message: "O arquivo precisa ser um PDF.",
     }),
+  filePathname: z.string().trim().min(1),
+  fileContentType: z.string().trim().optional(),
 });
 
 export const createSlideFn = createServerFn({ method: "POST" })
@@ -78,6 +82,16 @@ export const createSlideFn = createServerFn({ method: "POST" })
         sequence: nextSequence,
       })
       .returning({ id: presentationSlides.id });
+
+    const fileId = await registerPrivateFile({
+      pathname: data.filePathname,
+      originalName: data.fileName,
+      contentType: data.fileContentType ?? null,
+      ownerType: "presentation_slide",
+      ownerId: row.id,
+    });
+    await db.update(presentationSlides).set({ fileId }).where(eq(presentationSlides.id, row.id));
+
     await logAudit("slide.criar", `Adicionou o slide "${data.title}" em ${discipline.discipline}.`);
     return row;
   });
@@ -136,6 +150,7 @@ function selectSlideColumns() {
     title: presentationSlides.title,
     description: presentationSlides.description,
     fileName: presentationSlides.fileName,
+    fileId: presentationSlides.fileId,
     sequence: presentationSlides.sequence,
     startDate: disciplines.startDate,
   };
@@ -182,13 +197,21 @@ export const listDisciplinePresentationSlidesFn = createServerFn({ method: "GET"
 
 const slideIdSchema = z.object({ slideId: z.string().uuid() });
 
-/** Retorna a URL somente quando a disciplina já começou. */
+/**
+ * Retorna a referência do arquivo somente quando a disciplina já começou —
+ * o chamador resolve a URL autorizada via `getPrivateFileAccessFn`/
+ * `usePrivateFileUrl`, nunca recebe a URL do Blob direto daqui.
+ */
 export const getPresentationSlideFileFn = createServerFn({ method: "GET" })
   .validator(slideIdSchema)
-  .handler(async ({ data }): Promise<{ fileUrl: string }> => {
+  .handler(async ({ data }): Promise<{ fileId: string | null; fileUrl: string }> => {
     await requireAnyLogin();
     const [row] = await db
-      .select({ fileUrl: presentationSlides.fileUrl, startDate: disciplines.startDate })
+      .select({
+        fileUrl: presentationSlides.fileUrl,
+        fileId: presentationSlides.fileId,
+        startDate: disciplines.startDate,
+      })
       .from(presentationSlides)
       .innerJoin(disciplines, eq(disciplines.id, presentationSlides.disciplineId))
       .where(eq(presentationSlides.id, data.slideId))
@@ -197,5 +220,5 @@ export const getPresentationSlideFileFn = createServerFn({ method: "GET" })
     if (row.startDate !== null && row.startDate > todayIso()) {
       throw new Error("Este slide ainda não está disponível.");
     }
-    return { fileUrl: row.fileUrl };
+    return { fileId: row.fileId, fileUrl: row.fileUrl };
   });
