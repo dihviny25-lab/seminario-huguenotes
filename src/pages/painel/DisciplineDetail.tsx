@@ -45,7 +45,10 @@ export function DisciplineDetail({ disciplineId }: { disciplineId: string }) {
           </TabsContent>
         ) : null}
         <TabsContent value="frequencia">
-          <AttendanceTab disciplineId={disciplineId} />
+          <AttendanceTab
+            disciplineId={disciplineId}
+            canManageDiscipline={discipline?.canManageDiscipline === true}
+          />
         </TabsContent>
         {discipline?.canManageDiscipline !== false ? (
           <>

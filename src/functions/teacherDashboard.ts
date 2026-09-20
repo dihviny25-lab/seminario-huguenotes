@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { eq, inArray } from "drizzle-orm";
 
 import { buildTeacherDashboard } from "@/lib/teacherDashboard";
-import { effectiveTeacherId } from "@/lib/teachingAssignments";
+import { effectiveTeacherId, isFutureOrToday } from "@/lib/teachingAssignments";
 import { requireTeacherId } from "@/server/auth/guard";
 import { db } from "@/server/db/client";
 import {
@@ -64,7 +64,7 @@ export const getTeacherDashboardFn = createServerFn({ method: "GET" }).handler(a
         (lesson) =>
           !disciplineIds.includes(lesson.disciplineId) &&
           lesson.date !== null &&
-          lesson.date > today,
+          isFutureOrToday(lesson.date, today),
       )
       .map((lesson) => ({
         disciplineId: lesson.disciplineId,
