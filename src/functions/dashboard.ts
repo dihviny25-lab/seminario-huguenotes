@@ -15,6 +15,7 @@ import {
   summarizeExamsByStudent,
   summarizeVideosByStudent,
 } from "@/lib/dashboard";
+import { dateToIsoInTimeZone } from "@/lib/payments";
 import { requireOwnDiscipline, requireStudentId } from "@/server/auth/guard";
 import { db } from "@/server/db/client";
 import {
@@ -29,7 +30,7 @@ import {
 } from "@/server/db/schema";
 
 function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
+  return dateToIsoInTimeZone(new Date());
 }
 
 export type StudentNextLesson = {

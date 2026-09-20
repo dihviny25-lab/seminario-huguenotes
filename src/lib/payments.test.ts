@@ -4,6 +4,7 @@ import {
   computeCurrentAmount,
   computeDiscountedAmount,
   computeMonthlySeries,
+  dateToIsoInTimeZone,
   formatPeriodLabel,
   getReminderToSend,
 } from "@/lib/payments";
@@ -59,6 +60,16 @@ describe("computeDiscountedAmount", () => {
 
   it("returns the full amount unchanged when there's no discount", () => {
     expect(computeDiscountedAmount(200, 0)).toBe(200);
+  });
+});
+
+describe("dateToIsoInTimeZone", () => {
+  it("mantém o dia 10 em Brasília quando o servidor UTC já está no dia 11", () => {
+    expect(dateToIsoInTimeZone(new Date("2026-09-11T00:30:00Z"))).toBe("2026-09-10");
+  });
+
+  it("muda para o dia 11 somente à meia-noite de Brasília", () => {
+    expect(dateToIsoInTimeZone(new Date("2026-09-11T03:00:00Z"))).toBe("2026-09-11");
   });
 });
 

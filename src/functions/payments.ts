@@ -6,6 +6,7 @@ import {
   applyScholarship,
   computeCurrentAmount,
   computeMonthlySeries,
+  dateToIsoInTimeZone,
   formatPeriodLabel,
 } from "@/lib/payments";
 import { getPaymentModality, PUNCTUALITY_DISCOUNT_PERCENT } from "@/lib/paymentModalities";
@@ -34,7 +35,7 @@ export type Charge = {
 };
 
 function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
+  return dateToIsoInTimeZone(new Date());
 }
 
 function toCharge(row: typeof charges.$inferSelect): Charge {

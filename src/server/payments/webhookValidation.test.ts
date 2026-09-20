@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { decidePaymentWebhook } from "./webhookValidation";
 
@@ -22,6 +22,8 @@ function payment(overrides: Partial<Parameters<typeof decidePaymentWebhook>[1]> 
 }
 
 describe("decidePaymentWebhook", () => {
+  afterEach(() => vi.useRealTimers());
+
   it("aceita valor com desconto antes do vencimento", () => {
     expect(decidePaymentWebhook(baseCharge, payment())).toEqual({
       action: "mark-paid",
@@ -42,6 +44,25 @@ describe("decidePaymentWebhook", () => {
         payment({ transactionAmount: 250, approvedAt: "2026-09-11T08:00:00-03:00" }),
       ),
     ).toEqual({ action: "mark-paid", paidAmount: 250 });
+  });
+
+  it("usa a data de Brasília quando o horário aprovado vem em UTC", () => {
+    expect(
+      decidePaymentWebhook(
+        baseCharge,
+        payment({ approvedAt: "2026-09-11T00:30:00Z", transactionAmount: 200 }),
+      ),
+    ).toEqual({ action: "mark-paid", paidAmount: 200 });
+  });
+
+  it("usa a data de Brasília no fallback sem horário de aprovação", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-11T00:30:00Z"));
+
+    expect(decidePaymentWebhook(baseCharge, payment({ approvedAt: null }))).toEqual({
+      action: "mark-paid",
+      paidAmount: 200,
+    });
   });
 
   it("é idempotente para o mesmo pagamento", () => {
