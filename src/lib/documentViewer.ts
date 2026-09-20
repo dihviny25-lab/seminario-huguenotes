@@ -1,22 +1,23 @@
 const OFFICE_EXTENSIONS = new Set(["doc", "docx", "ppt", "pptx"]);
 
-function extensionOf(fileUrl: string): string {
-  const withoutQuery = fileUrl.split(/[?#]/)[0];
+function extensionOf(fileName: string): string {
+  const withoutQuery = fileName.split(/[?#]/)[0];
   return (withoutQuery.split(".").pop() ?? "").toLowerCase();
 }
 
 /**
- * URL pra embutir um documento num `<iframe>` só de leitura. PDF é
- * renderizado nativamente pelo navegador — some com a barra de ferramentas
- * pra não expor o botão de download. Word/PowerPoint não têm visualizador
- * nativo em navegador nenhum (o iframe fica em branco, ou o navegador
- * simplesmente baixa o arquivo); passamos pelo Google Docs Viewer, que
- * renderiza esses formatos como imagem de página, sem baixar nada — exige
- * que `fileUrl` seja publicamente acessível (é, os blobs são `access: "public"`).
+ * Word/PowerPoint não têm visualizador nativo em navegador nenhum — só dá
+ * pra embutir com segurança arquivos que o próprio navegador renderiza
+ * (PDF). Não usamos mais o Google Docs Viewer: ele exigia URL pública do
+ * arquivo, e os blobs agora são `access: "private"` (só acessíveis via
+ * `/api/arquivo/$fileId`, autorizado). Pra Office, o chamador deve oferecer
+ * download em vez de tentar embutir.
  */
+export function isEmbeddableInline(fileName: string): boolean {
+  return !OFFICE_EXTENSIONS.has(extensionOf(fileName));
+}
+
+/** URL pra embutir um PDF num `<iframe>` só de leitura, sem a barra de ferramentas. */
 export function getEmbeddableViewerUrl(fileUrl: string): string {
-  if (OFFICE_EXTENSIONS.has(extensionOf(fileUrl))) {
-    return `https://docs.google.com/gview?url=${encodeURIComponent(fileUrl)}&embedded=true`;
-  }
   return `${fileUrl}#toolbar=0&navpanes=0`;
 }

@@ -1,6 +1,16 @@
 import { upload } from "@vercel/blob/client";
 
-export type UploadedFile = { url: string; fileName: string };
+// `url`/`downloadUrl` não são mais publicamente acessíveis (blob é
+// `access: "private"`) — servem só de referência legada. `pathname` é o
+// que a função que cria o registro dono (tarefa, material, etc.) usa pra
+// registrar o arquivo em `private_files` e liberar leitura autorizada via
+// `/api/arquivo/$fileId`.
+export type UploadedFile = {
+  url: string;
+  fileName: string;
+  pathname: string;
+  contentType: string | null;
+};
 export type UploadPurpose = "assignment" | "material" | "library" | "video" | "slide";
 
 type ProgressHandler = (percent: number) => void;
@@ -25,11 +35,16 @@ export async function uploadFile(
   const progress = typeof purposeOrProgress === "function" ? purposeOrProgress : onProgress;
 
   const blob = await upload(file.name, file, {
-    access: "public",
+    access: "private",
     handleUploadUrl: "/api/blob/upload",
     clientPayload: JSON.stringify({ purpose }),
     multipart: true,
     onUploadProgress: progress ? ({ percentage }) => progress(percentage) : undefined,
   });
-  return { url: blob.url, fileName: file.name };
+  return {
+    url: blob.url,
+    fileName: file.name,
+    pathname: blob.pathname,
+    contentType: blob.contentType ?? null,
+  };
 }

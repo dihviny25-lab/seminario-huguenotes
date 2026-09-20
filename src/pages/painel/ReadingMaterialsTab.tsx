@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BookOpen, Download, Loader2, Pencil, Plus, Share2, Trash2 } from "lucide-react";
+import { BookOpen, Loader2, Pencil, Plus, Share2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { PrivateFileLink } from "@/components/PrivateFileLink";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -103,15 +104,12 @@ export function ReadingMaterialsTab({ disciplineId }: { disciplineId: string }) 
                     {material.description}
                   </span>
                 ) : null}
-                <a
-                  href={material.fileUrl}
-                  target="_blank"
-                  rel="noreferrer"
+                <PrivateFileLink
+                  fileId={material.fileId}
+                  fileUrl={material.fileUrl}
+                  fileName={material.fileName}
                   className="mt-1 inline-flex items-center gap-1 text-xs text-primary hover:underline"
-                >
-                  <Download className="size-3.5 shrink-0" aria-hidden />
-                  {material.fileName}
-                </a>
+                />
               </span>
               <div className="flex shrink-0 flex-col gap-1">
                 <Button
@@ -284,7 +282,7 @@ function CreateMaterialDialog({
       if (!file) throw new Error("Escolha um arquivo.");
       setUploading(true);
       try {
-        const uploaded = await uploadFile(file);
+        const uploaded = await uploadFile(file, "material");
         return createMaterialFn({
           data: {
             disciplineId,
@@ -292,6 +290,8 @@ function CreateMaterialDialog({
             description: description || undefined,
             fileUrl: uploaded.url,
             fileName: uploaded.fileName,
+            filePathname: uploaded.pathname,
+            fileContentType: uploaded.contentType ?? undefined,
           },
         });
       } finally {

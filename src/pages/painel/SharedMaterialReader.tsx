@@ -5,6 +5,7 @@ import { ArrowLeft, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { PainelShell } from "@/components/painel/PainelShell";
+import { PrivateDocumentViewer } from "@/components/PrivateDocumentViewer";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,7 +16,6 @@ import {
   listMaterialCommentsFn,
   listSharedWithMeFn,
 } from "@/functions/materialSharing";
-import { getEmbeddableViewerUrl } from "@/lib/documentViewer";
 
 function commentsKey(materialId: string) {
   return ["material-comments", materialId] as const;
@@ -84,8 +84,10 @@ export function SharedMaterialReader({ materialId }: { materialId: string }) {
       ) : (
         <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
           <div className="overflow-hidden rounded-md border border-border/70 bg-card/70 shadow-soft">
-            <iframe
-              src={getEmbeddableViewerUrl(material.fileUrl)}
+            <PrivateDocumentViewer
+              fileId={material.fileId}
+              fileUrl={material.fileUrl}
+              fileName={material.fileName}
               title={material.title}
               className="h-[70vh] w-full"
             />

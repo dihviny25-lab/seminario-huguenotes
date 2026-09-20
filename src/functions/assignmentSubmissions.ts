@@ -16,6 +16,7 @@ import {
   grades,
 } from "@/server/db/schema";
 import { finalizeAssignmentSubmission } from "@/server/assignments/scoring";
+import { registerPrivateFile } from "@/server/files/privateFileAccess";
 
 export type AvailableAssignment = {
   id: string;
@@ -188,6 +189,7 @@ export type MySubmission = {
   textContent: string | null;
   fileUrl: string | null;
   fileName: string | null;
+  fileId: string | null;
   submittedAt: string | null;
   feedback: string | null;
   score: string | null;
@@ -288,6 +290,7 @@ export const getMySubmissionFn = createServerFn({ method: "GET" })
       textContent: submission?.textContent ?? null,
       fileUrl: submission?.fileUrl ?? null,
       fileName: submission?.fileName ?? null,
+      fileId: submission?.fileId ?? null,
       submittedAt: submission?.submittedAt ? submission.submittedAt.toISOString() : null,
       feedback: submission?.feedback ?? null,
       score: grade?.score ?? null,
@@ -302,6 +305,10 @@ const submitSchema = z
     textContent: z.string().trim().optional(),
     fileUrl: z.string().trim().url().optional(),
     fileName: z.string().trim().optional(),
+    // Presentes só quando um arquivo novo foi subido nesta chamada — vêm
+    // do resultado de `uploadFile` (Blob `access: "private"`).
+    filePathname: z.string().trim().optional(),
+    fileContentType: z.string().trim().optional(),
   })
   .refine((data) => Boolean(data.textContent) || Boolean(data.fileUrl), {
     message: "Escreva uma resposta ou anexe um arquivo.",
@@ -336,7 +343,7 @@ export const submitAssignmentFn = createServerFn({ method: "POST" })
       throw new Error("Essa tarefa já foi corrigida — não é mais possível reenviar.");
     }
 
-    await db
+    const [submission] = await db
       .insert(assignmentSubmissions)
       .values({
         assignmentId: data.assignmentId,
@@ -351,9 +358,26 @@ export const submitAssignmentFn = createServerFn({ method: "POST" })
           textContent: data.textContent || null,
           fileUrl: data.fileUrl || null,
           fileName: data.fileName || null,
+          fileId: null,
           submittedAt: new Date(),
         },
+      })
+      .returning({ id: assignmentSubmissions.id });
+
+    if (data.filePathname && data.fileName) {
+      const fileId = await registerPrivateFile({
+        pathname: data.filePathname,
+        originalName: data.fileName,
+        contentType: data.fileContentType ?? null,
+        ownerType: "assignment_submission",
+        ownerId: submission.id,
       });
+      await db
+        .update(assignmentSubmissions)
+        .set({ fileId })
+        .where(eq(assignmentSubmissions.id, submission.id));
+    }
+
     await logAudit("tarefa.entregar", `Entregou a tarefa "${assignment.title}".`);
   });
 

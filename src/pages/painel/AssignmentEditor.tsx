@@ -60,6 +60,7 @@ import {
   type AssignmentDetail,
   type SubmissionRow,
 } from "@/functions/assignments";
+import { usePrivateFileUrl } from "@/hooks/usePrivateFileUrl";
 
 function assignmentKey(assignmentId: string) {
   return ["assignment-detail", assignmentId] as const;
@@ -437,6 +438,7 @@ function SubmissionCard({
     textContent: string | null;
     fileUrl: string | null;
     fileName: string | null;
+    fileId: string | null;
     submittedAt: string | null;
     feedback: string | null;
     gradedAt: string | null;
@@ -446,6 +448,7 @@ function SubmissionCard({
   const queryClient = useQueryClient();
   const [score, setScore] = useState(row.score ?? "");
   const [feedback, setFeedback] = useState(row.feedback ?? "");
+  const submissionFile = usePrivateFileUrl(row.fileId);
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -487,9 +490,9 @@ function SubmissionCard({
               {row.textContent}
             </p>
           ) : null}
-          {row.fileUrl ? (
+          {row.fileId && submissionFile.url ? (
             <a
-              href={row.fileUrl}
+              href={submissionFile.url}
               target="_blank"
               rel="noreferrer"
               className="mt-3 inline-flex items-center gap-1 text-sm text-primary hover:underline"
@@ -497,6 +500,10 @@ function SubmissionCard({
               <Download className="size-3.5 shrink-0" aria-hidden />
               {row.fileName}
             </a>
+          ) : !row.fileId && row.fileUrl ? (
+            <p className="mt-3 text-xs text-muted-foreground">
+              Arquivo indisponível para migração.
+            </p>
           ) : null}
           <p className="mt-2 text-xs text-muted-foreground">
             Entregue em{" "}

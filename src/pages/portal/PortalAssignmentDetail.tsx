@@ -28,6 +28,7 @@ import {
   submitAssignmentAnswersFn,
   submitAssignmentFn,
 } from "@/functions/assignmentSubmissions";
+import { usePrivateFileUrl } from "@/hooks/usePrivateFileUrl";
 import { uploadFile } from "@/lib/blobUpload";
 
 function submissionKey(assignmentId: string) {
@@ -44,6 +45,7 @@ export function PortalAssignmentDetail({ assignmentId }: { assignmentId: string 
   const [file, setFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const submissionFile = usePrivateFileUrl(submission?.fileId);
 
   const submitAnswersMutation = useMutation({
     mutationFn: () =>
@@ -66,7 +68,7 @@ export function PortalAssignmentDetail({ assignmentId }: { assignmentId: string 
 
   const mutation = useMutation({
     mutationFn: async () => {
-      let uploaded: { url: string; fileName: string } | null = null;
+      let uploaded: Awaited<ReturnType<typeof uploadFile>> | null = null;
       if (file) {
         setUploadProgress(0);
         try {
@@ -81,6 +83,8 @@ export function PortalAssignmentDetail({ assignmentId }: { assignmentId: string 
           textContent: textContent || undefined,
           fileUrl: uploaded?.url,
           fileName: uploaded?.fileName,
+          filePathname: uploaded?.pathname,
+          fileContentType: uploaded?.contentType ?? undefined,
         },
       });
     },
@@ -125,16 +129,24 @@ export function PortalAssignmentDetail({ assignmentId }: { assignmentId: string 
             </p>
           ) : null}
           <p className="mt-4 text-xs text-muted-foreground">Sua entrega já foi corrigida.</p>
-          {submission.fileUrl ? (
-            <a
-              href={submission.fileUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"
-            >
-              <Download className="size-3.5 shrink-0" aria-hidden />
-              {submission.fileName}
-            </a>
+          {submission.fileId ? (
+            submissionFile.url ? (
+              <a
+                href={submissionFile.url}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+              >
+                <Download className="size-3.5 shrink-0" aria-hidden />
+                {submission.fileName}
+              </a>
+            ) : (
+              <p className="mt-2 text-xs text-muted-foreground">Carregando arquivo…</p>
+            )
+          ) : submission.fileUrl ? (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Arquivo indisponível para migração.
+            </p>
           ) : null}
           {submission.textContent ? (
             <p className="mt-2 whitespace-pre-wrap rounded-md bg-background/60 p-3 text-sm text-foreground">
@@ -243,9 +255,9 @@ export function PortalAssignmentDetail({ assignmentId }: { assignmentId: string 
                   </p>
                 </div>
               ) : null}
-              {submission.fileUrl ? (
+              {submission.fileId && submissionFile.url ? (
                 <a
-                  href={submission.fileUrl}
+                  href={submissionFile.url}
                   target="_blank"
                   rel="noreferrer"
                   className="mt-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"
@@ -253,6 +265,10 @@ export function PortalAssignmentDetail({ assignmentId }: { assignmentId: string 
                   <Download className="size-3.5 shrink-0" aria-hidden />
                   Arquivo já enviado: {submission.fileName}
                 </a>
+              ) : !submission.fileId && submission.fileUrl ? (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Arquivo enviado anteriormente indisponível para migração — envie de novo.
+                </p>
               ) : null}
             </TabsContent>
           </Tabs>

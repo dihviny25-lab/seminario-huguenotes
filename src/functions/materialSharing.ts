@@ -135,6 +135,7 @@ export type SharedMaterial = {
   description: string | null;
   fileUrl: string;
   fileName: string;
+  fileId: string | null;
   sharedByName: string;
   /** Quando o compartilhamento foi feito (não a criação da apostila). */
   sharedAt: string;
@@ -170,6 +171,7 @@ export const listSharedWithMeFn = createServerFn({ method: "GET" }).handler(
           description: readingMaterials.description,
           fileUrl: readingMaterials.fileUrl,
           fileName: readingMaterials.fileName,
+          fileId: readingMaterials.fileId,
         })
         .from(readingMaterials)
         .innerJoin(disciplines, eq(disciplines.id, readingMaterials.disciplineId))
@@ -193,6 +195,7 @@ export const listSharedWithMeFn = createServerFn({ method: "GET" }).handler(
         description: material?.description ?? null,
         fileUrl: material?.fileUrl ?? "",
         fileName: material?.fileName ?? "",
+        fileId: material?.fileId ?? null,
         sharedByName: sharedBy?.name ?? "Professor",
         sharedAt: share.createdAt.toISOString(),
       };

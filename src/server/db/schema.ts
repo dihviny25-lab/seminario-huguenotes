@@ -35,6 +35,28 @@ export const noteKind = pgEnum("note_kind", ["note", "question"]);
 export const auditActorType = pgEnum("audit_actor_type", ["teacher", "student"]);
 export const pushOwnerType = pgEnum("push_owner_type", ["teacher", "student"]);
 export const assignmentKind = pgEnum("assignment_kind", ["open", "multiple_choice"]);
+export const privateFileOwnerType = pgEnum("private_file_owner_type", [
+  "assignment_submission",
+  "reading_material",
+  "library_book",
+  "presentation_slide",
+  "video_lesson",
+]);
+
+// Referência de arquivo privado no Vercel Blob (access: "private"). O objeto só é
+// acessível via /api/arquivo/$fileId, depois de checar canReadPrivateFile — nunca pela
+// URL do Blob diretamente. ownerType/ownerId são polimórficos (apontam pra linha
+// dona do arquivo); não têm FK porque cada dono está em tabela diferente.
+export const privateFiles = pgTable("private_files", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  blobPath: text("blob_path").notNull(),
+  originalName: text("original_name").notNull(),
+  contentType: text("content_type"),
+  ownerType: privateFileOwnerType("owner_type").notNull(),
+  ownerId: uuid("owner_id").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
+});
 
 export const teachers = pgTable("teachers", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -181,6 +203,9 @@ export const videoLessons = pgTable("video_lessons", {
   source: videoSource("source").notNull().default("youtube"),
   youtubeUrl: text("youtube_url"),
   fileUrl: text("file_url"),
+  // Anulável: registros antigos ficam sem file_id até migração manual do blob
+  // legado (ver docs/superpowers/plans/2026-09-20-lgpd-adequacao.md, Task 1).
+  fileId: uuid("file_id").references(() => privateFiles.id, { onDelete: "set null" }),
   sequence: integer("sequence").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -365,6 +390,7 @@ export const readingMaterials = pgTable("reading_materials", {
   description: text("description"),
   fileUrl: text("file_url").notNull(),
   fileName: text("file_name").notNull(),
+  fileId: uuid("file_id").references(() => privateFiles.id, { onDelete: "set null" }),
   sequence: integer("sequence").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -414,6 +440,7 @@ export const presentationSlides = pgTable("presentation_slides", {
   description: text("description"),
   fileUrl: text("file_url").notNull(),
   fileName: text("file_name").notNull(),
+  fileId: uuid("file_id").references(() => privateFiles.id, { onDelete: "set null" }),
   sequence: integer("sequence").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -450,6 +477,7 @@ export const assignmentSubmissions = pgTable(
     textContent: text("text_content"),
     fileUrl: text("file_url"),
     fileName: text("file_name"),
+    fileId: uuid("file_id").references(() => privateFiles.id, { onDelete: "set null" }),
     submittedAt: timestamp("submitted_at", { withTimezone: true }).notNull().defaultNow(),
     feedback: text("feedback"),
     gradedAt: timestamp("graded_at", { withTimezone: true }),
@@ -584,6 +612,7 @@ export const libraryBooks = pgTable("library_books", {
   description: text("description"),
   fileUrl: text("file_url").notNull(),
   fileName: text("file_name").notNull(),
+  fileId: uuid("file_id").references(() => privateFiles.id, { onDelete: "set null" }),
   uploadedById: uuid("uploaded_by_id").references(() => teachers.id, { onDelete: "set null" }),
   uploadedByName: text("uploaded_by_name").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

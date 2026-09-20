@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Loader2, Plus, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
 
+import { PrivateVideoPlayer } from "@/components/PrivateVideoPlayer";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -95,7 +96,10 @@ export function VideoLessonsTab({ disciplineId }: { disciplineId: string }) {
                 className="animate-in overflow-hidden rounded-md border border-border/70 bg-card/70 shadow-soft fade-in slide-in-from-top-1 duration-200"
               >
                 {video.source === "upload" && video.fileUrl ? (
-                  <video src={video.fileUrl} controls className="aspect-video w-full bg-black" />
+                  <PrivateVideoPlayer
+                    fileId={video.fileId}
+                    className="aspect-video w-full bg-black"
+                  />
                 ) : youtubeId ? (
                   <a href={video.youtubeUrl!} target="_blank" rel="noreferrer" className="block">
                     <img
@@ -205,9 +209,17 @@ function CreateVideoDialog({
       if (!file) throw new Error("Escolha um arquivo de vídeo.");
       setUploadProgress(0);
       try {
-        const uploaded = await uploadFile(file, setUploadProgress);
+        const uploaded = await uploadFile(file, "video", setUploadProgress);
         return createVideoLessonFn({
-          data: { disciplineId, title, source, fileUrl: uploaded.url },
+          data: {
+            disciplineId,
+            title,
+            source,
+            fileUrl: uploaded.url,
+            fileName: uploaded.fileName,
+            filePathname: uploaded.pathname,
+            fileContentType: uploaded.contentType ?? undefined,
+          },
         });
       } finally {
         setUploadProgress(null);
