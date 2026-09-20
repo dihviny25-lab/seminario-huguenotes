@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -49,6 +49,7 @@ import {
   setGradeFn,
 } from "@/functions/grades";
 import { computeWeightedAverage } from "@/lib/grades";
+import { createKeyedSerialExecutor, replaceValueIfLatestRevision } from "@/lib/optimisticState";
 
 function gradesKey(disciplineId: string) {
   return ["grades-board", disciplineId] as const;
@@ -85,26 +86,51 @@ export function GradesTab({ disciplineId }: { disciplineId: string }) {
   // isso pra dar pra reverter visualmente se o salvamento falhar (sem isso o campo
   // ficava mostrando o número digitado mesmo quando o servidor rejeitava a nota).
   const [localScores, setLocalScores] = useState<Record<string, string>>({});
+  const gradeRevisions = useRef<Record<string, number>>({});
+  const lastQueuedScores = useRef<Record<string, { revision: number; value: string }>>({});
+  const gradeSaveQueue = useRef<ReturnType<typeof createKeyedSerialExecutor> | null>(null);
+  if (!gradeSaveQueue.current) gradeSaveQueue.current = createKeyedSerialExecutor();
 
   const gradeMutation = useMutation({
-    mutationFn: (input: { assessmentId: string; studentId: string; score: number; key: string }) =>
-      setGradeFn({ data: { disciplineId, ...input } }),
-    onSuccess: (_, variables) => {
-      setLocalScores((prev) => {
-        const next = { ...prev };
-        delete next[variables.key];
-        return next;
-      });
-      invalidate();
+    mutationFn: (input: {
+      assessmentId: string;
+      studentId: string;
+      score: number;
+      key: string;
+      revision: number;
+    }) => {
+      const { key: _key, revision: _revision, ...grade } = input;
+      return gradeSaveQueue.current!(input.key, () =>
+        setGradeFn({ data: { disciplineId, ...grade } }),
+      );
+    },
+    onSuccess: async (_, variables) => {
+      await invalidate();
+      setLocalScores((prev) =>
+        replaceValueIfLatestRevision(
+          prev,
+          variables.key,
+          variables.revision,
+          gradeRevisions.current[variables.key] ?? 0,
+        ),
+      );
+      if ((gradeRevisions.current[variables.key] ?? 0) === variables.revision) {
+        delete lastQueuedScores.current[variables.key];
+      }
     },
     onError: (_, variables) => {
       // Rollback: o campo volta a refletir o que está salvo no servidor —
       // sem isso a nota parecia salva mesmo tendo falhado.
-      setLocalScores((prev) => {
-        const next = { ...prev };
-        delete next[variables.key];
-        return next;
-      });
+      setLocalScores((prev) =>
+        replaceValueIfLatestRevision(
+          prev,
+          variables.key,
+          variables.revision,
+          gradeRevisions.current[variables.key] ?? 0,
+        ),
+      );
+      if ((gradeRevisions.current[variables.key] ?? 0) !== variables.revision) return;
+      delete lastQueuedScores.current[variables.key];
       toast.error("Não foi possível salvar a nota. Confira e tente de novo.");
     },
   });
@@ -204,7 +230,9 @@ export function GradesTab({ disciplineId }: { disciplineId: string }) {
                         const savedValue = gradeByKey.get(key);
                         const displayValue = localScores[key] ?? savedValue ?? "";
                         const failed =
-                          gradeMutation.isError && gradeMutation.variables?.key === key;
+                          gradeMutation.isError &&
+                          gradeMutation.variables?.key === key &&
+                          gradeMutation.variables.revision === (gradeRevisions.current[key] ?? 0);
                         return (
                           <TableCell key={a.id} className="text-center">
                             <Input
@@ -217,19 +245,30 @@ export function GradesTab({ disciplineId }: { disciplineId: string }) {
                                   ? "mx-auto h-8 w-20 border-destructive text-center"
                                   : "mx-auto h-8 w-20 text-center"
                               }
-                              onChange={(event) =>
-                                setLocalScores((prev) => ({ ...prev, [key]: event.target.value }))
-                              }
+                              onChange={(event) => {
+                                gradeRevisions.current[key] =
+                                  (gradeRevisions.current[key] ?? 0) + 1;
+                                setLocalScores((prev) => ({ ...prev, [key]: event.target.value }));
+                              }}
                               onBlur={(event) => {
                                 const raw = event.target.value;
-                                if (raw === String(savedValue ?? "")) return;
+                                const revision = gradeRevisions.current[key] ?? 0;
+                                const lastQueued = lastQueuedScores.current[key];
+                                if (
+                                  (!lastQueued && raw === String(savedValue ?? "")) ||
+                                  (lastQueued?.value === raw && lastQueued.revision === revision)
+                                ) {
+                                  return;
+                                }
                                 const parsed = Number(raw);
                                 if (raw === "" || Number.isNaN(parsed)) return;
+                                lastQueuedScores.current[key] = { revision, value: raw };
                                 gradeMutation.mutate({
                                   assessmentId: a.id,
                                   studentId: student.id,
                                   score: parsed,
                                   key,
+                                  revision,
                                 });
                               }}
                             />
