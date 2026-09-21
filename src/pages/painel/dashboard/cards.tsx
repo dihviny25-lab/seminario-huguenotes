@@ -11,6 +11,7 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import type { TeacherDashboard } from "@/functions/teacherDashboard";
+import type { UpcomingLessonItem } from "@/lib/teacherDashboard";
 import { cn } from "@/lib/utils";
 
 import { DashboardCard } from "./DashboardCard";
@@ -40,6 +41,31 @@ function fmtDate(iso: string): string {
     day: "2-digit",
     month: "2-digit",
   });
+}
+
+/**
+ * Agrupa aulas consecutivas por disciplina — sem isso, uma disciplina com
+ * várias aulas seguidas repete o nome dela em cada linha da lista.
+ */
+function groupUpcomingLessons(
+  lessons: UpcomingLessonItem[],
+): Array<{ disciplineId: string; disciplineName: string; lessons: UpcomingLessonItem[] }> {
+  const groups: Array<{
+    disciplineId: string;
+    disciplineName: string;
+    lessons: UpcomingLessonItem[];
+  }> = [];
+  for (const lesson of lessons) {
+    const group = groups.find((g) => g.disciplineId === lesson.disciplineId);
+    if (group) group.lessons.push(lesson);
+    else
+      groups.push({
+        disciplineId: lesson.disciplineId,
+        disciplineName: lesson.disciplineName,
+        lessons: [lesson],
+      });
+  }
+  return groups;
 }
 
 const groupHeadingClass = "mb-3 font-display text-lg font-semibold text-foreground";
@@ -335,27 +361,31 @@ export function InfoCards({
             isEmpty={!d || d.upcomingLessons.length === 0}
             emptyLabel="Nenhuma aula agendada à frente."
           >
-            {d?.upcomingLessons.map((item) => (
-              <Link
-                key={`${item.disciplineId}-${item.sequence}`}
-                to="/painel/disciplinas/$disciplineId"
-                params={{ disciplineId: item.disciplineId }}
-                className={INFO_ITEM_CLASS}
-              >
-                <CalendarRange
-                  className="mt-0.5 size-4 shrink-0 text-muted-foreground"
-                  aria-hidden
-                />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-medium text-foreground">
-                    {item.disciplineName}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    Aula {item.sequence} · {fmtDate(item.date)}
-                  </span>
-                </span>
-              </Link>
-            ))}
+            {d
+              ? groupUpcomingLessons(d.upcomingLessons).map((group) => (
+                  <Link
+                    key={group.disciplineId}
+                    to="/painel/disciplinas/$disciplineId"
+                    params={{ disciplineId: group.disciplineId }}
+                    className={INFO_ITEM_CLASS}
+                  >
+                    <CalendarRange
+                      className="mt-0.5 size-4 shrink-0 text-muted-foreground"
+                      aria-hidden
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium text-foreground">
+                        {group.disciplineName}
+                      </span>
+                      <span className="block text-xs text-muted-foreground">
+                        {group.lessons
+                          .map((lesson) => `Aula ${lesson.sequence} · ${fmtDate(lesson.date)}`)
+                          .join(" · ")}
+                      </span>
+                    </span>
+                  </Link>
+                ))
+              : null}
           </DashboardCard>
         </div>
       </div>
