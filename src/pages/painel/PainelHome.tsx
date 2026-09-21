@@ -41,22 +41,6 @@ export function PainelHome() {
     queryFn: () => listMyDisciplinesFn(),
   });
 
-  const allClear =
-    !loadingDashboard &&
-    dashboard !== undefined &&
-    dashboard.counts.pendingGrading === 0 &&
-    dashboard.counts.endingDisciplines === 0 &&
-    dashboard.counts.atRiskStudents === 0 &&
-    dashboard.counts.lessonsWithoutAttendance === 0 &&
-    dashboard.materialGaps.length === 0 &&
-    dashboard.pendingGrading.length === 0 &&
-    dashboard.missingGrades.length === 0 &&
-    dashboard.missingAttendance.length === 0 &&
-    dashboard.endingDisciplines.length === 0 &&
-    dashboard.forum.length === 0 &&
-    dashboard.upcomingLessons.length === 0 &&
-    dashboard.atRiskStudents.length === 0;
-
   const pendingCount = dashboard
     ? dashboard.counts.pendingGrading +
       dashboard.counts.endingDisciplines +
@@ -103,12 +87,12 @@ export function PainelHome() {
             isLoading={loadingDashboard}
           />
 
-          {allClear ? null : (
-            <div className="mt-8 space-y-10">
+          <div className="mt-8 space-y-10">
+            {loadingDashboard || pendingCount > 0 ? (
               <ActionCards data={dashboard} isLoading={loadingDashboard} />
-              <InfoCards data={dashboard} isLoading={loadingDashboard} />
-            </div>
-          )}
+            ) : null}
+            <InfoCards data={dashboard} isLoading={loadingDashboard} />
+          </div>
         </>
       )}
 
