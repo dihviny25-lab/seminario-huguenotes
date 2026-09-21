@@ -5,6 +5,7 @@ import { ArrowLeft, CheckCircle2, Download, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { PortalShell } from "@/components/portal/PortalShell";
+import { QuestionReview } from "@/components/QuestionReview";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -154,7 +155,17 @@ export function PortalAssignmentDetail({ assignmentId }: { assignmentId: string 
             </p>
           ) : null}
         </div>
-      ) : submission.kind === "multiple_choice" ? (
+      ) : null}
+
+      {isGraded && submission.kind === "multiple_choice" ? (
+        <div className="mt-4 grid gap-4">
+          {submission.questions.map((question, index) => (
+            <QuestionReview key={question.id} question={question} index={index} />
+          ))}
+        </div>
+      ) : null}
+
+      {isGraded ? null : submission.kind === "multiple_choice" ? (
         <div className="rounded-md border border-t-2 border-border/70 border-t-accent bg-card/70 p-5 shadow-soft">
           <div className="grid gap-4">
             {submission.questions.map((question, index) => (
