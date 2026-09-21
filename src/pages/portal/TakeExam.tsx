@@ -4,6 +4,7 @@ import { Link } from "@tanstack/react-router";
 import { CheckCircle2, Clock, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { QuestionReview } from "@/components/QuestionReview";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -171,20 +172,31 @@ export function TakeExam({ examId }: { examId: string }) {
 
   if (attempt.submitted) {
     return (
-      <div className="animate-in mx-auto max-w-2xl px-4 py-16 text-center fade-in zoom-in-95 duration-300 sm:px-6">
-        <CheckCircle2 className="mx-auto size-12 text-success" aria-hidden />
-        <h1 className="mt-4 font-display text-2xl font-semibold text-foreground">Prova enviada</h1>
-        <p className="mt-2 text-muted-foreground">{attempt.title}</p>
-        <p className="mt-4 font-display text-4xl font-semibold text-foreground">
-          {attempt.score === null ? "—" : Number(attempt.score).toFixed(1)}
-          <span className="text-lg text-muted-foreground">
-            {" "}
-            / {Number(attempt.maxScore).toFixed(1)}
-          </span>
-        </p>
+      <div className="mx-auto max-w-2xl px-4 py-16 sm:px-6">
+        <div className="animate-in text-center fade-in zoom-in-95 duration-300">
+          <CheckCircle2 className="mx-auto size-12 text-success" aria-hidden />
+          <h1 className="mt-4 font-display text-2xl font-semibold text-foreground">
+            Prova enviada
+          </h1>
+          <p className="mt-2 text-muted-foreground">{attempt.title}</p>
+          <p className="mt-4 font-display text-4xl font-semibold text-foreground">
+            {attempt.score === null ? "—" : Number(attempt.score).toFixed(1)}
+            <span className="text-lg text-muted-foreground">
+              {" "}
+              / {Number(attempt.maxScore).toFixed(1)}
+            </span>
+          </p>
+        </div>
+
+        <div className="mt-10 grid gap-4">
+          {attempt.questions.map((question, index) => (
+            <QuestionReview key={question.id} question={question} index={index} />
+          ))}
+        </div>
+
         <Link
           to="/portal/provas"
-          className="mt-6 inline-block text-sm font-medium text-accent hover:underline"
+          className="mt-8 block text-center text-sm font-medium text-accent hover:underline"
         >
           Voltar para Provas
         </Link>

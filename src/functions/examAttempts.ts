@@ -158,7 +158,9 @@ export type ExamAttemptState = {
     id: string;
     text: string;
     points: string;
-    options: Array<{ id: string; text: string }>;
+    // `isCorrect` só vem preenchido depois que a tentativa é finalizada —
+    // nunca durante a prova, pra não vazar o gabarito por inspeção de rede.
+    options: Array<{ id: string; text: string; isCorrect?: boolean }>;
     selectedOptionId: string | null;
   }>;
 };
@@ -195,6 +197,7 @@ async function buildAttemptState(examId: string, studentId: string): Promise<Exa
             id: examOptions.id,
             text: examOptions.text,
             questionId: examOptions.questionId,
+            isCorrect: examOptions.isCorrect,
           })
           .from(examOptions)
           .where(inArray(examOptions.questionId, questionIds))
@@ -206,6 +209,7 @@ async function buildAttemptState(examId: string, studentId: string): Promise<Exa
   ]);
 
   const deadline = computeExamDeadline(attempt.startedAt, exam.durationMinutes, exam.opensAt!);
+  const revealAnswers = attempt.submittedAt !== null;
 
   return {
     examId: exam.id,
@@ -225,7 +229,11 @@ async function buildAttemptState(examId: string, studentId: string): Promise<Exa
       points: q.points,
       options: optionRows
         .filter((o) => o.questionId === q.id)
-        .map((o) => ({ id: o.id, text: o.text })),
+        .map((o) => ({
+          id: o.id,
+          text: o.text,
+          ...(revealAnswers ? { isCorrect: o.isCorrect } : {}),
+        })),
       selectedOptionId: answerRows.find((a) => a.questionId === q.id)?.optionId ?? null,
     })),
   };

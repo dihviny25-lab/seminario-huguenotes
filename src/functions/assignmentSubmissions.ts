@@ -176,7 +176,9 @@ export type MySubmissionQuestion = {
   id: string;
   text: string;
   points: string;
-  options: Array<{ id: string; text: string }>;
+  // `isCorrect` só vem preenchido depois que a entrega é corrigida — nunca
+  // antes, pra não vazar o gabarito por inspeção de rede.
+  options: Array<{ id: string; text: string; isCorrect?: boolean }>;
   selectedOptionId: string | null;
 };
 
@@ -255,6 +257,7 @@ export const getMySubmissionFn = createServerFn({ method: "GET" })
                 id: assignmentOptions.id,
                 text: assignmentOptions.text,
                 questionId: assignmentOptions.questionId,
+                isCorrect: assignmentOptions.isCorrect,
               })
               .from(assignmentOptions)
               .where(inArray(assignmentOptions.questionId, questionIds))
@@ -270,13 +273,18 @@ export const getMySubmissionFn = createServerFn({ method: "GET" })
           : Promise.resolve([]),
       ]);
 
+      const revealAnswers = submission?.gradedAt != null;
       questions = questionRows.map((q) => ({
         id: q.id,
         text: q.text,
         points: q.points,
         options: optionRows
           .filter((o) => o.questionId === q.id)
-          .map((o) => ({ id: o.id, text: o.text })),
+          .map((o) => ({
+            id: o.id,
+            text: o.text,
+            ...(revealAnswers ? { isCorrect: o.isCorrect } : {}),
+          })),
         selectedOptionId: answerRows.find((a) => a.questionId === q.id)?.optionId ?? null,
       }));
     }
