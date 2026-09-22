@@ -222,7 +222,12 @@ const bulkCreateSchema = z.object({
   ),
 });
 
-export type BulkCreateResult = { created: number; updated: number; skipped: Array<string> };
+export type BulkCreateResult = {
+  created: number;
+  updated: number;
+  skipped: Array<string>;
+  emailConflicts: Array<string>;
+};
 
 /**
  * Importação por planilha: cria quem não existe (mesmo nome, sem diferenciar
@@ -235,13 +240,20 @@ export const bulkCreateStudentsFn = createServerFn({ method: "POST" })
     await requireAdminId();
 
     const existing = await db
-      .select({ id: students.id, name: students.name, phone: students.phone })
+      .select({ id: students.id, name: students.name, phone: students.phone, email: students.email })
       .from(students);
     const existingByName = new Map(
       existing.map((s) => [s.name.trim().toLowerCase(), { id: s.id, phone: s.phone }]),
     );
+    const existingEmails = new Set(
+      existing
+        .map((s) => s.email?.trim().toLowerCase())
+        .filter((email): email is string => Boolean(email)),
+    );
 
     const seenInBatch = new Set<string>();
+    const seenEmailsInBatch = new Set<string>();
+    const emailConflicts: Array<string> = [];
     const toInsert: Array<{ name: string; email: string | null; phone: string | null }> = [];
     const toUpdatePhone: Array<{ id: string; phone: string }> = [];
     const skipped: Array<string> = [];
@@ -262,7 +274,14 @@ export const bulkCreateStudentsFn = createServerFn({ method: "POST" })
       }
 
       seenInBatch.add(key);
-      toInsert.push({ name: row.name, email: row.email || null, phone: row.phone || null });
+      const email = row.email?.trim().toLowerCase() || null;
+      const emailTaken = email !== null && (existingEmails.has(email) || seenEmailsInBatch.has(email));
+      if (email && emailTaken) {
+        emailConflicts.push(row.name);
+      } else if (email) {
+        seenEmailsInBatch.add(email);
+      }
+      toInsert.push({ name: row.name, email: emailTaken ? null : email, phone: row.phone || null });
     }
 
     if (toInsert.length > 0) {
@@ -275,7 +294,10 @@ export const bulkCreateStudentsFn = createServerFn({ method: "POST" })
     const parts = [`Importou ${toInsert.length} aluno(s) por planilha`];
     if (toUpdatePhone.length > 0) parts.push(`preencheu WhatsApp de ${toUpdatePhone.length}`);
     if (skipped.length > 0) parts.push(`${skipped.length} já existiam`);
+    if (emailConflicts.length > 0) {
+      parts.push(`${emailConflicts.length} ficaram sem e-mail (já usado por outro aluno)`);
+    }
     await logAudit("aluno.importar", `${parts.join("; ")}.`);
 
-    return { created: toInsert.length, updated: toUpdatePhone.length, skipped };
+    return { created: toInsert.length, updated: toUpdatePhone.length, skipped, emailConflicts };
   });
