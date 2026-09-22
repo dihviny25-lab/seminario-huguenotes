@@ -13,10 +13,11 @@ type GetCommandOptionsWithHeaders = GetCommandOptions & { headers?: Record<strin
 /**
  * Única forma de ler um arquivo protegido. A store do Blob é `access:
  * "public"` (Vercel não permite misturar público/privado na mesma store),
- * mas a URL real nunca é exposta ao cliente — só essa rota, que revalida a
- * permissão a cada requisição (não confia em URL assinada guardada pelo
- * cliente) e nunca revela se o recurso existe quando o acesso é negado —
- * sempre 404, tanto pra "não existe" quanto pra "existe mas você não pode".
+ * mas a URL real nunca é exposta ao cliente — só essa rota, que checa a
+ * permissão a cada requisição que não vier do cache do navegador (não
+ * confia em URL assinada guardada pelo cliente) e nunca revela se o
+ * recurso existe quando o acesso é negado — sempre 404, tanto pra "não
+ * existe" quanto pra "existe mas você não pode".
  */
 export const Route = createFileRoute("/api/arquivo/$fileId")({
   server: {
@@ -50,7 +51,12 @@ export const Route = createFileRoute("/api/arquivo/$fileId")({
           headers: {
             "content-type": blob.blob.contentType || file.contentType || "application/octet-stream",
             "content-disposition": `inline; filename="${encodeURIComponent(file.originalName)}"`,
-            "cache-control": "private, max-age=0, no-store",
+            // `private` (só o navegador de quem acabou de ser autorizado guarda,
+            // nunca um CDN/proxy compartilhado) com um max-age real — sem isso,
+            // cada replay do mesmo vídeo baixa o arquivo inteiro de novo do Blob,
+            // o que estourou a cota gratuita de transferência em poucos dias.
+            // O conteúdo por fileId é imutável (reupload gera fileId novo).
+            "cache-control": "private, max-age=604800, immutable",
             "accept-ranges": "bytes",
             ...(contentRange ? { "content-range": contentRange } : {}),
             ...(contentLength ? { "content-length": contentLength } : {}),
