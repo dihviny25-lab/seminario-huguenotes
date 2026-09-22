@@ -99,7 +99,7 @@ export const disciplines = pgTable("disciplines", {
 export const students = pgTable("students", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
-  email: text("email"),
+  email: text("email").unique(),
   // Informações pessoais básicas — o próprio aluno preenche em "Minha conta".
   phone: text("phone"),
   birthDate: date("birth_date"),

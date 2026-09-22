@@ -6,6 +6,7 @@ import { logAudit } from "@/server/audit";
 import { requireAdminId, requireTeacherId } from "@/server/auth/guard";
 import { hashPassword } from "@/server/auth/password";
 import { db } from "@/server/db/client";
+import { isUniqueViolation } from "@/server/db/errors";
 import { students } from "@/server/db/schema";
 
 export type Student = {
@@ -57,12 +58,19 @@ export const createStudentFn = createServerFn({ method: "POST" })
   .validator(createSchema)
   .handler(async ({ data }) => {
     await requireAdminId();
-    const [row] = await db
-      .insert(students)
-      .values({ name: data.name, email: data.email || null, phone: data.phone?.trim() || null })
-      .returning({ id: students.id });
-    await logAudit("aluno.criar", `Cadastrou o aluno ${data.name}.`);
-    return row;
+    try {
+      const [row] = await db
+        .insert(students)
+        .values({ name: data.name, email: data.email || null, phone: data.phone?.trim() || null })
+        .returning({ id: students.id });
+      await logAudit("aluno.criar", `Cadastrou o aluno ${data.name}.`);
+      return row;
+    } catch (error) {
+      if (isUniqueViolation(error)) {
+        throw new Error("Já existe um aluno cadastrado com esse e-mail.");
+      }
+      throw error;
+    }
   });
 
 const updateSchema = z.object({
@@ -86,10 +94,17 @@ export const updateStudentFn = createServerFn({ method: "POST" })
   .validator(updateSchema)
   .handler(async ({ data }) => {
     await requireAdminId();
-    await db
-      .update(students)
-      .set({ name: data.name, email: data.email || null, phone: data.phone?.trim() || null })
-      .where(eq(students.id, data.id));
+    try {
+      await db
+        .update(students)
+        .set({ name: data.name, email: data.email || null, phone: data.phone?.trim() || null })
+        .where(eq(students.id, data.id));
+    } catch (error) {
+      if (isUniqueViolation(error)) {
+        throw new Error("Já existe um aluno cadastrado com esse e-mail.");
+      }
+      throw error;
+    }
   });
 
 const setScholarshipSchema = z.object({
