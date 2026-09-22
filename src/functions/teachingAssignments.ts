@@ -149,26 +149,29 @@ export const updateDisciplineTeacherFn = createServerFn({ method: "POST" })
     ]);
     if (discipline.teacherId === data.teacherId) return;
     const previousTeacher = await findTeacher(discipline.teacherId);
-    await db.transaction(async (tx) => {
-      // Uma troca do padrão não pode reescrever implicitamente o professor
-      // efetivo de aulas já ministradas. Congela nelas o padrão anterior.
-      if (discipline.teacherId !== null) {
-        await tx
-          .update(lessons)
-          .set({ teacherId: discipline.teacherId })
-          .where(
-            and(
-              eq(lessons.disciplineId, data.disciplineId),
-              isNotNull(lessons.givenAt),
-              isNull(lessons.teacherId),
-            ),
-          );
-      }
-      await tx
-        .update(disciplines)
-        .set({ teacherId: data.teacherId })
-        .where(eq(disciplines.id, data.disciplineId));
-    });
+    // O driver neon-http não suporta db.transaction(callback) — só db.batch
+    // com a lista de queries já montada (ver node_modules/drizzle-orm/neon-http).
+    const updateDisciplineQuery = db
+      .update(disciplines)
+      .set({ teacherId: data.teacherId })
+      .where(eq(disciplines.id, data.disciplineId));
+    // Uma troca do padrão não pode reescrever implicitamente o professor
+    // efetivo de aulas já ministradas. Congela nelas o padrão anterior.
+    if (discipline.teacherId !== null) {
+      const freezeLessonsQuery = db
+        .update(lessons)
+        .set({ teacherId: discipline.teacherId })
+        .where(
+          and(
+            eq(lessons.disciplineId, data.disciplineId),
+            isNotNull(lessons.givenAt),
+            isNull(lessons.teacherId),
+          ),
+        );
+      await db.batch([freezeLessonsQuery, updateDisciplineQuery]);
+    } else {
+      await updateDisciplineQuery;
+    }
     await logAudit(
       "disciplina.professor_alterado",
       `Alterou o professor padrão de ${discipline.name}: ${previousTeacher?.name ?? "não atribuído"} → ${teacher?.name ?? "não atribuído"}.`,
