@@ -31,12 +31,6 @@ export function PrivateVideoPlayer({
   }
 
   return (
-    <video
-      src={url}
-      controls
-      controlsList="nodownload"
-      className={className}
-      onEnded={onEnded}
-    />
+    <video src={url} controls controlsList="nodownload" className={className} onEnded={onEnded} />
   );
 }
