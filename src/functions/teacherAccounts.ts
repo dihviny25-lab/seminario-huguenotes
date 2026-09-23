@@ -6,6 +6,7 @@ import { logAudit } from "@/server/audit";
 import { requireAdminId, requireAdminOrSelf, requireTeacherId } from "@/server/auth/guard";
 import { hashPassword } from "@/server/auth/password";
 import { db } from "@/server/db/client";
+import { isUniqueViolation } from "@/server/db/errors";
 import { teachers } from "@/server/db/schema";
 
 export type TeacherAccount = {
@@ -15,15 +16,6 @@ export type TeacherAccount = {
   hasLogin: boolean;
   role: "admin" | "teacher";
 };
-
-function isUniqueViolation(error: unknown): boolean {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    (error as { code?: unknown }).code === "23505"
-  );
-}
 
 export const listTeacherAccountsFn = createServerFn({ method: "GET" }).handler(
   async (): Promise<Array<TeacherAccount>> => {

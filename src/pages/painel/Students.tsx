@@ -113,6 +113,9 @@ export function Students() {
       const partes = [`${result.created} importado(s)`];
       if (result.updated > 0) partes.push(`${result.updated} com WhatsApp preenchido`);
       if (result.skipped.length > 0) partes.push(`${result.skipped.length} já cadastrado(s)`);
+      if (result.emailConflicts.length > 0) {
+        partes.push(`${result.emailConflicts.length} sem e-mail (já usado por outro aluno)`);
+      }
       toast.success(`${partes.join(", ")}.`);
       await invalidate();
     },
