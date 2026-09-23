@@ -30,5 +30,7 @@ export function PrivateVideoPlayer({
     return <Skeleton className={className ?? "aspect-video w-full"} />;
   }
 
-  return <video src={url} controls className={className} onEnded={onEnded} />;
+  return (
+    <video src={url} controls controlsList="nodownload" className={className} onEnded={onEnded} />
+  );
 }
