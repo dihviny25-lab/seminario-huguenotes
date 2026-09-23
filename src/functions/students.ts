@@ -240,7 +240,12 @@ export const bulkCreateStudentsFn = createServerFn({ method: "POST" })
     await requireAdminId();
 
     const existing = await db
-      .select({ id: students.id, name: students.name, phone: students.phone, email: students.email })
+      .select({
+        id: students.id,
+        name: students.name,
+        phone: students.phone,
+        email: students.email,
+      })
       .from(students);
     const existingByName = new Map(
       existing.map((s) => [s.name.trim().toLowerCase(), { id: s.id, phone: s.phone }]),
@@ -275,7 +280,8 @@ export const bulkCreateStudentsFn = createServerFn({ method: "POST" })
 
       seenInBatch.add(key);
       const email = row.email?.trim().toLowerCase() || null;
-      const emailTaken = email !== null && (existingEmails.has(email) || seenEmailsInBatch.has(email));
+      const emailTaken =
+        email !== null && (existingEmails.has(email) || seenEmailsInBatch.has(email));
       if (email && emailTaken) {
         emailConflicts.push(row.name);
       } else if (email) {
