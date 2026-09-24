@@ -4,10 +4,16 @@ import { z } from "zod";
 
 import { extractYouTubeId } from "@/lib/youtube";
 import { logAudit } from "@/server/audit";
-import { requireAnyLogin, requireOwnDiscipline, requireStudentId } from "@/server/auth/guard";
+import {
+  requireAnyLogin,
+  requireOwnDiscipline,
+  requireStudentId,
+  requireTeacherId,
+} from "@/server/auth/guard";
 import { db } from "@/server/db/client";
 import { students, videoLessons, videoWatches } from "@/server/db/schema";
 import { registerPrivateFile } from "@/server/files/privateFileAccess";
+import { requireValidUploadOwnership } from "@/server/uploads/uploadToken";
 
 export type VideoLesson = {
   id: string;
@@ -86,10 +92,11 @@ const createSchema = z
     title: z.string().trim().min(1, "Informe um título."),
     source: z.enum(["youtube", "upload"]),
     youtubeUrl: z.string().trim().optional(),
-    fileUrl: z.string().trim().url().optional(),
+    fileUrl: z.string().trim().min(1).optional(),
     fileName: z.string().trim().optional(),
     filePathname: z.string().trim().optional(),
     fileContentType: z.string().trim().optional(),
+    uploadToken: z.string().trim().optional(),
   })
   .refine(
     (data) =>
@@ -102,6 +109,7 @@ const createSchema = z
 export const createVideoLessonFn = createServerFn({ method: "POST" })
   .validator(createSchema)
   .handler(async ({ data }) => {
+    const teacherId = await requireTeacherId();
     const discipline = await requireOwnDiscipline(data.disciplineId);
 
     const existing = await db
@@ -123,6 +131,13 @@ export const createVideoLessonFn = createServerFn({ method: "POST" })
       .returning({ id: videoLessons.id });
 
     if (data.source === "upload" && data.filePathname && data.fileName) {
+      if (!data.uploadToken) throw new Error("Envie o arquivo novamente.");
+      requireValidUploadOwnership({
+        token: data.uploadToken,
+        purpose: "video",
+        key: data.filePathname,
+        identityId: teacherId,
+      });
       const fileId = await registerPrivateFile({
         pathname: data.filePathname,
         originalName: data.fileName,
