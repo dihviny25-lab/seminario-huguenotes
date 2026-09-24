@@ -311,7 +311,7 @@ const submitSchema = z
   .object({
     assignmentId: z.string().uuid(),
     textContent: z.string().trim().optional(),
-    fileUrl: z.string().trim().url().optional(),
+    fileUrl: z.string().trim().min(1).optional(),
     fileName: z.string().trim().optional(),
     // Presentes só quando um arquivo novo foi subido nesta chamada — vêm
     // do resultado de `uploadFile`.

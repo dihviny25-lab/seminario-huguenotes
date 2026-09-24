@@ -7,14 +7,12 @@ import { assignmentSubmissions, privateFiles } from "@/server/db/schema";
 import { canReadFileRecord, type FileOwnerRecord, type FileOwnerType } from "./access";
 
 /**
- * Registra um arquivo (recém-subido ou legado já existente no Blob) como
- * dono de `ownerType`/`ownerId` e devolve o `id` do registro em
- * `private_files`, pra a chamadora gravar em `fileId` na tabela dona.
- * `pathname` aceita tanto um pathname relativo quanto a URL pública
- * completa — `get()` do SDK do Blob resolve os dois. Sempre cria um
- * registro novo (não faz upsert) — numa reedição, o registro antigo fica
- * órfão até uma rotina de retenção (fora do escopo desta tarefa); nunca
- * apagamos blob em lote aqui.
+ * Registra um arquivo (recém-subido) como dono de `ownerType`/`ownerId` e
+ * devolve o `id` do registro em `private_files`, pra a chamadora gravar em
+ * `fileId` na tabela dona. `pathname` é a chave do objeto no bucket R2.
+ * Sempre cria um registro novo (não faz upsert) — numa reedição, o
+ * registro antigo fica órfão até uma rotina de retenção (fora do escopo
+ * desta tarefa); nunca apagamos objeto em lote aqui.
  */
 export async function registerPrivateFile(input: {
   pathname: string;

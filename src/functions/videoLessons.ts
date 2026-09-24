@@ -86,7 +86,7 @@ const createSchema = z
     title: z.string().trim().min(1, "Informe um título."),
     source: z.enum(["youtube", "upload"]),
     youtubeUrl: z.string().trim().optional(),
-    fileUrl: z.string().trim().url().optional(),
+    fileUrl: z.string().trim().min(1).optional(),
     fileName: z.string().trim().optional(),
     filePathname: z.string().trim().optional(),
     fileContentType: z.string().trim().optional(),

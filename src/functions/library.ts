@@ -43,7 +43,7 @@ const createSchema = z.object({
   title: z.string().trim().min(1, "Informe o título."),
   author: z.string().trim().optional(),
   description: z.string().trim().optional(),
-  fileUrl: z.string().trim().url("URL de arquivo inválida."),
+  fileUrl: z.string().trim().min(1),
   fileName: z.string().trim().min(1),
   filePathname: z.string().trim().min(1),
   fileContentType: z.string().trim().optional(),

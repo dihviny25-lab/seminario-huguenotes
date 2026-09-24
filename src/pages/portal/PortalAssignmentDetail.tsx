@@ -82,7 +82,7 @@ export function PortalAssignmentDetail({ assignmentId }: { assignmentId: string 
         data: {
           assignmentId,
           textContent: textContent || undefined,
-          fileUrl: uploaded?.url,
+          fileUrl: uploaded?.pathname,
           fileName: uploaded?.fileName,
           filePathname: uploaded?.pathname,
           fileContentType: uploaded?.contentType ?? undefined,

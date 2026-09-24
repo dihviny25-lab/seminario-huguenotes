@@ -265,7 +265,7 @@ function CreateSlideDialog({
             disciplineId,
             title,
             description: description || undefined,
-            fileUrl: uploaded.url,
+            fileUrl: uploaded.pathname,
             fileName: uploaded.fileName,
             filePathname: uploaded.pathname,
             fileContentType: uploaded.contentType ?? undefined,

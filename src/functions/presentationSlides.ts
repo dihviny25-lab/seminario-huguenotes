@@ -48,7 +48,7 @@ const createSchema = z.object({
   disciplineId: z.string().uuid(),
   title: z.string().trim().min(1, "Informe um título."),
   description: z.string().trim().optional(),
-  fileUrl: z.string().trim().url("URL de arquivo inválida."),
+  fileUrl: z.string().trim().min(1),
   fileName: z
     .string()
     .trim()
