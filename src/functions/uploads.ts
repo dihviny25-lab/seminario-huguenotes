@@ -3,9 +3,10 @@ import { randomUUID } from "node:crypto";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-import { requireAnyLogin, requireTeacherId } from "@/server/auth/guard";
+import { requireAnyIdentity } from "@/server/auth/guard";
 import { createUploadUrl } from "@/server/storage/r2";
 import { getUploadPolicy } from "@/server/uploads/policy";
+import { signUploadToken } from "@/server/uploads/uploadToken";
 
 const requestSchema = z.object({
   purpose: z.enum(["assignment", "material", "library", "video", "slide"]),
@@ -28,10 +29,9 @@ export const createUploadUrlFn = createServerFn({ method: "POST" })
   .validator(requestSchema)
   .handler(async ({ data }) => {
     const policy = getUploadPolicy(data.purpose);
-    if (policy.requiresTeacher) {
-      await requireTeacherId();
-    } else {
-      await requireAnyLogin();
+    const identity = await requireAnyIdentity();
+    if (policy.requiresTeacher && identity.role !== "teacher") {
+      throw new Error("Ação restrita a professores.");
     }
 
     if (!policy.allowedContentTypes.includes(data.contentType)) {
@@ -47,6 +47,11 @@ export const createUploadUrlFn = createServerFn({ method: "POST" })
       contentType: data.contentType,
       contentLength: data.size,
     });
+    const uploadToken = signUploadToken({
+      identityId: identity.id,
+      purpose: data.purpose,
+      key,
+    });
 
-    return { uploadUrl, pathname: key };
+    return { uploadUrl, pathname: key, uploadToken };
   });

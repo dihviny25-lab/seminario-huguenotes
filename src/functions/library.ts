@@ -7,6 +7,7 @@ import { requireAdminOrSelf, requireAnyLogin, requireTeacherId } from "@/server/
 import { db } from "@/server/db/client";
 import { libraryBooks, teachers } from "@/server/db/schema";
 import { registerPrivateFile } from "@/server/files/privateFileAccess";
+import { requireValidUploadOwnership } from "@/server/uploads/uploadToken";
 
 export type LibraryBook = {
   id: string;
@@ -47,12 +48,19 @@ const createSchema = z.object({
   fileName: z.string().trim().min(1),
   filePathname: z.string().trim().min(1),
   fileContentType: z.string().trim().optional(),
+  uploadToken: z.string().trim().min(1),
 });
 
 export const createLibraryBookFn = createServerFn({ method: "POST" })
   .validator(createSchema)
   .handler(async ({ data }) => {
     const teacherId = await requireTeacherId();
+    requireValidUploadOwnership({
+      token: data.uploadToken,
+      purpose: "library",
+      key: data.filePathname,
+      identityId: teacherId,
+    });
     const [teacher] = await db
       .select({ name: teachers.name })
       .from(teachers)

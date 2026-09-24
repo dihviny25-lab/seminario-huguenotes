@@ -269,6 +269,7 @@ function CreateSlideDialog({
             fileName: uploaded.fileName,
             filePathname: uploaded.pathname,
             fileContentType: uploaded.contentType ?? undefined,
+            uploadToken: uploaded.uploadToken,
           },
         });
       } finally {

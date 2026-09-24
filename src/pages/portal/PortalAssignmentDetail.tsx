@@ -86,6 +86,7 @@ export function PortalAssignmentDetail({ assignmentId }: { assignmentId: string 
           fileName: uploaded?.fileName,
           filePathname: uploaded?.pathname,
           fileContentType: uploaded?.contentType ?? undefined,
+          uploadToken: uploaded?.uploadToken,
         },
       });
     },

@@ -3,10 +3,11 @@ import { asc, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { logAudit } from "@/server/audit";
-import { requireAnyLogin, requireOwnDiscipline } from "@/server/auth/guard";
+import { requireAnyLogin, requireOwnDiscipline, requireTeacherId } from "@/server/auth/guard";
 import { db } from "@/server/db/client";
 import { disciplines, readingMaterials } from "@/server/db/schema";
 import { registerPrivateFile } from "@/server/files/privateFileAccess";
+import { requireValidUploadOwnership } from "@/server/uploads/uploadToken";
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
@@ -50,12 +51,20 @@ const createSchema = z.object({
   fileName: z.string().trim().min(1),
   filePathname: z.string().trim().min(1),
   fileContentType: z.string().trim().optional(),
+  uploadToken: z.string().trim().min(1),
 });
 
 export const createMaterialFn = createServerFn({ method: "POST" })
   .validator(createSchema)
   .handler(async ({ data }) => {
+    const teacherId = await requireTeacherId();
     const discipline = await requireOwnDiscipline(data.disciplineId);
+    requireValidUploadOwnership({
+      token: data.uploadToken,
+      purpose: "material",
+      key: data.filePathname,
+      identityId: teacherId,
+    });
 
     const existing = await db
       .select({ sequence: readingMaterials.sequence })

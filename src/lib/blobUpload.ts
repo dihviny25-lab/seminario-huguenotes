@@ -8,6 +8,10 @@ export type UploadedFile = {
   fileName: string;
   pathname: string;
   contentType: string | null;
+  // Prova assinada de que foi esta identidade que pediu a URL de upload
+  // pra esse `pathname`/finalidade — as funções de registro (`submitAssignmentFn`
+  // e afins) exigem e conferem antes de gravar o arquivo em `private_files`.
+  uploadToken: string;
 };
 export type UploadPurpose = "assignment" | "material" | "library" | "video" | "slide";
 
@@ -32,7 +36,7 @@ export async function uploadFile(
     explicitPurpose ?? (file.type.startsWith("video/") ? "video" : "assignment");
   const progress = typeof purposeOrProgress === "function" ? purposeOrProgress : onProgress;
 
-  const { uploadUrl, pathname } = await createUploadUrlFn({
+  const { uploadUrl, pathname, uploadToken } = await createUploadUrlFn({
     data: {
       purpose,
       fileName: file.name,
@@ -43,7 +47,7 @@ export async function uploadFile(
 
   await putWithProgress(uploadUrl, file, progress);
 
-  return { fileName: file.name, pathname, contentType: file.type || null };
+  return { fileName: file.name, pathname, contentType: file.type || null, uploadToken };
 }
 
 /** `fetch` não expõe progresso de upload — usa `XMLHttpRequest` só por isso. */

@@ -17,6 +17,7 @@ import {
 } from "@/server/db/schema";
 import { finalizeAssignmentSubmission } from "@/server/assignments/scoring";
 import { registerPrivateFile } from "@/server/files/privateFileAccess";
+import { requireValidUploadOwnership } from "@/server/uploads/uploadToken";
 
 export type AvailableAssignment = {
   id: string;
@@ -317,6 +318,7 @@ const submitSchema = z
     // do resultado de `uploadFile`.
     filePathname: z.string().trim().optional(),
     fileContentType: z.string().trim().optional(),
+    uploadToken: z.string().trim().optional(),
   })
   .refine((data) => Boolean(data.textContent) || Boolean(data.fileUrl), {
     message: "Escreva uma resposta ou anexe um arquivo.",
@@ -373,6 +375,13 @@ export const submitAssignmentFn = createServerFn({ method: "POST" })
       .returning({ id: assignmentSubmissions.id });
 
     if (data.filePathname && data.fileName) {
+      if (!data.uploadToken) throw new Error("Envie o arquivo novamente.");
+      requireValidUploadOwnership({
+        token: data.uploadToken,
+        purpose: "assignment",
+        key: data.filePathname,
+        identityId: studentId,
+      });
       const fileId = await registerPrivateFile({
         pathname: data.filePathname,
         originalName: data.fileName,
