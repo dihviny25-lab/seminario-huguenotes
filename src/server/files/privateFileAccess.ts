@@ -1,3 +1,4 @@
+import { del } from "@vercel/blob";
 import { eq } from "drizzle-orm";
 
 import type { AnyIdentity } from "@/server/auth/guard";
@@ -80,6 +81,35 @@ export async function loadPrivateFile(fileId: string): Promise<PrivateFileRow | 
     .limit(1);
   if (!row || row.deletedAt) return null;
   return row;
+}
+
+/**
+ * Apaga um arquivo privado de verdade — chamar sempre que a linha dona
+ * (apostila, slide, vídeo-aula, livro) for apagada. Marca `deleted_at` (pra
+ * `loadPrivateFile`/`canReadPrivateFile` negarem acesso imediatamente,
+ * mesmo se o `del` abaixo demorar ou falhar) e remove o objeto do Blob.
+ * `fileId` nulo é registro legado sem migração — não há blob desta
+ * aplicação pra apagar, só ignora. Falha do `del` (rede, objeto já
+ * removido) não impede a exclusão do conteúdo no app — fica só um aviso no
+ * log; um blob órfão remanescente é bem menos grave que travar o "apagar"
+ * por causa de uma falha transitória do storage.
+ */
+export async function deletePrivateFile(fileId: string | null): Promise<void> {
+  if (!fileId) return;
+  const [row] = await db
+    .select({ blobPath: privateFiles.blobPath })
+    .from(privateFiles)
+    .where(eq(privateFiles.id, fileId))
+    .limit(1);
+  if (!row) return;
+
+  await db.update(privateFiles).set({ deletedAt: new Date() }).where(eq(privateFiles.id, fileId));
+
+  try {
+    await del(row.blobPath);
+  } catch (error) {
+    console.warn(`Falha ao apagar blob "${row.blobPath}" (private_files.id=${fileId}):`, error);
+  }
 }
 
 /**

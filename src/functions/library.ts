@@ -6,7 +6,7 @@ import { logAudit } from "@/server/audit";
 import { requireAdminOrSelf, requireAnyLogin, requireTeacherId } from "@/server/auth/guard";
 import { db } from "@/server/db/client";
 import { libraryBooks, teachers } from "@/server/db/schema";
-import { registerPrivateFile } from "@/server/files/privateFileAccess";
+import { deletePrivateFile, registerPrivateFile } from "@/server/files/privateFileAccess";
 
 export type LibraryBook = {
   id: string;
@@ -130,5 +130,6 @@ export const deleteLibraryBookFn = createServerFn({ method: "POST" })
 
     await requireAdminOrSelf(book.uploadedById ?? "");
     await db.delete(libraryBooks).where(eq(libraryBooks.id, data.bookId));
+    await deletePrivateFile(book.fileId);
     await logAudit("biblioteca.apagar", `Apagou o livro "${book.title}" da biblioteca.`);
   });
