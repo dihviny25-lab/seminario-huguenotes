@@ -6,7 +6,7 @@ import { logAudit } from "@/server/audit";
 import { requireAnyLogin, requireOwnDiscipline } from "@/server/auth/guard";
 import { db } from "@/server/db/client";
 import { disciplines, readingMaterials } from "@/server/db/schema";
-import { registerPrivateFile } from "@/server/files/privateFileAccess";
+import { deletePrivateFile, registerPrivateFile } from "@/server/files/privateFileAccess";
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
@@ -119,11 +119,12 @@ export const deleteMaterialFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const discipline = await requireOwnDiscipline(data.disciplineId);
     const [material] = await db
-      .select({ title: readingMaterials.title })
+      .select({ title: readingMaterials.title, fileId: readingMaterials.fileId })
       .from(readingMaterials)
       .where(eq(readingMaterials.id, data.materialId))
       .limit(1);
     await db.delete(readingMaterials).where(eq(readingMaterials.id, data.materialId));
+    await deletePrivateFile(material?.fileId ?? null);
     await logAudit(
       "apostila.apagar",
       `Apagou o material "${material?.title ?? data.materialId}" em ${discipline.discipline}.`,

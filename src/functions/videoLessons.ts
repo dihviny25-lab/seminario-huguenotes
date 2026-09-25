@@ -7,7 +7,7 @@ import { logAudit } from "@/server/audit";
 import { requireAnyLogin, requireOwnDiscipline, requireStudentId } from "@/server/auth/guard";
 import { db } from "@/server/db/client";
 import { students, videoLessons, videoWatches } from "@/server/db/schema";
-import { registerPrivateFile } from "@/server/files/privateFileAccess";
+import { deletePrivateFile, registerPrivateFile } from "@/server/files/privateFileAccess";
 
 export type VideoLesson = {
   id: string;
@@ -147,11 +147,12 @@ export const deleteVideoLessonFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const discipline = await requireOwnDiscipline(data.disciplineId);
     const [video] = await db
-      .select({ title: videoLessons.title })
+      .select({ title: videoLessons.title, fileId: videoLessons.fileId })
       .from(videoLessons)
       .where(eq(videoLessons.id, data.videoId))
       .limit(1);
     await db.delete(videoLessons).where(eq(videoLessons.id, data.videoId));
+    await deletePrivateFile(video?.fileId ?? null);
     await logAudit(
       "video.apagar",
       `Apagou a vídeo-aula "${video?.title ?? data.videoId}" em ${discipline.discipline}.`,
