@@ -5,6 +5,7 @@ import { BookOpen, GraduationCap, Users } from "lucide-react";
 import { NotificationToggle } from "@/components/NotificationToggle";
 import { PainelShell } from "@/components/painel/PainelShell";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getCurrentTeacherFn } from "@/functions/auth";
 import { getTeacherDashboardFn } from "@/functions/teacherDashboard";
 import { listMyDisciplinesFn } from "@/functions/disciplines";
 import { ActionCards, InfoCards } from "@/pages/painel/dashboard/cards";
@@ -40,6 +41,11 @@ export function PainelHome() {
     queryKey: ["my-disciplines"],
     queryFn: () => listMyDisciplinesFn(),
   });
+  const { data: me } = useQuery({
+    queryKey: ["current-teacher"],
+    queryFn: () => getCurrentTeacherFn(),
+  });
+  const isAdmin = me?.role === "admin";
 
   const pendingCount = dashboard
     ? dashboard.counts.pendingGrading +
@@ -115,10 +121,12 @@ export function PainelHome() {
       </div>
 
       <h2 className="mt-10 font-display text-xl font-semibold tracking-tight text-foreground">
-        Minhas disciplinas
+        {isAdmin ? "Todas as disciplinas do seminário" : "Minhas disciplinas"}
       </h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        Lance notas e faltas nas disciplinas que você ministra.
+        {isAdmin
+          ? "Lance notas e faltas em qualquer disciplina, de qualquer professor."
+          : "Lance notas e faltas nas disciplinas que você ministra."}
       </p>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -150,14 +158,16 @@ export function PainelHome() {
                 </span>
                 <span className="block text-xs text-muted-foreground">
                   {discipline.module} · {discipline.term}
+                  {isAdmin ? ` · ${discipline.teacherName ?? "sem professor"}` : ""}
                 </span>
               </span>
             </Link>
           ))
         ) : (
           <p className="text-muted-foreground">
-            Nenhuma disciplina atribuída a você ainda — peça para outro professor te vincular em
-            "Contas de professores" ou verifique se seu login está associado à disciplina certa.
+            {isAdmin
+              ? "Nenhuma disciplina cadastrada ainda."
+              : 'Nenhuma disciplina atribuída a você ainda — peça para outro professor te vincular em "Contas de professores" ou verifique se seu login está associado à disciplina certa.'}
           </p>
         )}
       </div>
