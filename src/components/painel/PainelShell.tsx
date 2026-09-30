@@ -122,6 +122,11 @@ export function PainelShell({ title, description, children, fullWidth }: PainelS
     queryFn: () => getCurrentTeacherFn(),
   });
   const isAdmin = me?.role === "admin";
+  const mainNavItems = isAdmin
+    ? painelNavItems.map((item) =>
+        item.to === "/painel/minhas-materias" ? { ...item, label: "Materiais do seminário" } : item,
+      )
+    : painelNavItems;
 
   async function handleLogout() {
     setSigningOut(true);
@@ -142,7 +147,7 @@ export function PainelShell({ title, description, children, fullWidth }: PainelS
         </SidebarHeader>
         <SidebarContent>
           <SidebarGroup>
-            <NavItems items={painelNavItems} pathname={pathname} />
+            <NavItems items={mainNavItems} pathname={pathname} />
           </SidebarGroup>
           {isAdmin ? (
             <SidebarGroup>
