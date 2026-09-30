@@ -244,32 +244,15 @@
   }
 }
 
-/* Card navy de destaque no topo do painel (PainelHome) — degradê nos tons
-   já usados pela sidebar (--sidebar/--sidebar-accent) com um brilho radial
-   que deriva bem devagar, tipo luz batendo numa superfície polida. É o único
-   elemento com esse movimento contínuo na tela — o resto fica quieto. A
-   guarda global de prefers-reduced-motion (acima) já encolhe a duração pra
-   quase-zero, então o brilho para de se mover sem precisar de regra extra. */
-@keyframes hero-card-sheen {
-  0%,
-  100% {
-    background-position:
-      10% -10%,
-      0 0;
-  }
-  50% {
-    background-position:
-      60% 40%,
-      0 0;
-  }
-}
-
+/* Card navy de destaque no topo do painel (PainelHome) — degradê estático nos
+   tons já usados pela sidebar (--sidebar/--sidebar-accent) com um brilho
+   radial fixo no canto superior, tipo luz batendo numa superfície polida.
+   Sem animação contínua: é uma ferramenta de uso frequente (painel), e
+   movimento decorativo sem propósito é exatamente o que MOTION.md pede pra
+   evitar — só as classes animate-in aplicadas no elemento (entrada única ao
+   montar) animam aqui. */
 .hero-card {
   background-image:
-    radial-gradient(48rem 24rem at 50% 50%, oklch(1 0 0 / 12%), transparent 60%),
+    radial-gradient(48rem 24rem at 10% -10%, oklch(1 0 0 / 12%), transparent 60%),
     linear-gradient(135deg, var(--sidebar), var(--sidebar-accent) 130%);
-  background-size:
-    220% 220%,
-    100% 100%;
-  animation: hero-card-sheen 16s ease-in-out infinite;
 }
