@@ -22,6 +22,25 @@ function r2Config() {
   return { accountId, bucket, accessKeyId, secretAccessKey };
 }
 
+/** Prefixo de chave usado pra todo objeto gravado no R2 (upload novo ou migrado do Blob). */
+export const R2_KEY_PREFIXES = [
+  "assignment/",
+  "material/",
+  "library/",
+  "video/",
+  "slide/",
+  "migrated/",
+] as const;
+
+/**
+ * `true` só pros registros que ainda apontam pro Blob da Vercel (URL completa
+ * ou pathname antigo sem prefixo) — usado tanto pela migração quanto pela
+ * leitura, pra decidir se serve do R2 ou cai no fallback do Blob.
+ */
+export function isStillOnVercelBlob(blobPath: string): boolean {
+  return !R2_KEY_PREFIXES.some((prefix) => blobPath.startsWith(prefix));
+}
+
 let cachedClient: S3Client | null = null;
 
 function getClient(): S3Client {
