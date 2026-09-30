@@ -312,12 +312,12 @@ function CreateBookDialog({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="book-file">Arquivo (PDF ou PowerPoint)</Label>
+            <Label htmlFor="book-file">Arquivo (PDF)</Label>
             <Input
               id="book-file"
               type="file"
               ref={fileInputRef}
-              accept=".pdf,.ppt,.pptx"
+              accept=".pdf"
               onChange={(event) => setFile(event.target.files?.[0] ?? null)}
               required
             />

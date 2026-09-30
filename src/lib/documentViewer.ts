@@ -1,23 +1,22 @@
-const OFFICE_EXTENSIONS = new Set(["doc", "docx", "ppt", "pptx"]);
+const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg"]);
 
 function extensionOf(fileName: string): string {
   const withoutQuery = fileName.split(/[?#]/)[0];
   return (withoutQuery.split(".").pop() ?? "").toLowerCase();
 }
 
-/**
- * Word/PowerPoint não têm visualizador nativo em navegador nenhum — só dá
- * pra embutir com segurança arquivos que o próprio navegador renderiza
- * (PDF). Não usamos mais o Google Docs Viewer: ele exigia mandar a URL do
- * arquivo pro Google, e a aplicação não expõe mais essa URL pra ninguém —
- * só serve o conteúdo autorizado via `/api/arquivo/$fileId`. Pra Office, o
- * chamador deve oferecer download em vez de tentar embutir.
- */
-export function isEmbeddableInline(fileName: string): boolean {
-  return !OFFICE_EXTENSIONS.has(extensionOf(fileName));
-}
+export type ViewerKind = "pdf" | "image" | "unsupported";
 
-/** URL pra embutir um PDF num `<iframe>` só de leitura, sem a barra de ferramentas. */
-export function getEmbeddableViewerUrl(fileUrl: string): string {
-  return `${fileUrl}#toolbar=0&navpanes=0`;
+/**
+ * PDF é renderizado em canvas (react-pdf) e imagem num `<img>` — os dois
+ * sempre online, nunca baixados. Word/PowerPoint não têm visualizador
+ * confiável em navegador nenhum; a política de upload de apostila/livro
+ * só aceita PDF (e imagem, apostila) por causa disso — `unsupported` só
+ * deve aparecer pra conteúdo enviado antes dessa restrição existir.
+ */
+export function getViewerKind(fileName: string): ViewerKind {
+  const ext = extensionOf(fileName);
+  if (ext === "pdf") return "pdf";
+  if (IMAGE_EXTENSIONS.has(ext)) return "image";
+  return "unsupported";
 }
