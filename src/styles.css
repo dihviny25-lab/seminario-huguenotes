@@ -70,6 +70,7 @@
   --font-display: "Fraunces", Georgia, serif;
   --font-sans: "Public Sans", ui-sans-serif, system-ui, sans-serif;
   --shadow-soft: var(--shadow-soft-value);
+  --shadow-hero: var(--shadow-hero-value);
 }
 
 :root {
@@ -116,6 +117,14 @@
   --accent-soft: oklch(0.94 0.05 75);
   --shadow-soft-value:
     0 1px 2px oklch(0.25 0.03 260 / 0.04), 0 8px 24px -12px oklch(0.25 0.03 260 / 0.12);
+  /* Sombra com o próprio tom do card (mesma cadeia de --primary/--sidebar)
+     em vez de cinza genérico — usada só no card de destaque do topo do
+     painel, pra dar profundidade sem repetir a mesma sombra de todo card. */
+  --shadow-hero-value:
+    inset 0 1px 0 oklch(1 0 0 / 14%),
+    0 1px 2px oklch(0.25 0.03 260 / 0.06),
+    0 16px 32px -12px oklch(0.286 0.071 257.3 / 0.35),
+    0 32px 64px -28px oklch(0.286 0.071 257.3 / 0.22);
 }
 
 .dark {
@@ -160,6 +169,10 @@
   --warning-border: oklch(0.42 0.07 80);
   --accent-soft: oklch(0.3 0.05 78);
   --shadow-soft-value: 0 1px 2px oklch(0 0 0 / 0.3), 0 8px 24px -12px oklch(0 0 0 / 0.5);
+  --shadow-hero-value:
+    inset 0 1px 0 oklch(1 0 0 / 8%),
+    0 1px 2px oklch(0 0 0 / 0.4),
+    0 20px 40px -16px oklch(0 0 0 / 0.65);
 }
 
 @layer base {
@@ -229,4 +242,34 @@
   .blur-reveal-char {
     animation-delay: 0ms !important;
   }
+}
+
+/* Card navy de destaque no topo do painel (PainelHome) — degradê nos tons
+   já usados pela sidebar (--sidebar/--sidebar-accent) com um brilho radial
+   que deriva bem devagar, tipo luz batendo numa superfície polida. É o único
+   elemento com esse movimento contínuo na tela — o resto fica quieto. A
+   guarda global de prefers-reduced-motion (acima) já encolhe a duração pra
+   quase-zero, então o brilho para de se mover sem precisar de regra extra. */
+@keyframes hero-card-sheen {
+  0%,
+  100% {
+    background-position:
+      10% -10%,
+      0 0;
+  }
+  50% {
+    background-position:
+      60% 40%,
+      0 0;
+  }
+}
+
+.hero-card {
+  background-image:
+    radial-gradient(48rem 24rem at 50% 50%, oklch(1 0 0 / 12%), transparent 60%),
+    linear-gradient(135deg, var(--sidebar), var(--sidebar-accent) 130%);
+  background-size:
+    220% 220%,
+    100% 100%;
+  animation: hero-card-sheen 16s ease-in-out infinite;
 }
