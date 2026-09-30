@@ -97,8 +97,13 @@ export function PainelShell({ title, description, children, fullWidth }: PainelS
     queryKey: ["current-teacher"],
     queryFn: () => getCurrentTeacherFn(),
   });
-  const navItems =
-    me?.role === "admin" ? [...painelNavItems, ...adminOnlyNavItems] : painelNavItems;
+  const isAdmin = me?.role === "admin";
+  const navItems = (isAdmin ? [...painelNavItems, ...adminOnlyNavItems] : painelNavItems).map(
+    (item) =>
+      isAdmin && item.to === "/painel/minhas-materias"
+        ? { ...item, label: "Materiais do seminário" }
+        : item,
+  );
 
   async function handleLogout() {
     setSigningOut(true);
