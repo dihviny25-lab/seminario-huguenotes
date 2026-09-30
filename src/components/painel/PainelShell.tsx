@@ -29,6 +29,7 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarInset,
   SidebarMenu,
@@ -66,6 +67,29 @@ const adminOnlyNavItems = [
   { to: "/painel/auditoria", label: "Auditoria", icon: ShieldCheck },
 ] as const;
 
+type NavItem = { to: string; label: string; icon: (typeof painelNavItems)[number]["icon"] };
+
+function isNavItemActive(pathname: string, to: string): boolean {
+  return to === "/painel" ? pathname === to : pathname === to || pathname.startsWith(`${to}/`);
+}
+
+function NavItems({ items, pathname }: { items: ReadonlyArray<NavItem>; pathname: string }) {
+  return (
+    <SidebarMenu>
+      {items.map((item) => (
+        <SidebarMenuItem key={item.to}>
+          <SidebarMenuButton asChild isActive={isNavItemActive(pathname, item.to)}>
+            <NavLink to={item.to}>
+              <item.icon />
+              <span>{item.label}</span>
+            </NavLink>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      ))}
+    </SidebarMenu>
+  );
+}
+
 /** Link de navegação da sidebar — fecha o menu mobile ao navegar (senão o Sheet fica aberto por cima da tela nova). */
 function NavLink({ onClick, ...props }: ComponentProps<typeof Link>) {
   const { isMobile, setOpenMobile } = useSidebar();
@@ -98,12 +122,11 @@ export function PainelShell({ title, description, children, fullWidth }: PainelS
     queryFn: () => getCurrentTeacherFn(),
   });
   const isAdmin = me?.role === "admin";
-  const navItems = (isAdmin ? [...painelNavItems, ...adminOnlyNavItems] : painelNavItems).map(
-    (item) =>
-      isAdmin && item.to === "/painel/minhas-materias"
-        ? { ...item, label: "Materiais do seminário" }
-        : item,
-  );
+  const mainNavItems = isAdmin
+    ? painelNavItems.map((item) =>
+        item.to === "/painel/minhas-materias" ? { ...item, label: "Materiais do seminário" } : item,
+      )
+    : painelNavItems;
 
   async function handleLogout() {
     setSigningOut(true);
@@ -118,31 +141,20 @@ export function PainelShell({ title, description, children, fullWidth }: PainelS
           <NavLink to="/painel" className="flex items-center gap-2.5 px-1">
             <img src="/logo.png" alt="" className="size-8 shrink-0" aria-hidden />
             <span className="min-w-0 font-display text-sm font-semibold text-sidebar-foreground">
-              Painel do professor
+              Seminário Huguenotes
             </span>
           </NavLink>
         </SidebarHeader>
         <SidebarContent>
           <SidebarGroup>
-            <SidebarMenu>
-              {navItems.map((item) => {
-                const isActive =
-                  item.to === "/painel"
-                    ? pathname === item.to
-                    : pathname === item.to || pathname.startsWith(`${item.to}/`);
-                return (
-                  <SidebarMenuItem key={item.to}>
-                    <SidebarMenuButton asChild isActive={isActive}>
-                      <NavLink to={item.to}>
-                        <item.icon />
-                        <span>{item.label}</span>
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
+            <NavItems items={mainNavItems} pathname={pathname} />
           </SidebarGroup>
+          {isAdmin ? (
+            <SidebarGroup>
+              <SidebarGroupLabel>Administração</SidebarGroupLabel>
+              <NavItems items={adminOnlyNavItems} pathname={pathname} />
+            </SidebarGroup>
+          ) : null}
         </SidebarContent>
         <SidebarFooter className="px-3 pb-3">
           <SidebarMenu>
@@ -159,8 +171,8 @@ export function PainelShell({ title, description, children, fullWidth }: PainelS
       <SidebarInset>
         <header className="sticky top-0 z-40 flex items-center gap-2 border-b border-border/80 bg-background/85 px-4 py-3 backdrop-blur-md md:hidden print:hidden">
           <SidebarTrigger />
-          <span className="font-display text-sm font-semibold text-foreground">
-            Painel do professor
+          <span className="truncate font-display text-sm font-semibold text-foreground">
+            {title}
           </span>
         </header>
 

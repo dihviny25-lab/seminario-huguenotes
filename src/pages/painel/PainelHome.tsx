@@ -63,35 +63,49 @@ export function PainelHome() {
       title="Painel do professor"
       description="O que precisa da sua atenção agora: correções, notas, chamada, materiais e fórum."
     >
-      <div className="mb-4">
-        <NotificationToggle />
-      </div>
-
       {dashboardError ? (
-        <p className="rounded-md border border-t-2 border-border/70 border-t-destructive bg-card/70 p-6 text-center text-sm text-muted-foreground shadow-soft">
-          Não foi possível carregar o resumo. Tente recarregar a página.
-        </p>
+        <>
+          <div className="mb-4">
+            <NotificationToggle />
+          </div>
+          <p className="rounded-md border border-t-2 border-border/70 border-t-destructive bg-card/70 p-6 text-center text-sm text-muted-foreground shadow-soft">
+            Não foi possível carregar o resumo. Tente recarregar a página.
+          </p>
+        </>
       ) : (
         <>
-          {loadingDashboard ? (
-            <Skeleton className="mb-6 h-9 w-2/3" />
-          ) : (
-            <p className="mb-6 font-display text-2xl font-semibold text-foreground sm:text-3xl">
-              {heroMessage}
-            </p>
-          )}
+          <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
+            <div className="rounded-lg bg-sidebar p-6 text-sidebar-foreground shadow-soft">
+              <p className="text-xs font-semibold uppercase tracking-wide text-sidebar-primary">
+                Hoje
+              </p>
+              {loadingDashboard ? (
+                <Skeleton className="mt-3 h-9 w-2/3 bg-sidebar-foreground/10" />
+              ) : (
+                <p className="mt-2 font-display text-2xl font-semibold sm:text-3xl">
+                  {heroMessage}
+                </p>
+              )}
+              <p className="mt-2 text-sm text-sidebar-foreground/70">
+                Aqui está um resumo da sua sala de aula neste momento.
+              </p>
 
-          <KpiStrip
-            counts={
-              dashboard?.counts ?? {
-                pendingGrading: 0,
-                endingDisciplines: 0,
-                atRiskStudents: 0,
-                lessonsWithoutAttendance: 0,
-              }
-            }
-            isLoading={loadingDashboard}
-          />
+              <KpiStrip
+                counts={
+                  dashboard?.counts ?? {
+                    pendingGrading: 0,
+                    endingDisciplines: 0,
+                    atRiskStudents: 0,
+                    lessonsWithoutAttendance: 0,
+                  }
+                }
+                isLoading={loadingDashboard}
+                embedded
+              />
+            </div>
+
+            <NotificationToggle />
+          </div>
 
           <div className="mt-8 space-y-10">
             {loadingDashboard || pendingCount > 0 ? (
