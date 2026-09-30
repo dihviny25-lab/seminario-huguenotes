@@ -23,4 +23,9 @@ describe("upload policy", () => {
     expect(policy.maximumSizeInBytes).toBe(2 * 1024 * 1024 * 1024);
     expect(policy.allowedContentTypes).toEqual(["video/mp4", "video/webm", "video/quicktime"]);
   });
+
+  it("apostila e livro só aceitam formato com visualização online (PDF/imagem)", () => {
+    expect(getUploadPolicy("material").allowedContentTypes).not.toContain("application/msword");
+    expect(getUploadPolicy("library").allowedContentTypes).toEqual(["application/pdf"]);
+  });
 });
