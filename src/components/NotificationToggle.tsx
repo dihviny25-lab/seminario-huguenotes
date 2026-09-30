@@ -3,6 +3,7 @@ import { Bell, BellOff } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { cardVariant } from "@/lib/cardVariants";
 import {
   disablePush,
   enablePush,
@@ -52,7 +53,7 @@ export function NotificationToggle() {
   if (!supported || loading) return null;
 
   return (
-    <div className="flex items-start gap-3 rounded-md border border-t-2 border-border/70 border-t-accent bg-card/70 p-4 shadow-soft">
+    <div className={cardVariant("passive", "flex items-start gap-3")}>
       {enabled ? (
         <Bell className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden />
       ) : (
