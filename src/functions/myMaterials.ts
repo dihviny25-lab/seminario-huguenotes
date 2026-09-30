@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { eq } from "drizzle-orm";
 
-import { requireTeacherId } from "@/server/auth/guard";
+import { isAdminTeacher, requireTeacherId } from "@/server/auth/guard";
 import { db } from "@/server/db/client";
 import { disciplines, presentationSlides, readingMaterials } from "@/server/db/schema";
 
@@ -18,13 +18,16 @@ export type MyMaterialItem = {
 
 /**
  * Apostilas + slides de todas as disciplinas do professor logado, num só
- * array — base do hub "Minhas Matérias". Não expõe update/delete próprios:
- * a UI chama updateMaterialFn/deleteMaterialFn ou updateSlideFn/deleteSlideFn
+ * array — base do hub "Minhas Matérias". Admin vê de todas as disciplinas,
+ * de todos os professores. Não expõe update/delete próprios: a UI chama
+ * updateMaterialFn/deleteMaterialFn ou updateSlideFn/deleteSlideFn
  * conforme o `kind` do item, ambas já protegidas por requireOwnDiscipline.
  */
 export const listMyMaterialsFn = createServerFn({ method: "GET" }).handler(
   async (): Promise<Array<MyMaterialItem>> => {
     const teacherId = await requireTeacherId();
+    const isAdmin = await isAdminTeacher(teacherId);
+    const ownDiscipline = isAdmin ? undefined : eq(disciplines.teacherId, teacherId);
 
     const [materialRows, slideRows] = await Promise.all([
       db
@@ -39,7 +42,7 @@ export const listMyMaterialsFn = createServerFn({ method: "GET" }).handler(
         })
         .from(readingMaterials)
         .innerJoin(disciplines, eq(disciplines.id, readingMaterials.disciplineId))
-        .where(eq(disciplines.teacherId, teacherId)),
+        .where(ownDiscipline),
       db
         .select({
           id: presentationSlides.id,
@@ -52,7 +55,7 @@ export const listMyMaterialsFn = createServerFn({ method: "GET" }).handler(
         })
         .from(presentationSlides)
         .innerJoin(disciplines, eq(disciplines.id, presentationSlides.disciplineId))
-        .where(eq(disciplines.teacherId, teacherId)),
+        .where(ownDiscipline),
     ]);
 
     return [

@@ -29,15 +29,12 @@ export function PortalLibraryReader({ bookId }: { bookId: string }) {
       {isLoading || !book ? (
         <Skeleton className="h-[85vh] w-full" />
       ) : (
-        <div className="animate-in overflow-hidden rounded-md border border-border/70 bg-card/70 shadow-soft fade-in duration-300">
-          <PrivateDocumentViewer
-            fileId={book.fileId}
-            fileUrl={book.fileUrl}
-            fileName={book.fileName}
-            title={book.title}
-            className="h-[85vh] w-full"
-          />
-        </div>
+        <PrivateDocumentViewer
+          fileId={book.fileId}
+          fileUrl={book.fileUrl}
+          fileName={book.fileName}
+          className="h-[85vh] w-full"
+        />
       )}
     </PortalShell>
   );

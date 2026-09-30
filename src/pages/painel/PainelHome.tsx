@@ -5,6 +5,7 @@ import { BookOpen, GraduationCap, Users } from "lucide-react";
 import { NotificationToggle } from "@/components/NotificationToggle";
 import { PainelShell } from "@/components/painel/PainelShell";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getCurrentTeacherFn } from "@/functions/auth";
 import { getTeacherDashboardFn } from "@/functions/teacherDashboard";
 import { listMyDisciplinesFn } from "@/functions/disciplines";
 import { ActionCards, InfoCards } from "@/pages/painel/dashboard/cards";
@@ -40,6 +41,11 @@ export function PainelHome() {
     queryKey: ["my-disciplines"],
     queryFn: () => listMyDisciplinesFn(),
   });
+  const { data: me } = useQuery({
+    queryKey: ["current-teacher"],
+    queryFn: () => getCurrentTeacherFn(),
+  });
+  const isAdmin = me?.role === "admin";
 
   const pendingCount = dashboard
     ? dashboard.counts.pendingGrading +
@@ -57,35 +63,49 @@ export function PainelHome() {
       title="Painel do professor"
       description="O que precisa da sua atenção agora: correções, notas, chamada, materiais e fórum."
     >
-      <div className="mb-4">
-        <NotificationToggle />
-      </div>
-
       {dashboardError ? (
-        <p className="rounded-md border border-t-2 border-border/70 border-t-destructive bg-card/70 p-6 text-center text-sm text-muted-foreground shadow-soft">
-          Não foi possível carregar o resumo. Tente recarregar a página.
-        </p>
+        <>
+          <div className="mb-4">
+            <NotificationToggle />
+          </div>
+          <p className="rounded-md border border-t-2 border-border/70 border-t-destructive bg-card/70 p-6 text-center text-sm text-muted-foreground shadow-soft">
+            Não foi possível carregar o resumo. Tente recarregar a página.
+          </p>
+        </>
       ) : (
         <>
-          {loadingDashboard ? (
-            <Skeleton className="mb-6 h-9 w-2/3" />
-          ) : (
-            <p className="mb-6 font-display text-2xl font-semibold text-foreground sm:text-3xl">
-              {heroMessage}
-            </p>
-          )}
+          <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
+            <div className="rounded-lg bg-sidebar p-6 text-sidebar-foreground shadow-soft">
+              <p className="text-xs font-semibold uppercase tracking-wide text-sidebar-primary">
+                Hoje
+              </p>
+              {loadingDashboard ? (
+                <Skeleton className="mt-3 h-9 w-2/3 bg-sidebar-foreground/10" />
+              ) : (
+                <p className="mt-2 font-display text-2xl font-semibold sm:text-3xl">
+                  {heroMessage}
+                </p>
+              )}
+              <p className="mt-2 text-sm text-sidebar-foreground/70">
+                Aqui está um resumo da sua sala de aula neste momento.
+              </p>
 
-          <KpiStrip
-            counts={
-              dashboard?.counts ?? {
-                pendingGrading: 0,
-                endingDisciplines: 0,
-                atRiskStudents: 0,
-                lessonsWithoutAttendance: 0,
-              }
-            }
-            isLoading={loadingDashboard}
-          />
+              <KpiStrip
+                counts={
+                  dashboard?.counts ?? {
+                    pendingGrading: 0,
+                    endingDisciplines: 0,
+                    atRiskStudents: 0,
+                    lessonsWithoutAttendance: 0,
+                  }
+                }
+                isLoading={loadingDashboard}
+                embedded
+              />
+            </div>
+
+            <NotificationToggle />
+          </div>
 
           <div className="mt-8 space-y-10">
             {loadingDashboard || pendingCount > 0 ? (
@@ -115,10 +135,12 @@ export function PainelHome() {
       </div>
 
       <h2 className="mt-10 font-display text-xl font-semibold tracking-tight text-foreground">
-        Minhas disciplinas
+        {isAdmin ? "Todas as disciplinas do seminário" : "Minhas disciplinas"}
       </h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        Lance notas e faltas nas disciplinas que você ministra.
+        {isAdmin
+          ? "Lance notas e faltas em qualquer disciplina, de qualquer professor."
+          : "Lance notas e faltas nas disciplinas que você ministra."}
       </p>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -150,14 +172,16 @@ export function PainelHome() {
                 </span>
                 <span className="block text-xs text-muted-foreground">
                   {discipline.module} · {discipline.term}
+                  {isAdmin ? ` · ${discipline.teacherName ?? "sem professor"}` : ""}
                 </span>
               </span>
             </Link>
           ))
         ) : (
           <p className="text-muted-foreground">
-            Nenhuma disciplina atribuída a você ainda — peça para outro professor te vincular em
-            "Contas de professores" ou verifique se seu login está associado à disciplina certa.
+            {isAdmin
+              ? "Nenhuma disciplina cadastrada ainda."
+              : 'Nenhuma disciplina atribuída a você ainda — peça para outro professor te vincular em "Contas de professores" ou verifique se seu login está associado à disciplina certa.'}
           </p>
         )}
       </div>

@@ -29,15 +29,18 @@ export function getUploadPolicy(purpose: UploadPurpose): UploadPolicy {
         maximumSizeInBytes: 50 * MB,
       };
     case "material":
+      // Só PDF/imagem: são os únicos formatos que o leitor do portal exibe
+      // embutido (canvas do PDF.js ou <img>) — Word/PowerPoint sempre caía
+      // pra download por falta de visualizador confiável no navegador.
       return {
         requiresTeacher: true,
-        allowedContentTypes: [...DOCUMENT_TYPES, ...PRESENTATION_TYPES, "image/png", "image/jpeg"],
+        allowedContentTypes: ["application/pdf", "image/png", "image/jpeg"],
         maximumSizeInBytes: 100 * MB,
       };
     case "library":
       return {
         requiresTeacher: true,
-        allowedContentTypes: ["application/pdf", ...PRESENTATION_TYPES],
+        allowedContentTypes: ["application/pdf"],
         maximumSizeInBytes: 250 * MB,
       };
     case "video":

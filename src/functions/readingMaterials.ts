@@ -105,6 +105,12 @@ const updateSchema = z.object({
   materialId: z.string().uuid(),
   title: z.string().trim().min(1, "Informe um título."),
   description: z.string().trim().optional(),
+  // Presentes só quando um arquivo novo foi subido nesta chamada — vêm do
+  // resultado de `uploadFile`. Substitui o arquivo sem apagar o registro.
+  fileUrl: z.string().trim().url("URL de arquivo inválida.").optional(),
+  fileName: z.string().trim().min(1).optional(),
+  filePathname: z.string().trim().min(1).optional(),
+  fileContentType: z.string().trim().optional(),
 });
 
 export const updateMaterialFn = createServerFn({ method: "POST" })
@@ -115,6 +121,21 @@ export const updateMaterialFn = createServerFn({ method: "POST" })
       .update(readingMaterials)
       .set({ title: data.title, description: data.description || null })
       .where(eq(readingMaterials.id, data.materialId));
+
+    if (data.filePathname && data.fileName && data.fileUrl) {
+      const fileId = await registerPrivateFile({
+        pathname: data.filePathname,
+        originalName: data.fileName,
+        contentType: data.fileContentType ?? null,
+        ownerType: "reading_material",
+        ownerId: data.materialId,
+      });
+      await db
+        .update(readingMaterials)
+        .set({ fileId, fileUrl: data.fileUrl, fileName: data.fileName })
+        .where(eq(readingMaterials.id, data.materialId));
+    }
+
     await logAudit(
       "apostila.editar",
       `Editou o material "${data.title}" em ${discipline.discipline}.`,

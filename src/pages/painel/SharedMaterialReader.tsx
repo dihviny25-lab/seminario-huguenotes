@@ -83,15 +83,12 @@ export function SharedMaterialReader({ materialId }: { materialId: string }) {
         <Skeleton className="h-[70vh] w-full" />
       ) : (
         <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
-          <div className="overflow-hidden rounded-md border border-border/70 bg-card/70 shadow-soft">
-            <PrivateDocumentViewer
-              fileId={material.fileId}
-              fileUrl={material.fileUrl}
-              fileName={material.fileName}
-              title={material.title}
-              className="h-[70vh] w-full"
-            />
-          </div>
+          <PrivateDocumentViewer
+            fileId={material.fileId}
+            fileUrl={material.fileUrl}
+            fileName={material.fileName}
+            className="h-[70vh] w-full"
+          />
 
           <div className="flex flex-col rounded-md border border-border/70 bg-card/70 p-4 shadow-soft">
             <h2 className="font-display text-sm font-semibold text-foreground">Comentários</h2>
