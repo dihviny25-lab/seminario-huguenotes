@@ -294,10 +294,22 @@ export function pickMissingAttendance(input: DashboardInput): {
   return { items: items.slice(0, MISSING_ATTENDANCE_LIMIT), total };
 }
 
+/**
+ * Só aulas de disciplinas "em andamento" (já iniciadas e ainda não
+ * encerradas — mesmo critério de progress usado por pickMaterialGaps/
+ * pickAtRiskStudents). Sem esse filtro, uma disciplina que ainda nem
+ * começou podia ocupar sozinha todo o limite com seu calendário inteiro,
+ * escondendo o que de fato está em curso.
+ */
 export function pickUpcomingLessons(input: DashboardInput): UpcomingLessonItem[] {
   const disciplineName = new Map(input.disciplines.map((d) => [d.id, d.discipline]));
+  const progress = progressByDiscipline(input);
   return input.lessons
     .filter((l) => l.date !== null && l.date > input.today)
+    .filter((l) => {
+      const p = progress.get(l.disciplineId);
+      return p ? p.isStarted && !p.isEnded : false;
+    })
     .sort((a, b) => (a.date! < b.date! ? -1 : a.date! > b.date! ? 1 : a.sequence - b.sequence))
     .slice(0, UPCOMING_LESSONS_LIMIT)
     .map((l) => ({
