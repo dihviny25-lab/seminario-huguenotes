@@ -20,7 +20,7 @@ import {
  */
 
 export const scheduleStatus = pgEnum("schedule_status", ["confirmed", "pending"]);
-export const teacherRole = pgEnum("teacher_role", ["admin", "teacher"]);
+export const teacherRole = pgEnum("teacher_role", ["admin", "teacher", "super_admin"]);
 export const chargeStatus = pgEnum("charge_status", ["pending", "paid", "canceled"]);
 export const paymentMethod = pgEnum("payment_method", [
   "pix",
@@ -69,9 +69,15 @@ export const teachers = pgTable("teachers", {
   // true sempre que a senha foi (re)definida por alguém administrando a conta
   // (criação ou "Redefinir senha") — força a troca no próximo login.
   mustChangePassword: boolean("must_change_password").notNull().default(true),
-  // admin: acesso completo (gerenciar professores e alunos).
-  // teacher: só visualiza professores/alunos, edita apenas o próprio perfil.
+  // admin: acesso completo (gerenciar professores e alunos, Financeiro,
+  // Auditoria). super_admin: tudo que admin tem, mais a visão da escola
+  // inteira. teacher: só visualiza professores/alunos, edita apenas o
+  // próprio perfil.
   role: teacherRole("role").notNull().default("teacher"),
+  // Rótulo livre, opcional, exibido no lugar do nome padrão do papel (ex.:
+  // "Gerente" pra um admin que não dá aula) — não afeta permissão nenhuma,
+  // é só exibição.
+  title: text("title"),
   // Recuperação de senha self-service — token opaco de uso único, expira em 1h.
   resetToken: text("reset_token"),
   resetTokenExpiresAt: timestamp("reset_token_expires_at", { withTimezone: true }),

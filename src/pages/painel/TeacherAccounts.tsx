@@ -54,11 +54,23 @@ import {
   updateTeacherAccountFn,
   type TeacherAccount,
 } from "@/functions/teacherAccounts";
+import { isAdminRole } from "@/lib/teacherRole";
 
 const TEACHER_ACCOUNTS_KEY = ["teacher-accounts"] as const;
 
 function errorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
+}
+
+const ROLE_DEFAULT_LABEL: Record<TeacherAccount["role"], string> = {
+  super_admin: "Super Admin",
+  admin: "Admin",
+  teacher: "Professor",
+};
+
+/** O cargo livre (ex.: "Gerente") substitui o rótulo padrão só na exibição — não muda a permissão. */
+function roleLabel(teacher: TeacherAccount): string {
+  return teacher.title || ROLE_DEFAULT_LABEL[teacher.role];
 }
 
 /** Tela de administração: criar contas de professor e gerenciar login. */
@@ -72,7 +84,7 @@ export function TeacherAccounts() {
     queryKey: ["current-teacher"],
     queryFn: () => getCurrentTeacherFn(),
   });
-  const isAdmin = me?.role === "admin";
+  const isAdmin = isAdminRole(me?.role);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<TeacherAccount | null>(null);
@@ -147,8 +159,8 @@ export function TeacherAccounts() {
                     <TableCell className="font-medium text-foreground">{teacher.name}</TableCell>
                     <TableCell className="text-muted-foreground">{teacher.email}</TableCell>
                     <TableCell>
-                      <Badge variant={teacher.role === "admin" ? "default" : "outline"}>
-                        {teacher.role === "admin" ? "Admin" : "Professor"}
+                      <Badge variant={isAdminRole(teacher.role) ? "default" : "outline"}>
+                        {roleLabel(teacher)}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -268,6 +280,7 @@ const createSchema = z.object({
   name: z.string().trim().min(1, "Informe o nome."),
   email: z.string().trim().toLowerCase().email("Informe um e-mail válido."),
   password: z.string().min(8, "Mínimo de 8 caracteres."),
+  title: z.string().trim().optional(),
 });
 
 function CreateTeacherDialog({
@@ -281,7 +294,7 @@ function CreateTeacherDialog({
 }) {
   const form = useForm<z.infer<typeof createSchema>>({
     resolver: zodResolver(createSchema),
-    defaultValues: { name: "", email: "", password: "" },
+    defaultValues: { name: "", email: "", password: "", title: "" },
   });
 
   const mutation = useMutation({
@@ -345,6 +358,19 @@ function CreateTeacherDialog({
                 </FormItem>
               )}
             />
+            <FormField
+              control={form.control}
+              name="title"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Cargo (opcional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Ex.: Gerente" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <DialogFooter>
               <Button type="submit" disabled={mutation.isPending}>
                 {mutation.isPending ? (
@@ -363,6 +389,7 @@ function CreateTeacherDialog({
 const editSchema = z.object({
   name: z.string().trim().min(1, "Informe o nome."),
   email: z.string().trim().toLowerCase().email("Informe um e-mail válido."),
+  title: z.string().trim().optional(),
 });
 
 function EditTeacherDialog({
@@ -376,7 +403,7 @@ function EditTeacherDialog({
 }) {
   const form = useForm<z.infer<typeof editSchema>>({
     resolver: zodResolver(editSchema),
-    defaultValues: { name: teacher.name, email: teacher.email },
+    defaultValues: { name: teacher.name, email: teacher.email, title: teacher.title ?? "" },
   });
 
   const mutation = useMutation({
@@ -422,6 +449,19 @@ function EditTeacherDialog({
                   <FormLabel>E-mail</FormLabel>
                   <FormControl>
                     <Input type="email" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="title"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Cargo (opcional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Ex.: Gerente" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

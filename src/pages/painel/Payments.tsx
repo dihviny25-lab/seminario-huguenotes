@@ -78,6 +78,7 @@ import {
 } from "@/functions/payments";
 import { computeDiscountedAmount } from "@/lib/payments";
 import { PAYMENT_MODALITIES, PUNCTUALITY_DISCOUNT_PERCENT } from "@/lib/paymentModalities";
+import { isAdminRole } from "@/lib/teacherRole";
 
 function errorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
@@ -125,7 +126,7 @@ export function Payments({ initialStudentId }: { initialStudentId?: string } = {
     queryKey: ["current-teacher"],
     queryFn: () => getCurrentTeacherFn(),
   });
-  const isAdmin = me?.role === "admin";
+  const isAdmin = isAdminRole(me?.role);
 
   const filtered = useMemo(() => {
     const term = query.trim().toLowerCase();
