@@ -16,6 +16,8 @@
     "db:seed": "tsx src/server/db/seed.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1139.0",
+    "@aws-sdk/s3-request-presigner": "^3.1139.0",
     "@block65/webcrypto-web-push": "^1.0.2",
     "@hookform/resolvers": "^5.2.2",
     "@neondatabase/serverless": "^0.10.4",

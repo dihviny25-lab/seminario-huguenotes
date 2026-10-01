@@ -1,0 +1,8 @@
+[
+  {
+    "AllowedOrigins": ["https://seminario-huguenotes.vercel.app"],
+    "AllowedMethods": ["PUT"],
+    "AllowedHeaders": ["Content-Type"],
+    "MaxAgeSeconds": 3600
+  }
+]

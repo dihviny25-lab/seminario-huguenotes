@@ -20,34 +20,6 @@ export type UploadPolicy = {
   maximumSizeInBytes: number;
 };
 
-export function parseUploadPurpose(clientPayload: string | null | undefined): UploadPurpose {
-  if (!clientPayload) throw new Error("Finalidade do upload não informada.");
-
-  let value: unknown;
-  try {
-    value = JSON.parse(clientPayload);
-  } catch {
-    throw new Error("Finalidade do upload inválida.");
-  }
-
-  const purpose =
-    typeof value === "object" && value !== null && "purpose" in value
-      ? (value as { purpose?: unknown }).purpose
-      : undefined;
-
-  if (
-    purpose !== "assignment" &&
-    purpose !== "material" &&
-    purpose !== "library" &&
-    purpose !== "video" &&
-    purpose !== "slide"
-  ) {
-    throw new Error("Finalidade do upload inválida.");
-  }
-
-  return purpose;
-}
-
 export function getUploadPolicy(purpose: UploadPurpose): UploadPolicy {
   switch (purpose) {
     case "assignment":

@@ -1,15 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { getUploadPolicy, parseUploadPurpose } from "./policy";
+import { getUploadPolicy } from "./policy";
 
 describe("upload policy", () => {
-  it("aceita somente finalidades conhecidas", () => {
-    expect(parseUploadPurpose('{"purpose":"assignment"}')).toBe("assignment");
-    expect(parseUploadPurpose('{"purpose":"video"}')).toBe("video");
-    expect(() => parseUploadPurpose('{"purpose":"unknown"}')).toThrow();
-    expect(() => parseUploadPurpose(null)).toThrow();
-  });
-
   it("restringe tarefa a 50 MB e não exige professor", () => {
     const policy = getUploadPolicy("assignment");
     expect(policy.requiresTeacher).toBe(false);
