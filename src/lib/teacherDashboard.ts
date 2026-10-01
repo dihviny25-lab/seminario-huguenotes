@@ -38,6 +38,16 @@ export type DashboardInput = {
   threads: Array<{ id: string; disciplineId: string; title: string; createdAt: string }>;
   posts: Array<{ threadId: string; authorRole: "teacher" | "student"; createdAt: string }>;
   activeStudents: Array<{ id: string; name: string }>;
+  /**
+   * Todas as aulas da disciplina (de qualquer professor), sem o filtro de
+   * "professor efetivo" que `lessons` já tem — usado só por
+   * pickUpcomingLessons pra decidir se a disciplina está "em andamento".
+   * Sem isso, uma disciplina cujas aulas já dadas foram todas substituídas
+   * (effectiveTeacherId !== teacherId) ficaria com isStarted=false pra quem
+   * é dono dela, escondendo aulas futuras que são, de fato, dele. Opcional:
+   * quando ausente, cai de volta em `lessons` (comportamento anterior).
+   */
+  allLessons?: Array<{ disciplineId: string; givenAt: string | null }>;
 };
 
 export type DisciplineProgress = {
@@ -153,8 +163,12 @@ export function computeDisciplineProgress(
   };
 }
 
-function progressByDiscipline(input: DashboardInput): Map<string, DisciplineProgress> {
-  return new Map(input.disciplines.map((d) => [d.id, computeDisciplineProgress(d, input.lessons)]));
+function progressByDiscipline(
+  input: DashboardInput,
+  lessonsOverride?: Array<{ disciplineId: string; givenAt: string | null }>,
+): Map<string, DisciplineProgress> {
+  const lessons = lessonsOverride ?? input.lessons;
+  return new Map(input.disciplines.map((d) => [d.id, computeDisciplineProgress(d, lessons)]));
 }
 
 export function pickEndingDisciplines(input: DashboardInput): EndingDisciplineItem[] {
@@ -303,7 +317,7 @@ export function pickMissingAttendance(input: DashboardInput): {
  */
 export function pickUpcomingLessons(input: DashboardInput): UpcomingLessonItem[] {
   const disciplineName = new Map(input.disciplines.map((d) => [d.id, d.discipline]));
-  const progress = progressByDiscipline(input);
+  const progress = progressByDiscipline(input, input.allLessons);
   return input.lessons
     .filter((l) => l.date !== null && l.date > input.today)
     .filter((l) => {

@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { eq, inArray } from "drizzle-orm";
 
-import { buildTeacherDashboard } from "@/lib/teacherDashboard";
+import { buildTeacherDashboard, computeDisciplineProgress } from "@/lib/teacherDashboard";
 import { effectiveTeacherId, isFutureOrToday } from "@/lib/teachingAssignments";
 import { requireTeacherId } from "@/server/auth/guard";
 import { db } from "@/server/db/client";
@@ -56,16 +56,55 @@ export const getTeacherDashboardFn = createServerFn({ method: "GET" }).handler(a
     .innerJoin(disciplines, eq(lessons.disciplineId, disciplines.id))
     .where(eq(lessons.teacherId, teacherId));
 
+  // Disciplinas de terceiros onde este professor só tem substituições
+  // pontuais — precisam do próprio cálculo de "em andamento", já que elas
+  // não entram no `disciplineRows`/`lessonRows` principal (esse é escopado
+  // às disciplinas do professor).
+  const assignedDisciplineIds = [
+    ...new Set(
+      assignedLessonRows
+        .map((lesson) => lesson.disciplineId)
+        .filter((id) => !disciplineIds.includes(id)),
+    ),
+  ];
+  const [assignedDisciplineRows, assignedDisciplineLessonRows] =
+    assignedDisciplineIds.length === 0
+      ? [[], []]
+      : await Promise.all([
+          db
+            .select({
+              id: disciplines.id,
+              discipline: disciplines.discipline,
+              lessons: disciplines.lessons,
+            })
+            .from(disciplines)
+            .where(inArray(disciplines.id, assignedDisciplineIds)),
+          db
+            .select({ disciplineId: lessons.disciplineId, givenAt: lessons.givenAt })
+            .from(lessons)
+            .where(inArray(lessons.disciplineId, assignedDisciplineIds)),
+        ]);
+  const assignedDisciplineLessonsForProgress = assignedDisciplineLessonRows.map((l) => ({
+    disciplineId: l.disciplineId,
+    givenAt: l.givenAt ? l.givenAt.toISOString() : null,
+  }));
+  const assignedDisciplineProgress = new Map(
+    assignedDisciplineRows.map((d) => [
+      d.id,
+      computeDisciplineProgress(d, assignedDisciplineLessonsForProgress),
+    ]),
+  );
+
   function addAssignedUpcoming<T extends ReturnType<typeof buildTeacherDashboard>>(
     dashboard: T,
   ): T {
     const extras = assignedLessonRows
-      .filter(
-        (lesson) =>
-          !disciplineIds.includes(lesson.disciplineId) &&
-          lesson.date !== null &&
-          isFutureOrToday(lesson.date, today),
-      )
+      .filter((lesson) => {
+        if (disciplineIds.includes(lesson.disciplineId)) return false;
+        if (lesson.date === null || !isFutureOrToday(lesson.date, today)) return false;
+        const progress = assignedDisciplineProgress.get(lesson.disciplineId);
+        return progress ? progress.isStarted && !progress.isEnded : false;
+      })
       .map((lesson) => ({
         disciplineId: lesson.disciplineId,
         disciplineName: lesson.disciplineName,
@@ -217,6 +256,13 @@ export const getTeacherDashboardFn = createServerFn({ method: "GET" }).handler(a
       disciplines: disciplineRows,
       lessons: effectiveLessonRows.map(({ teacherId: _teacherId, ...lesson }) => ({
         ...lesson,
+        givenAt: lesson.givenAt ? lesson.givenAt.toISOString() : null,
+      })),
+      // Sem o filtro de professor efetivo — ver doc de DashboardInput.allLessons.
+      // Uma disciplina cujas aulas dadas foram todas substituídas por outro
+      // professor não pode parecer "não iniciada" pra quem é dono dela.
+      allLessons: lessonRows.map((lesson) => ({
+        disciplineId: lesson.disciplineId,
         givenAt: lesson.givenAt ? lesson.givenAt.toISOString() : null,
       })),
       attendance: attendanceRows,
