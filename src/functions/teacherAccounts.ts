@@ -14,7 +14,8 @@ export type TeacherAccount = {
   name: string;
   email: string;
   hasLogin: boolean;
-  role: "admin" | "teacher";
+  role: "admin" | "teacher" | "super_admin";
+  title: string | null;
 };
 
 export const listTeacherAccountsFn = createServerFn({ method: "GET" }).handler(
@@ -27,6 +28,7 @@ export const listTeacherAccountsFn = createServerFn({ method: "GET" }).handler(
         email: teachers.email,
         passwordHash: teachers.passwordHash,
         role: teachers.role,
+        title: teachers.title,
       })
       .from(teachers)
       .orderBy(asc(teachers.name));
@@ -38,6 +40,7 @@ const createSchema = z.object({
   name: z.string().trim().min(1, "Informe o nome."),
   email: z.string().trim().toLowerCase().email("Informe um e-mail válido."),
   password: z.string().min(8, "A senha precisa ter ao menos 8 caracteres."),
+  title: z.string().trim().optional(),
 });
 
 export const createTeacherAccountFn = createServerFn({ method: "POST" })
@@ -48,7 +51,13 @@ export const createTeacherAccountFn = createServerFn({ method: "POST" })
     try {
       const [row] = await db
         .insert(teachers)
-        .values({ name: data.name, email: data.email, passwordHash, mustChangePassword: true })
+        .values({
+          name: data.name,
+          email: data.email,
+          passwordHash,
+          mustChangePassword: true,
+          title: data.title || null,
+        })
         .returning({ id: teachers.id });
       await logAudit("professor.criar", `Criou a conta do professor ${data.name} (${data.email}).`);
       return row;
@@ -64,6 +73,7 @@ const updateSchema = z.object({
   id: z.string().uuid(),
   name: z.string().trim().min(1, "Informe o nome."),
   email: z.string().trim().toLowerCase().email("Informe um e-mail válido."),
+  title: z.string().trim().optional(),
 });
 
 /** Admin edita qualquer um; professor comum só edita o próprio perfil. */
@@ -74,7 +84,7 @@ export const updateTeacherAccountFn = createServerFn({ method: "POST" })
     try {
       await db
         .update(teachers)
-        .set({ name: data.name, email: data.email })
+        .set({ name: data.name, email: data.email, title: data.title || null })
         .where(eq(teachers.id, data.id));
     } catch (error) {
       if (isUniqueViolation(error)) {
