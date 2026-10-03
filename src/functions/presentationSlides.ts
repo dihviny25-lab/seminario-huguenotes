@@ -224,11 +224,12 @@ const slideIdSchema = z.object({ slideId: z.string().uuid() });
 export const getPresentationSlideFileFn = createServerFn({ method: "GET" })
   .validator(slideIdSchema)
   .handler(async ({ data }): Promise<{ fileId: string | null; fileUrl: string }> => {
-    await requireAnyIdentity();
+    const identity = await requireAnyIdentity();
     const [row] = await db
       .select({
         fileUrl: presentationSlides.fileUrl,
         fileId: presentationSlides.fileId,
+        lessonId: presentationSlides.lessonId,
         startDate: disciplines.startDate,
       })
       .from(presentationSlides)
@@ -238,6 +239,12 @@ export const getPresentationSlideFileFn = createServerFn({ method: "GET" })
     if (!row) throw new Error("Slide não encontrado.");
     if (row.startDate !== null && row.startDate > todayIso()) {
       throw new Error("Este slide ainda não está disponível.");
+    }
+    if (identity.role === "student") {
+      const accessibleLessonIds = await getStudentAccessibleLessonIds(identity.id);
+      if (!isLessonContentVisible(row.lessonId, accessibleLessonIds)) {
+        throw new Error("Este slide não está disponível pra você.");
+      }
     }
     return { fileId: row.fileId, fileUrl: row.fileUrl };
   });

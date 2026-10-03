@@ -10,8 +10,10 @@ import {
   grades,
   lessons,
   students,
+  studentLessonAccess,
   teachers,
 } from "@/server/db/schema";
+import { getStudentAccessibleLessonIds } from "@/server/enrollment";
 
 export type ClassReportAssessment = { id: string; title: string; maxScore: number };
 
@@ -52,7 +54,11 @@ export async function getClassReportData(disciplineId: string): Promise<ClassRep
 
   const [studentRows, assessmentRows, lessonRows] = await Promise.all([
     db
-      .select({ id: students.id, name: students.name })
+      .select({
+        id: students.id,
+        name: students.name,
+        selectiveEnrollment: students.selectiveEnrollment,
+      })
       .from(students)
       .where(eq(students.active, true))
       .orderBy(asc(students.name)),
@@ -106,6 +112,24 @@ export async function getClassReportData(disciplineId: string): Promise<ClassRep
           ),
   ]);
 
+  // Aluno de matrícula seletiva só conta, no denominador de frequência, as
+  // aulas que ele de fato está matriculado — senão aulas que ele nunca
+  // deveria frequentar inflam (ou derrubam) a frequência dele indevidamente.
+  const restrictedStudentIds = studentRows.filter((s) => s.selectiveEnrollment).map((s) => s.id);
+  const grantedRows =
+    restrictedStudentIds.length === 0
+      ? []
+      : await db
+          .select({
+            studentId: studentLessonAccess.studentId,
+            lessonId: studentLessonAccess.lessonId,
+          })
+          .from(studentLessonAccess)
+          .where(inArray(studentLessonAccess.studentId, restrictedStudentIds));
+  const grantedByStudent = new Map<string, Set<string>>();
+  for (const id of restrictedStudentIds) grantedByStudent.set(id, new Set());
+  for (const row of grantedRows) grantedByStudent.get(row.studentId)?.add(row.lessonId);
+
   const assessmentWeightById = new Map(assessmentRows.map((a) => [a.id, Number(a.weight)]));
 
   const rows: Array<ClassReportRow> = studentRows.map((student) => {
@@ -121,19 +145,22 @@ export async function getClassReportData(disciplineId: string): Promise<ClassRep
       .map((s) => ({ score: s.score, weight: assessmentWeightById.get(s.assessmentId) ?? 1 }));
     const average = computeWeightedAverage(weighted);
 
+    const studentLessonIds = student.selectiveEnrollment
+      ? lessonIds.filter((id) => grantedByStudent.get(student.id)?.has(id))
+      : lessonIds;
     const absentLessonIds = new Set(
       attendanceRows
         .filter((a) => a.studentId === student.id && a.present === false)
         .map((a) => a.lessonId),
     );
-    const totalFaltas = countFaltas(lessonIds, absentLessonIds);
+    const totalFaltas = countFaltas(studentLessonIds, absentLessonIds);
 
     return {
       studentId: student.id,
       studentName: student.name,
       scores,
       average,
-      totalLessons: lessonIds.length,
+      totalLessons: studentLessonIds.length,
       totalFaltas,
     };
   });
@@ -190,6 +217,7 @@ export async function getStudentReportData(studentId: string): Promise<StudentRe
     .where(eq(students.id, studentId))
     .limit(1);
   if (!student) throw new Error("Aluno não encontrado.");
+  const accessibleLessonIds = await getStudentAccessibleLessonIds(studentId);
 
   const disciplineRows = await db
     .select({
@@ -272,7 +300,11 @@ export async function getStudentReportData(studentId: string): Promise<StudentRe
       };
     });
 
-    const disciplineLessons = pastLessonRows.filter((l) => l.disciplineId === discipline.id);
+    const disciplineLessons = pastLessonRows.filter(
+      (l) =>
+        l.disciplineId === discipline.id &&
+        (accessibleLessonIds === null || accessibleLessonIds.has(l.id)),
+    );
     const totalFaltas = countFaltas(
       disciplineLessons.map((l) => l.id),
       absentLessonIds,

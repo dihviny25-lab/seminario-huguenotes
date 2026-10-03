@@ -3,6 +3,12 @@ import { eq } from "drizzle-orm";
 import { db } from "@/server/db/client";
 import { students, studentLessonAccess } from "@/server/db/schema";
 
+// Reexportado daqui por conveniência (quem já importava `isLessonContentVisible`
+// de `@/server/enrollment` continua funcionando) — mas a definição real mora em
+// `@/server/files/access`, que precisa continuar sem tocar banco (ver o
+// comentário lá), diferente deste arquivo.
+export { isLessonContentVisible } from "@/server/files/access";
+
 /**
  * `null` = aluno comum, sem restrição (currículo inteiro, como sempre foi).
  * `Set<string>` = aluno de matrícula seletiva — só essas aulas.
@@ -22,18 +28,4 @@ export async function getStudentAccessibleLessonIds(
     .from(studentLessonAccess)
     .where(eq(studentLessonAccess.studentId, studentId));
   return new Set(rows.map((r) => r.lessonId));
-}
-
-/**
- * `lessonId` nulo no conteúdo = material geral da disciplina, sempre visível.
- * Com `accessibleLessonIds` (aluno de matrícula seletiva), só aparece o
- * conteúdo cuja aula está liberada pra ele.
- */
-export function isLessonContentVisible(
-  lessonId: string | null,
-  accessibleLessonIds: Set<string> | null,
-): boolean {
-  if (accessibleLessonIds === null) return true;
-  if (lessonId === null) return true;
-  return accessibleLessonIds.has(lessonId);
 }

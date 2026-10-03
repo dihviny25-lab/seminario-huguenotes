@@ -10,12 +10,18 @@ import {
   requireOwnDiscipline,
   requireStudentId,
 } from "@/server/auth/guard";
+import { getStudentAccessibleLessonIds, isLessonContentVisible } from "@/server/enrollment";
 import {
+  assignments,
   attendance,
   disciplines,
+  exams,
   lessons,
+  presentationSlides,
+  readingMaterials,
   students,
   studentLessonAccess,
+  videoLessons,
 } from "@/server/db/schema";
 import { db } from "@/server/db/client";
 
@@ -168,6 +174,42 @@ export const deleteLessonFn = createServerFn({ method: "POST" })
     if (!lesson || lesson.disciplineId !== data.disciplineId) {
       throw new Error("Aula não encontrada.");
     }
+
+    // Apagar a aula zeraria o `lesson_id` do conteúdo vinculado (FK
+    // `on delete set null`), o que o tornaria "geral" e visível pra todo
+    // mundo de novo — inclusive pra aluno de matrícula seletiva sem acesso
+    // a essa aula. Em vez de deixar isso acontecer silenciosamente, bloqueia.
+    const linkedContentRows = (
+      await Promise.all([
+        db
+          .select({ id: videoLessons.id })
+          .from(videoLessons)
+          .where(eq(videoLessons.lessonId, data.lessonId))
+          .limit(1),
+        db
+          .select({ id: readingMaterials.id })
+          .from(readingMaterials)
+          .where(eq(readingMaterials.lessonId, data.lessonId))
+          .limit(1),
+        db
+          .select({ id: presentationSlides.id })
+          .from(presentationSlides)
+          .where(eq(presentationSlides.lessonId, data.lessonId))
+          .limit(1),
+        db.select({ id: exams.id }).from(exams).where(eq(exams.lessonId, data.lessonId)).limit(1),
+        db
+          .select({ id: assignments.id })
+          .from(assignments)
+          .where(eq(assignments.lessonId, data.lessonId))
+          .limit(1),
+      ])
+    ).flat();
+    if (linkedContentRows.length > 0) {
+      throw new Error(
+        "Essa aula tem material/vídeo/slide/prova/tarefa vinculado a ela — desvincule antes de apagar.",
+      );
+    }
+
     await db.delete(lessons).where(eq(lessons.id, data.lessonId));
     await logAudit("aula.apagar", `Apagou uma aula de ${discipline.discipline}.`);
   });
@@ -339,6 +381,10 @@ export const checkInFn = createServerFn({ method: "POST" })
 
     if (!row || !row.checkInOpen || row.checkInToken !== data.token) {
       throw new Error("Chamada não está aberta ou QR code inválido.");
+    }
+    const accessibleLessonIds = await getStudentAccessibleLessonIds(studentId);
+    if (!isLessonContentVisible(data.lessonId, accessibleLessonIds)) {
+      throw new Error("Você não está matriculado nesta aula.");
     }
 
     await db
