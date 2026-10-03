@@ -1,12 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { logAudit } from "@/server/audit";
 import { requireAnyLogin, requireOwnDiscipline } from "@/server/auth/guard";
 import { db } from "@/server/db/client";
 import { disciplines, readingMaterials } from "@/server/db/schema";
-import { registerPrivateFile } from "@/server/files/privateFileAccess";
+import { deletePrivateFile, registerPrivateFile } from "@/server/files/privateFileAccess";
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
@@ -108,10 +108,17 @@ export const updateMaterialFn = createServerFn({ method: "POST" })
   .validator(updateSchema)
   .handler(async ({ data }) => {
     const discipline = await requireOwnDiscipline(data.disciplineId);
-    await db
+    const [updated] = await db
       .update(readingMaterials)
       .set({ title: data.title, description: data.description || null })
-      .where(eq(readingMaterials.id, data.materialId));
+      .where(
+        and(
+          eq(readingMaterials.id, data.materialId),
+          eq(readingMaterials.disciplineId, data.disciplineId),
+        ),
+      )
+      .returning({ id: readingMaterials.id });
+    if (!updated) throw new Error("Material não encontrado nesta disciplina.");
 
     if (data.filePathname && data.fileName && data.fileUrl) {
       const fileId = await registerPrivateFile({
@@ -140,14 +147,19 @@ export const deleteMaterialFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const discipline = await requireOwnDiscipline(data.disciplineId);
     const [material] = await db
-      .select({ title: readingMaterials.title })
-      .from(readingMaterials)
-      .where(eq(readingMaterials.id, data.materialId))
-      .limit(1);
-    await db.delete(readingMaterials).where(eq(readingMaterials.id, data.materialId));
+      .delete(readingMaterials)
+      .where(
+        and(
+          eq(readingMaterials.id, data.materialId),
+          eq(readingMaterials.disciplineId, data.disciplineId),
+        ),
+      )
+      .returning({ title: readingMaterials.title, fileId: readingMaterials.fileId });
+    if (!material) throw new Error("Material não encontrado nesta disciplina.");
+    await deletePrivateFile(material.fileId);
     await logAudit(
       "apostila.apagar",
-      `Apagou o material "${material?.title ?? data.materialId}" em ${discipline.discipline}.`,
+      `Apagou o material "${material.title}" em ${discipline.discipline}.`,
     );
   });
 
