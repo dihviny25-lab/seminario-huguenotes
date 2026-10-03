@@ -4,14 +4,16 @@ import { z } from "zod";
 
 import { extractYouTubeId } from "@/lib/youtube";
 import { logAudit } from "@/server/audit";
-import { requireAnyLogin, requireOwnDiscipline, requireStudentId } from "@/server/auth/guard";
+import { requireAnyIdentity, requireOwnDiscipline, requireStudentId } from "@/server/auth/guard";
 import { db } from "@/server/db/client";
 import { students, videoLessons, videoWatches } from "@/server/db/schema";
+import { getStudentAccessibleLessonIds, isLessonContentVisible } from "@/server/enrollment";
 import { deletePrivateFile, registerPrivateFile } from "@/server/files/privateFileAccess";
 
 export type VideoLesson = {
   id: string;
   disciplineId: string;
+  lessonId: string | null;
   title: string;
   source: "youtube" | "upload";
   youtubeUrl: string | null;
@@ -83,6 +85,7 @@ export const getMyDisciplineVideoBoardFn = createServerFn({ method: "GET" })
 const createSchema = z
   .object({
     disciplineId: z.string().uuid(),
+    lessonId: z.string().uuid().optional(),
     title: z.string().trim().min(1, "Informe um título."),
     source: z.enum(["youtube", "upload"]),
     youtubeUrl: z.string().trim().optional(),
@@ -114,6 +117,7 @@ export const createVideoLessonFn = createServerFn({ method: "POST" })
       .insert(videoLessons)
       .values({
         disciplineId: data.disciplineId,
+        lessonId: data.lessonId || null,
         title: data.title,
         source: data.source,
         youtubeUrl: data.source === "youtube" ? data.youtubeUrl : null,
@@ -166,8 +170,11 @@ export const deleteVideoLessonFn = createServerFn({ method: "POST" })
  */
 export const listAllVideoLessonsFn = createServerFn({ method: "GET" }).handler(
   async (): Promise<Array<VideoLesson>> => {
-    await requireAnyLogin();
-    return db.select().from(videoLessons).orderBy(asc(videoLessons.sequence));
+    const identity = await requireAnyIdentity();
+    const accessibleLessonIds =
+      identity.role === "student" ? await getStudentAccessibleLessonIds(identity.id) : null;
+    const rows = await db.select().from(videoLessons).orderBy(asc(videoLessons.sequence));
+    return rows.filter((row) => isLessonContentVisible(row.lessonId, accessibleLessonIds));
   },
 );
 
@@ -175,12 +182,15 @@ export const listAllVideoLessonsFn = createServerFn({ method: "GET" }).handler(
 export const listDisciplineVideoLessonsFn = createServerFn({ method: "GET" })
   .validator(disciplineIdSchema)
   .handler(async ({ data }): Promise<Array<VideoLesson>> => {
-    await requireAnyLogin();
-    return db
+    const identity = await requireAnyIdentity();
+    const accessibleLessonIds =
+      identity.role === "student" ? await getStudentAccessibleLessonIds(identity.id) : null;
+    const rows = await db
       .select()
       .from(videoLessons)
       .where(eq(videoLessons.disciplineId, data.disciplineId))
       .orderBy(asc(videoLessons.sequence));
+    return rows.filter((row) => isLessonContentVisible(row.lessonId, accessibleLessonIds));
   });
 
 /** IDs das vídeo-aulas que o próprio aluno já concluiu. */

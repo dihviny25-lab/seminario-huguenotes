@@ -16,6 +16,7 @@ import {
   grades,
 } from "@/server/db/schema";
 import { finalizeAssignmentSubmission } from "@/server/assignments/scoring";
+import { getStudentAccessibleLessonIds, isLessonContentVisible } from "@/server/enrollment";
 import { registerPrivateFile } from "@/server/files/privateFileAccess";
 
 export type AvailableAssignment = {
@@ -33,10 +34,12 @@ export type AvailableAssignment = {
 export const listAvailableAssignmentsFn = createServerFn({ method: "GET" }).handler(
   async (): Promise<Array<AvailableAssignment>> => {
     const studentId = await requireStudentId();
+    const accessibleLessonIds = await getStudentAccessibleLessonIds(studentId);
 
-    const rows = await db
+    const allRows = await db
       .select({
         id: assignments.id,
+        lessonId: assignments.lessonId,
         title: assignments.title,
         instructions: assignments.instructions,
         dueAt: assignments.dueAt,
@@ -48,6 +51,7 @@ export const listAvailableAssignmentsFn = createServerFn({ method: "GET" }).hand
       .innerJoin(disciplines, eq(assignments.disciplineId, disciplines.id))
       .innerJoin(assessments, eq(assignments.assessmentId, assessments.id))
       .orderBy(asc(assignments.createdAt));
+    const rows = allRows.filter((row) => isLessonContentVisible(row.lessonId, accessibleLessonIds));
 
     const ids = rows.map((r) => r.id);
     const [submissionRows, gradeRows] = await Promise.all([
@@ -105,10 +109,12 @@ export const listDisciplineAssignmentsFn = createServerFn({ method: "GET" })
   .validator(disciplineIdSchema)
   .handler(async ({ data }): Promise<Array<AvailableAssignment>> => {
     const studentId = await requireStudentId();
+    const accessibleLessonIds = await getStudentAccessibleLessonIds(studentId);
 
-    const rows = await db
+    const allRows = await db
       .select({
         id: assignments.id,
+        lessonId: assignments.lessonId,
         title: assignments.title,
         instructions: assignments.instructions,
         dueAt: assignments.dueAt,
@@ -121,6 +127,7 @@ export const listDisciplineAssignmentsFn = createServerFn({ method: "GET" })
       .innerJoin(assessments, eq(assignments.assessmentId, assessments.id))
       .where(eq(assignments.disciplineId, data.disciplineId))
       .orderBy(asc(assignments.createdAt));
+    const rows = allRows.filter((row) => isLessonContentVisible(row.lessonId, accessibleLessonIds));
 
     const ids = rows.map((r) => r.id);
     const [submissionRows, gradeRows] = await Promise.all([

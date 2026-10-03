@@ -3,9 +3,10 @@ import { and, asc, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { logAudit } from "@/server/audit";
-import { requireAnyLogin, requireOwnDiscipline } from "@/server/auth/guard";
+import { requireAnyIdentity, requireOwnDiscipline } from "@/server/auth/guard";
 import { db } from "@/server/db/client";
 import { disciplines, presentationSlides } from "@/server/db/schema";
+import { getStudentAccessibleLessonIds, isLessonContentVisible } from "@/server/enrollment";
 import { deletePrivateFile, registerPrivateFile } from "@/server/files/privateFileAccess";
 
 function todayIso(): string {
@@ -15,6 +16,7 @@ function todayIso(): string {
 export type PresentationSlide = {
   id: string;
   disciplineId: string;
+  lessonId: string | null;
   title: string;
   description: string | null;
   fileUrl: string;
@@ -46,6 +48,7 @@ export const listMyDisciplineSlidesFn = createServerFn({ method: "GET" })
 
 const createSchema = z.object({
   disciplineId: z.string().uuid(),
+  lessonId: z.string().uuid().optional(),
   title: z.string().trim().min(1, "Informe um título."),
   description: z.string().trim().optional(),
   fileUrl: z.string().trim().url("URL de arquivo inválida."),
@@ -75,6 +78,7 @@ export const createSlideFn = createServerFn({ method: "POST" })
       .insert(presentationSlides)
       .values({
         disciplineId: data.disciplineId,
+        lessonId: data.lessonId || null,
         title: data.title,
         description: data.description || null,
         fileUrl: data.fileUrl,
@@ -99,6 +103,7 @@ export const createSlideFn = createServerFn({ method: "POST" })
 const updateSchema = z.object({
   disciplineId: z.string().uuid(),
   slideId: z.string().uuid(),
+  lessonId: z.string().uuid().optional(),
   title: z.string().trim().min(1, "Informe um título."),
   description: z.string().trim().optional(),
 });
@@ -109,7 +114,11 @@ export const updateSlideFn = createServerFn({ method: "POST" })
     const discipline = await requireOwnDiscipline(data.disciplineId);
     const [updated] = await db
       .update(presentationSlides)
-      .set({ title: data.title, description: data.description || null })
+      .set({
+        title: data.title,
+        description: data.description || null,
+        lessonId: data.lessonId || null,
+      })
       .where(
         and(
           eq(presentationSlides.id, data.slideId),
@@ -148,6 +157,7 @@ function selectSlideColumns() {
   return {
     id: presentationSlides.id,
     disciplineId: presentationSlides.disciplineId,
+    lessonId: presentationSlides.lessonId,
     title: presentationSlides.title,
     description: presentationSlides.description,
     fileName: presentationSlides.fileName,
@@ -172,13 +182,17 @@ function withAvailability(
  */
 export const listAllPresentationSlidesFn = createServerFn({ method: "GET" }).handler(
   async (): Promise<Array<PortalPresentationSlide>> => {
-    await requireAnyLogin();
+    const identity = await requireAnyIdentity();
+    const accessibleLessonIds =
+      identity.role === "student" ? await getStudentAccessibleLessonIds(identity.id) : null;
     const rows = await db
       .select(selectSlideColumns())
       .from(presentationSlides)
       .innerJoin(disciplines, eq(disciplines.id, presentationSlides.disciplineId))
       .orderBy(asc(presentationSlides.sequence));
-    return rows.map(withAvailability);
+    return rows
+      .filter((row) => isLessonContentVisible(row.lessonId, accessibleLessonIds))
+      .map(withAvailability);
   },
 );
 
@@ -186,14 +200,18 @@ export const listAllPresentationSlidesFn = createServerFn({ method: "GET" }).han
 export const listDisciplinePresentationSlidesFn = createServerFn({ method: "GET" })
   .validator(disciplineIdSchema)
   .handler(async ({ data }): Promise<Array<PortalPresentationSlide>> => {
-    await requireAnyLogin();
+    const identity = await requireAnyIdentity();
+    const accessibleLessonIds =
+      identity.role === "student" ? await getStudentAccessibleLessonIds(identity.id) : null;
     const rows = await db
       .select(selectSlideColumns())
       .from(presentationSlides)
       .innerJoin(disciplines, eq(disciplines.id, presentationSlides.disciplineId))
       .where(eq(presentationSlides.disciplineId, data.disciplineId))
       .orderBy(asc(presentationSlides.sequence));
-    return rows.map(withAvailability);
+    return rows
+      .filter((row) => isLessonContentVisible(row.lessonId, accessibleLessonIds))
+      .map(withAvailability);
   });
 
 const slideIdSchema = z.object({ slideId: z.string().uuid() });
@@ -206,7 +224,7 @@ const slideIdSchema = z.object({ slideId: z.string().uuid() });
 export const getPresentationSlideFileFn = createServerFn({ method: "GET" })
   .validator(slideIdSchema)
   .handler(async ({ data }): Promise<{ fileId: string | null; fileUrl: string }> => {
-    await requireAnyLogin();
+    await requireAnyIdentity();
     const [row] = await db
       .select({
         fileUrl: presentationSlides.fileUrl,

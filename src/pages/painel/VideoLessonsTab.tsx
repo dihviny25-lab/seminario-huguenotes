@@ -4,6 +4,7 @@ import { CheckCircle2, Loader2, Plus, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
 
 import { PrivateVideoPlayer } from "@/components/PrivateVideoPlayer";
+import { LessonSelect } from "@/components/painel/LessonSelect";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -190,12 +191,14 @@ function CreateVideoDialog({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [title, setTitle] = useState("");
   const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [lessonId, setLessonId] = useState<string | undefined>(undefined);
   const [file, setFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
   function reset() {
     setTitle("");
     setYoutubeUrl("");
+    setLessonId(undefined);
     setFile(null);
     setUploadProgress(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -204,7 +207,9 @@ function CreateVideoDialog({
   const mutation = useMutation({
     mutationFn: async (source: "youtube" | "upload") => {
       if (source === "youtube") {
-        return createVideoLessonFn({ data: { disciplineId, title, source, youtubeUrl } });
+        return createVideoLessonFn({
+          data: { disciplineId, title, source, youtubeUrl, lessonId },
+        });
       }
       if (!file) throw new Error("Escolha um arquivo de vídeo.");
       setUploadProgress(0);
@@ -215,6 +220,7 @@ function CreateVideoDialog({
             disciplineId,
             title,
             source,
+            lessonId,
             fileUrl: uploaded.url,
             fileName: uploaded.fileName,
             filePathname: uploaded.pathname,
@@ -250,6 +256,11 @@ function CreateVideoDialog({
             value={title}
             onChange={(event) => setTitle(event.target.value)}
           />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Aula (opcional)</Label>
+          <LessonSelect disciplineId={disciplineId} value={lessonId} onChange={setLessonId} />
         </div>
 
         <Tabs defaultValue="youtube" className="mt-2">

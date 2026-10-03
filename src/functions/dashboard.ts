@@ -18,6 +18,7 @@ import {
 import { dateToIsoInTimeZone } from "@/lib/payments";
 import { requireOwnDiscipline, requireStudentId } from "@/server/auth/guard";
 import { db } from "@/server/db/client";
+import { getStudentAccessibleLessonIds, isLessonContentVisible } from "@/server/enrollment";
 import {
   assignments,
   assignmentSubmissions,
@@ -56,10 +57,11 @@ export type StudentDashboard = {
 /** Avisos do topo do portal do aluno: cobrança, próxima aula, vídeos novos. */
 export const getStudentDashboardFn = createServerFn({ method: "GET" }).handler(
   async (): Promise<StudentDashboard> => {
-    await requireStudentId();
+    const studentId = await requireStudentId();
     const today = todayIso();
+    const accessibleLessonIds = await getStudentAccessibleLessonIds(studentId);
 
-    const [myCharges, watchedIds, lessonRows, videoRows] = await Promise.all([
+    const [myCharges, watchedIds, lessonRowsRaw, videoRowsRaw] = await Promise.all([
       listMyChargesFn(),
       listMyWatchedVideosFn(),
       db
@@ -74,6 +76,7 @@ export const getStudentDashboardFn = createServerFn({ method: "GET" }).handler(
       db
         .select({
           id: videoLessons.id,
+          lessonId: videoLessons.lessonId,
           disciplineId: videoLessons.disciplineId,
           disciplineName: disciplines.discipline,
           title: videoLessons.title,
@@ -82,6 +85,12 @@ export const getStudentDashboardFn = createServerFn({ method: "GET" }).handler(
         .from(videoLessons)
         .innerJoin(disciplines, eq(disciplines.id, videoLessons.disciplineId)),
     ]);
+    const lessonRows = lessonRowsRaw.filter((row) =>
+      isLessonContentVisible(row.id, accessibleLessonIds),
+    );
+    const videoRows = videoRowsRaw.filter((row) =>
+      isLessonContentVisible(row.lessonId, accessibleLessonIds),
+    );
 
     const chargeAlert = buildChargeAlert(
       myCharges.map((c) => ({

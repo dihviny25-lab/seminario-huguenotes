@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
 import { effectiveTeacherId } from "@/lib/teachingAssignments";
@@ -10,13 +10,25 @@ import {
   requireOwnDiscipline,
   requireStudentId,
 } from "@/server/auth/guard";
-import { attendance, disciplines, lessons, students } from "@/server/db/schema";
+import {
+  attendance,
+  disciplines,
+  lessons,
+  students,
+  studentLessonAccess,
+} from "@/server/db/schema";
 import { db } from "@/server/db/client";
 
 const disciplineIdSchema = z.object({ disciplineId: z.string().uuid() });
 
 export type AttendanceBoard = {
   students: Array<{ id: string; name: string }>;
+  /**
+   * Alunos de matrícula seletiva (ex.: Denis) e as aulas liberadas pra cada
+   * um — o quadro usa isso pra não exigir presença numa aula que o aluno
+   * não está matriculado. Ausente da lista = sem restrição, vê tudo.
+   */
+  restrictedStudentLessonIds: Record<string, Array<string>>;
   lessons: Array<{
     id: string;
     date: string | null;
@@ -36,7 +48,11 @@ export const getAttendanceBoardFn = createServerFn({ method: "GET" })
 
     const [studentRows, lessonRows] = await Promise.all([
       db
-        .select({ id: students.id, name: students.name })
+        .select({
+          id: students.id,
+          name: students.name,
+          selectiveEnrollment: students.selectiveEnrollment,
+        })
         .from(students)
         .where(eq(students.active, true))
         .orderBy(asc(students.name)),
@@ -54,6 +70,21 @@ export const getAttendanceBoardFn = createServerFn({ method: "GET" })
         .where(eq(lessons.disciplineId, data.disciplineId))
         .orderBy(asc(lessons.sequence)),
     ]);
+
+    const restrictedStudentIds = studentRows.filter((s) => s.selectiveEnrollment).map((s) => s.id);
+    const grantedRows =
+      restrictedStudentIds.length === 0
+        ? []
+        : await db
+            .select({
+              studentId: studentLessonAccess.studentId,
+              lessonId: studentLessonAccess.lessonId,
+            })
+            .from(studentLessonAccess)
+            .where(inArray(studentLessonAccess.studentId, restrictedStudentIds));
+    const restrictedStudentLessonIds: Record<string, Array<string>> = {};
+    for (const studentId of restrictedStudentIds) restrictedStudentLessonIds[studentId] = [];
+    for (const row of grantedRows) restrictedStudentLessonIds[row.studentId]?.push(row.lessonId);
 
     const visibleLessons = isAdmin
       ? lessonRows
@@ -74,13 +105,28 @@ export const getAttendanceBoardFn = createServerFn({ method: "GET" })
             .where(inArray(attendance.lessonId, lessonIds));
 
     return {
-      students: studentRows,
+      students: studentRows.map(({ id, name }) => ({ id, name })),
+      restrictedStudentLessonIds,
       lessons: visibleLessons.map(({ teacherId: _teacherId, ...lesson }) => ({
         ...lesson,
         givenAt: lesson.givenAt ? lesson.givenAt.toISOString() : null,
       })),
       attendance: attendanceRows,
     };
+  });
+
+export type DisciplineLessonOption = { id: string; sequence: number; date: string | null };
+
+/** Lista enxuta de aulas de uma disciplina — pro seletor "Aula" ao criar conteúdo. */
+export const listDisciplineLessonsFn = createServerFn({ method: "GET" })
+  .validator(disciplineIdSchema)
+  .handler(async ({ data }): Promise<Array<DisciplineLessonOption>> => {
+    await requireOwnDiscipline(data.disciplineId);
+    return db
+      .select({ id: lessons.id, sequence: lessons.sequence, date: lessons.date })
+      .from(lessons)
+      .where(eq(lessons.disciplineId, data.disciplineId))
+      .orderBy(asc(lessons.sequence));
   });
 
 const createLessonSchema = z.object({
@@ -157,10 +203,32 @@ export const setLessonAttendanceAllFn = createServerFn({ method: "POST" })
   .validator(setLessonAttendanceAllSchema)
   .handler(async ({ data }) => {
     const { discipline } = await requireAssignedLesson(data.disciplineId, data.lessonId);
-    const activeStudents = await db
-      .select({ id: students.id })
+    const activeStudentRows = await db
+      .select({ id: students.id, selectiveEnrollment: students.selectiveEnrollment })
       .from(students)
       .where(eq(students.active, true));
+
+    const restrictedIds = activeStudentRows.filter((s) => s.selectiveEnrollment).map((s) => s.id);
+    const grantedForLesson =
+      restrictedIds.length === 0
+        ? new Set<string>()
+        : new Set(
+            (
+              await db
+                .select({ studentId: studentLessonAccess.studentId })
+                .from(studentLessonAccess)
+                .where(
+                  and(
+                    inArray(studentLessonAccess.studentId, restrictedIds),
+                    eq(studentLessonAccess.lessonId, data.lessonId),
+                  ),
+                )
+            ).map((r) => r.studentId),
+          );
+    // Matrícula seletiva sem essa aula liberada não entra no "marcar todos".
+    const activeStudents = activeStudentRows.filter(
+      (s) => !s.selectiveEnrollment || grantedForLesson.has(s.id),
+    );
 
     // Cada aluno é uma linha independente (sem dependência de ordem entre elas),
     // então roda em paralelo — sequencial aqui deixaria "marcar todos" visivelmente lento.
