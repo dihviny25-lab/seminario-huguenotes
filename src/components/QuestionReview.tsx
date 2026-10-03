@@ -1,5 +1,6 @@
 import { CheckCircle2, X } from "lucide-react";
 
+import { cardVariant } from "@/lib/cardVariants";
 import { cn } from "@/lib/utils";
 
 export type ReviewQuestion = {
@@ -23,8 +24,8 @@ export function QuestionReview({ question, index }: { question: ReviewQuestion; 
   return (
     <div
       className={cn(
-        "animate-in rounded-md border border-t-2 bg-card/70 p-4 shadow-soft fade-in slide-in-from-top-1 duration-200",
-        gotItRight ? "border-border/70 border-t-success" : "border-border/70 border-t-destructive",
+        cardVariant(gotItRight ? "success" : "destructive"),
+        "animate-in fade-in slide-in-from-top-1 duration-200",
       )}
     >
       <div className="flex items-start justify-between gap-3">

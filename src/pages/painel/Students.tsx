@@ -70,6 +70,7 @@ import {
   updateStudentFn,
   type Student,
 } from "@/functions/students";
+import { isAdminRole } from "@/lib/teacherRole";
 
 const STUDENTS_KEY = ["students"] as const;
 
@@ -88,7 +89,7 @@ export function Students() {
     queryKey: ["current-teacher"],
     queryFn: () => getCurrentTeacherFn(),
   });
-  const isAdmin = me?.role === "admin";
+  const isAdmin = isAdminRole(me?.role);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<Student | null>(null);

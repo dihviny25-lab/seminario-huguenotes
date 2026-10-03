@@ -3,6 +3,8 @@ import { Bell, BellOff } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cardVariant } from "@/lib/cardVariants";
 import {
   disablePush,
   enablePush,
@@ -49,10 +51,25 @@ export function NotificationToggle() {
     }
   }
 
-  if (!supported || loading) return null;
+  // `loading` é só o tempo de checar a inscrição já existente — passageiro,
+  // por isso mostra skeleton. `!supported` é definitivo (navegador não tem
+  // suporte), por isso não mostra nada, sem novo carregamento depois.
+  if (loading) {
+    return (
+      <div className={cardVariant("passive", "flex items-start gap-3")}>
+        <Skeleton className="mt-0.5 size-4 shrink-0 rounded-full" />
+        <span className="min-w-0 flex-1 space-y-2">
+          <Skeleton className="h-4 w-40" />
+          <Skeleton className="h-3 w-full" />
+        </span>
+      </div>
+    );
+  }
+
+  if (!supported) return null;
 
   return (
-    <div className="flex items-start gap-3 rounded-md border border-t-2 border-border/70 border-t-accent bg-card/70 p-4 shadow-soft">
+    <div className={cardVariant("passive", "flex items-start gap-3")}>
       {enabled ? (
         <Bell className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden />
       ) : (

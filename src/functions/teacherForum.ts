@@ -3,6 +3,7 @@ import { asc, desc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
 import { canDeletePost, canDeleteThread } from "@/lib/forumPermissions";
+import { isAdminRole } from "@/lib/teacherRole";
 import { logAudit } from "@/server/audit";
 import { requireTeacherId } from "@/server/auth/guard";
 import { db } from "@/server/db/client";
@@ -208,7 +209,7 @@ export const deleteTeacherThreadFn = createServerFn({ method: "POST" })
       .from(teachers)
       .where(eq(teachers.id, teacherId))
       .limit(1);
-    const isModerator = teacher?.role === "admin";
+    const isModerator = isAdminRole(teacher?.role);
 
     const [thread] = await db
       .select()
@@ -271,7 +272,7 @@ export const deleteTeacherPostFn = createServerFn({ method: "POST" })
         .from(teachers)
         .where(eq(teachers.id, teacherId))
         .limit(1);
-      isModerator = teacher?.role === "admin";
+      isModerator = isAdminRole(teacher?.role);
     }
 
     const isOpeningPost = initialPost?.id === post.id;

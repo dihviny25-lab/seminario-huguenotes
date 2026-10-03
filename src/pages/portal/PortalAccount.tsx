@@ -21,6 +21,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   changeMyStudentPasswordFn,
   getCurrentStudentFn,
@@ -47,7 +48,7 @@ const passwordSchema = z
 /** Minha conta — informações pessoais, notificações e troca de senha. */
 export function PortalAccount() {
   const queryClient = useQueryClient();
-  const { data: student } = useQuery({
+  const { data: student, isLoading: loadingStudent } = useQuery({
     queryKey: ["current-student"],
     queryFn: () => getCurrentStudentFn(),
   });
@@ -112,80 +113,93 @@ export function PortalAccount() {
           Ajude a secretaria a manter seu cadastro em dia.
         </p>
 
-        {student?.email ? (
-          <div className="mt-4 flex items-center justify-between gap-3 rounded-md border border-border/70 bg-muted/30 px-3 py-2.5">
-            <span className="min-w-0">
-              <span className="block truncate text-sm text-foreground">{student.email}</span>
-              {student.emailVerified ? (
-                <span className="mt-0.5 flex items-center gap-1 text-xs text-success">
-                  <CheckCircle2 className="size-3.5 shrink-0" aria-hidden />
-                  Confirmado
-                </span>
-              ) : (
-                <span className="mt-0.5 block text-xs text-muted-foreground">Não confirmado</span>
-              )}
-            </span>
-            {student.emailVerified ? (
-              <Badge variant="outline" className="shrink-0">
-                OK
-              </Badge>
-            ) : (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="shrink-0"
-                onClick={() => verifyEmailMutation.mutate()}
-                disabled={verifyEmailMutation.isPending}
-              >
-                {verifyEmailMutation.isPending ? (
-                  <Loader2 className="size-4 animate-spin" aria-hidden />
-                ) : null}
-                {verifyEmailMutation.isPending ? "Enviando…" : "Confirmar e-mail"}
-              </Button>
-            )}
+        {loadingStudent ? (
+          <div className="mt-4 space-y-4">
+            <Skeleton className="h-14 w-full" />
+            <Skeleton className="h-9 w-full" />
+            <Skeleton className="h-9 w-full" />
+            <Skeleton className="h-9 w-full" />
           </div>
-        ) : null}
+        ) : (
+          <>
+            {student?.email ? (
+              <div className="mt-4 flex items-center justify-between gap-3 rounded-md border border-border/70 bg-muted/30 px-3 py-2.5">
+                <span className="min-w-0">
+                  <span className="block truncate text-sm text-foreground">{student.email}</span>
+                  {student.emailVerified ? (
+                    <span className="mt-0.5 flex items-center gap-1 text-xs text-success">
+                      <CheckCircle2 className="size-3.5 shrink-0" aria-hidden />
+                      Confirmado
+                    </span>
+                  ) : (
+                    <span className="mt-0.5 block text-xs text-muted-foreground">
+                      Não confirmado
+                    </span>
+                  )}
+                </span>
+                {student.emailVerified ? (
+                  <Badge variant="outline" className="shrink-0">
+                    OK
+                  </Badge>
+                ) : (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="shrink-0"
+                    onClick={() => verifyEmailMutation.mutate()}
+                    disabled={verifyEmailMutation.isPending}
+                  >
+                    {verifyEmailMutation.isPending ? (
+                      <Loader2 className="size-4 animate-spin" aria-hidden />
+                    ) : null}
+                    {verifyEmailMutation.isPending ? "Enviando…" : "Confirmar e-mail"}
+                  </Button>
+                )}
+              </div>
+            ) : null}
 
-        <Form {...profileForm}>
-          <form
-            className="mt-4 space-y-4"
-            onSubmit={profileForm.handleSubmit((values) => profileMutation.mutate(values))}
-          >
-            <FormField
-              control={profileForm.control}
-              name="phone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Telefone / WhatsApp</FormLabel>
-                  <FormControl>
-                    <Input type="tel" placeholder="(00) 00000-0000" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={profileForm.control}
-              name="birthDate"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Data de nascimento</FormLabel>
-                  <FormControl>
-                    <Input type="date" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <Button type="submit" className="w-full" disabled={profileMutation.isPending}>
-              {profileMutation.isPending ? (
-                <Loader2 className="size-4 animate-spin" aria-hidden />
-              ) : null}
-              {profileMutation.isPending ? "Salvando…" : "Salvar informações"}
-            </Button>
-          </form>
-        </Form>
+            <Form {...profileForm}>
+              <form
+                className="mt-4 space-y-4"
+                onSubmit={profileForm.handleSubmit((values) => profileMutation.mutate(values))}
+              >
+                <FormField
+                  control={profileForm.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Telefone / WhatsApp</FormLabel>
+                      <FormControl>
+                        <Input type="tel" placeholder="(00) 00000-0000" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={profileForm.control}
+                  name="birthDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Data de nascimento</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button type="submit" className="w-full" disabled={profileMutation.isPending}>
+                  {profileMutation.isPending ? (
+                    <Loader2 className="size-4 animate-spin" aria-hidden />
+                  ) : null}
+                  {profileMutation.isPending ? "Salvando…" : "Salvar informações"}
+                </Button>
+              </form>
+            </Form>
+          </>
+        )}
       </div>
 
       <div className="mt-6 max-w-sm">

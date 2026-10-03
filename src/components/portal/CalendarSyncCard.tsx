@@ -4,6 +4,7 @@ import { Calendar, Check, Copy } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getMyCalendarLinkFn, regenerateMyCalendarLinkFn } from "@/functions/calendarFeed";
 
@@ -64,7 +65,18 @@ export function CalendarSyncCard() {
     setTimeout(() => setCopied(false), 2000);
   }
 
-  if (isLoading) return null;
+  if (isLoading) {
+    return (
+      <div className="flex items-start gap-3 rounded-md border border-t-2 border-border/70 border-t-accent bg-card/70 p-4 shadow-soft">
+        <Calendar className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
+        <span className="min-w-0 flex-1 space-y-2">
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-3 w-full" />
+          <Skeleton className="h-3 w-2/3" />
+        </span>
+      </div>
+    );
+  }
 
   if (error || !url) {
     return (

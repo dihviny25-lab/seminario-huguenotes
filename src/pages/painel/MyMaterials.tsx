@@ -17,9 +17,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { getCurrentTeacherFn } from "@/functions/auth";
 import { listMyMaterialsFn, type MyMaterialItem } from "@/functions/myMaterials";
 import { deleteMaterialFn, updateMaterialFn } from "@/functions/readingMaterials";
 import { deleteSlideFn, updateSlideFn } from "@/functions/presentationSlides";
+import { isAdminRole } from "@/lib/teacherRole";
 
 const MY_MATERIALS_KEY = ["my-materials"] as const;
 
@@ -51,6 +53,11 @@ function deleteItem(item: MyMaterialItem) {
 
 export function MyMaterials() {
   const queryClient = useQueryClient();
+  const { data: me } = useQuery({
+    queryKey: ["current-teacher"],
+    queryFn: () => getCurrentTeacherFn(),
+  });
+  const isAdmin = isAdminRole(me?.role);
   const { data: items, isLoading } = useQuery({
     queryKey: MY_MATERIALS_KEY,
     queryFn: () => listMyMaterialsFn(),
@@ -79,8 +86,12 @@ export function MyMaterials() {
 
   return (
     <PainelShell
-      title="Minhas Matérias"
-      description="Apostilas e slides de todas as suas disciplinas, num lugar só."
+      title={isAdmin ? "Materiais do seminário" : "Minhas Matérias"}
+      description={
+        isAdmin
+          ? "Apostilas e slides de todas as disciplinas do seminário, de todos os professores."
+          : "Apostilas e slides de todas as suas disciplinas, num lugar só."
+      }
     >
       {isLoading || !items ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

@@ -32,7 +32,7 @@ export type AttendanceBoard = {
 export const getAttendanceBoardFn = createServerFn({ method: "GET" })
   .validator(disciplineIdSchema)
   .handler(async ({ data }): Promise<AttendanceBoard> => {
-    const { discipline, teacherId } = await requireAttendanceDiscipline(data.disciplineId);
+    const { discipline, teacherId, isAdmin } = await requireAttendanceDiscipline(data.disciplineId);
 
     const [studentRows, lessonRows] = await Promise.all([
       db
@@ -55,9 +55,11 @@ export const getAttendanceBoardFn = createServerFn({ method: "GET" })
         .orderBy(asc(lessons.sequence)),
     ]);
 
-    const visibleLessons = lessonRows.filter(
-      (lesson) => effectiveTeacherId(lesson.teacherId, discipline.teacherId) === teacherId,
-    );
+    const visibleLessons = isAdmin
+      ? lessonRows
+      : lessonRows.filter(
+          (lesson) => effectiveTeacherId(lesson.teacherId, discipline.teacherId) === teacherId,
+        );
     const lessonIds = visibleLessons.map((l) => l.id);
     const attendanceRows =
       lessonIds.length === 0

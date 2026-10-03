@@ -377,10 +377,12 @@ export function InfoCards({
                       <span className="block truncate text-sm font-medium text-foreground">
                         {group.disciplineName}
                       </span>
-                      <span className="block text-xs text-muted-foreground">
-                        {group.lessons
-                          .map((lesson) => `Aula ${lesson.sequence} · ${fmtDate(lesson.date)}`)
-                          .join(" · ")}
+                      <span className="mt-0.5 flex flex-wrap gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+                        {group.lessons.map((lesson) => (
+                          <span key={lesson.sequence} className="whitespace-nowrap">
+                            Aula {lesson.sequence} · {fmtDate(lesson.date)}
+                          </span>
+                        ))}
                       </span>
                     </span>
                   </Link>

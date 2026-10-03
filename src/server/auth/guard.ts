@@ -18,17 +18,38 @@ export async function requireTeacherId(): Promise<string> {
 }
 
 /**
- * Garante que o professor logado é admin (acesso completo). Não-admins só
- * visualizam professores/alunos e editam o próprio perfil.
+ * `true` pra admin e super_admin — super_admin herda todo poder de admin
+ * (gerenciar qualquer disciplina/professor/aula, Financeiro, Auditoria
+ * etc.) e soma só uma coisa a mais: a visão da escola inteira, checada
+ * separadamente por `isSuperAdminTeacher`. Nenhum admin comum muda de
+ * comportamento com a adição do papel novo.
  */
-export async function requireAdminId(): Promise<string> {
-  const teacherId = await requireTeacherId();
+export async function isAdminTeacher(teacherId: string): Promise<boolean> {
   const [teacher] = await db
     .select({ role: teachers.role })
     .from(teachers)
     .where(eq(teachers.id, teacherId))
     .limit(1);
-  if (teacher?.role !== "admin") {
+  return teacher?.role === "admin" || teacher?.role === "super_admin";
+}
+
+/** `true` só pro papel mais alto — gate exclusivo da visão de escola inteira. */
+export async function isSuperAdminTeacher(teacherId: string): Promise<boolean> {
+  const [teacher] = await db
+    .select({ role: teachers.role })
+    .from(teachers)
+    .where(eq(teachers.id, teacherId))
+    .limit(1);
+  return teacher?.role === "super_admin";
+}
+
+/**
+ * Garante que o professor logado é admin (acesso completo). Não-admins só
+ * visualizam professores/alunos e editam o próprio perfil.
+ */
+export async function requireAdminId(): Promise<string> {
+  const teacherId = await requireTeacherId();
+  if (!(await isAdminTeacher(teacherId))) {
     throw new Error("Só administradores podem fazer isso.");
   }
   return teacherId;
@@ -41,13 +62,7 @@ export async function requireAdminId(): Promise<string> {
 export async function requireAdminOrSelf(targetTeacherId: string): Promise<string> {
   const teacherId = await requireTeacherId();
   if (teacherId === targetTeacherId) return teacherId;
-
-  const [teacher] = await db
-    .select({ role: teachers.role })
-    .from(teachers)
-    .where(eq(teachers.id, teacherId))
-    .limit(1);
-  if (teacher?.role !== "admin") {
+  if (!(await isAdminTeacher(teacherId))) {
     throw new Error("Você só pode editar o seu próprio perfil.");
   }
   return teacherId;
@@ -125,6 +140,7 @@ export async function requireAnyIdentity(): Promise<AnyIdentity> {
 /**
  * Garante que a disciplina existe e pertence ao professor logado — cada
  * professor só lança notas/faltas nas disciplinas que ele mesmo ministra.
+ * Admin gerencia qualquer disciplina, de qualquer professor.
  */
 export async function requireOwnDiscipline(disciplineId: string) {
   const teacherId = await requireTeacherId();
@@ -134,16 +150,17 @@ export async function requireOwnDiscipline(disciplineId: string) {
     .where(eq(disciplines.id, disciplineId))
     .limit(1);
 
-  if (!discipline || discipline.teacherId !== teacherId) {
-    throw new Error("Disciplina não encontrada.");
-  }
-  return discipline;
+  if (!discipline) throw new Error("Disciplina não encontrada.");
+  if (discipline.teacherId === teacherId) return discipline;
+  if (await isAdminTeacher(teacherId)) return discipline;
+  throw new Error("Disciplina não encontrada.");
 }
 
 /**
  * Autoriza ações limitadas a uma aula para seu professor efetivo: o override,
  * quando existe, ou o professor responsável pela disciplina por herança.
- * Também confirma que lessonId pertence à disciplineId informada.
+ * Admin passa por qualquer aula. Também confirma que lessonId pertence à
+ * disciplineId informada.
  */
 export async function requireAssignedLesson(disciplineId: string, lessonId: string) {
   const teacherId = await requireTeacherId();
@@ -157,20 +174,21 @@ export async function requireAssignedLesson(disciplineId: string, lessonId: stri
     .where(eq(lessons.id, lessonId))
     .limit(1);
 
-  if (
-    !row ||
-    row.lesson.disciplineId !== disciplineId ||
-    (row.lesson.teacherId ?? row.discipline.teacherId) !== teacherId
-  ) {
+  if (!row || row.lesson.disciplineId !== disciplineId) {
+    throw new Error("Aula não encontrada.");
+  }
+  const effectiveTeacherId = row.lesson.teacherId ?? row.discipline.teacherId;
+  if (effectiveTeacherId !== teacherId && !(await isAdminTeacher(teacherId))) {
     throw new Error("Aula não encontrada.");
   }
   return row;
 }
 
 /**
- * Autoriza a grade de chamada para o responsável padrão da disciplina ou um
- * professor com ao menos uma aula atribuída nela. O consumidor ainda deve
- * filtrar as aulas pelo professor efetivo antes de devolvê-las ao cliente.
+ * Autoriza a grade de chamada para o responsável padrão da disciplina, um
+ * professor com ao menos uma aula atribuída nela, ou admin (qualquer
+ * disciplina — `isAdmin: true` sinaliza pro consumidor que não deve
+ * filtrar as aulas pelo professor efetivo, já que admin vê todas).
  */
 export async function requireAttendanceDiscipline(disciplineId: string) {
   const teacherId = await requireTeacherId();
@@ -181,7 +199,8 @@ export async function requireAttendanceDiscipline(disciplineId: string) {
     .limit(1);
 
   if (!discipline) throw new Error("Disciplina não encontrada.");
-  if (discipline.teacherId === teacherId) return { discipline, teacherId };
+  if (discipline.teacherId === teacherId) return { discipline, teacherId, isAdmin: false };
+  if (await isAdminTeacher(teacherId)) return { discipline, teacherId, isAdmin: true };
 
   const [assignedLesson] = await db
     .select({ id: lessons.id })
@@ -190,5 +209,5 @@ export async function requireAttendanceDiscipline(disciplineId: string) {
     .limit(1);
   if (!assignedLesson) throw new Error("Disciplina não encontrada.");
 
-  return { discipline, teacherId };
+  return { discipline, teacherId, isAdmin: false };
 }

@@ -379,7 +379,7 @@ describe("pickUpcomingLessons", () => {
     const input = emptyInput({
       disciplines: [{ id: "d1", discipline: "Disc", lessons: 10 }],
       lessons: [
-        { id: "p", disciplineId: "d1", date: "2026-08-01", sequence: 1, givenAt: null },
+        { id: "p", disciplineId: "d1", date: "2026-08-01", sequence: 1, givenAt: "2026-08-01" },
         { id: "f2", disciplineId: "d1", date: "2026-09-10", sequence: 3, givenAt: null },
         { id: "f1", disciplineId: "d1", date: "2026-09-01", sequence: 2, givenAt: null },
       ],
@@ -387,6 +387,29 @@ describe("pickUpcomingLessons", () => {
     const out = pickUpcomingLessons(input);
     expect(out.map((l) => l.date)).toEqual(["2026-09-01", "2026-09-10"]);
     expect(out[0]).toMatchObject({ disciplineId: "d1", disciplineName: "Disc", sequence: 2 });
+  });
+
+  it("ignora disciplina que ainda não começou (nenhuma aula dada)", () => {
+    const input = emptyInput({
+      disciplines: [{ id: "d1", discipline: "Não começou", lessons: 10 }],
+      lessons: [
+        { id: "f1", disciplineId: "d1", date: "2026-09-01", sequence: 1, givenAt: null },
+        { id: "f2", disciplineId: "d1", date: "2026-09-08", sequence: 2, givenAt: null },
+      ],
+    });
+    expect(pickUpcomingLessons(input)).toEqual([]);
+  });
+
+  it("ignora disciplina já encerrada (progress >= 1)", () => {
+    const input = emptyInput({
+      disciplines: [{ id: "d1", discipline: "Encerrada", lessons: 2 }],
+      lessons: [
+        { id: "p1", disciplineId: "d1", date: "2026-08-01", sequence: 1, givenAt: "2026-08-01" },
+        { id: "p2", disciplineId: "d1", date: "2026-08-08", sequence: 2, givenAt: "2026-08-08" },
+        { id: "f1", disciplineId: "d1", date: "2026-09-01", sequence: 3, givenAt: null },
+      ],
+    });
+    expect(pickUpcomingLessons(input)).toEqual([]);
   });
 });
 
@@ -618,8 +641,9 @@ describe("buildTeacherDashboard", () => {
       scope: "minhas",
       disciplines: [{ id: "d1", discipline: "Disc", lessons: 10 }],
       lessons: [
-        { id: "l1", disciplineId: "d1", date: "2026-08-01", sequence: 1, givenAt: null },
-        { id: "l2", disciplineId: "d1", date: "2026-09-01", sequence: 2, givenAt: null },
+        { id: "l0", disciplineId: "d1", date: "2026-07-01", sequence: 1, givenAt: "2026-07-01" },
+        { id: "l1", disciplineId: "d1", date: "2026-08-01", sequence: 2, givenAt: null },
+        { id: "l2", disciplineId: "d1", date: "2026-09-01", sequence: 3, givenAt: null },
       ],
       assignments: [{ id: "a1", disciplineId: "d1", title: "T1" }],
       submissions: [

@@ -2,9 +2,9 @@ import { createServerFn } from "@tanstack/react-start";
 import { asc, eq } from "drizzle-orm";
 import { z } from "zod";
 
-import { requireAttendanceDiscipline, requireTeacherId } from "@/server/auth/guard";
+import { isAdminTeacher, requireAttendanceDiscipline, requireTeacherId } from "@/server/auth/guard";
 import { db } from "@/server/db/client";
-import { disciplines } from "@/server/db/schema";
+import { disciplines, teachers } from "@/server/db/schema";
 
 export type MyDiscipline = {
   id: string;
@@ -12,11 +12,14 @@ export type MyDiscipline = {
   term: string;
   module: string;
   discipline: string;
+  teacherName: string | null;
 };
 
+/** Disciplinas do professor logado — admin vê todas, de todos os professores. */
 export const listMyDisciplinesFn = createServerFn({ method: "GET" }).handler(
   async (): Promise<Array<MyDiscipline>> => {
     const teacherId = await requireTeacherId();
+    const isAdmin = await isAdminTeacher(teacherId);
     return db
       .select({
         id: disciplines.id,
@@ -24,9 +27,11 @@ export const listMyDisciplinesFn = createServerFn({ method: "GET" }).handler(
         term: disciplines.term,
         module: disciplines.module,
         discipline: disciplines.discipline,
+        teacherName: teachers.name,
       })
       .from(disciplines)
-      .where(eq(disciplines.teacherId, teacherId))
+      .leftJoin(teachers, eq(teachers.id, disciplines.teacherId))
+      .where(isAdmin ? undefined : eq(disciplines.teacherId, teacherId))
       .orderBy(asc(disciplines.semester));
   },
 );

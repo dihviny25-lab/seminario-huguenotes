@@ -26,6 +26,7 @@ import {
   getTeacherThreadFn,
 } from "@/functions/teacherForum";
 import { canDeletePost, canDeleteThread } from "@/lib/forumPermissions";
+import { isAdminRole } from "@/lib/teacherRole";
 
 import { teacherThreadsKey } from "./TeacherForumHome";
 
@@ -84,7 +85,7 @@ export function TeacherForumThread({ threadId }: { threadId: string }) {
       toast.error(error instanceof Error ? error.message : "Não foi possível apagar o tópico."),
   });
 
-  const isModerator = me?.role === "admin";
+  const isModerator = isAdminRole(me?.role);
   const canDelete =
     thread !== undefined &&
     canDeleteThread({

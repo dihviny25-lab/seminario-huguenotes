@@ -178,8 +178,11 @@ function EditMaterialDialog({
   onOpenChange: (open: boolean) => void;
   onUpdated: () => Promise<unknown>;
 }) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [title, setTitle] = useState(material?.title ?? "");
   const [description, setDescription] = useState(material?.description ?? "");
+  const [file, setFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   // O diálogo fica montado o tempo todo — sem isso, o useState acima só pega o
   // valor de `material` na primeira vez que abriu, e editar um material
@@ -188,19 +191,35 @@ function EditMaterialDialog({
     if (material) {
       setTitle(material.title);
       setDescription(material.description ?? "");
+      setFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   }, [material]);
 
   const mutation = useMutation({
-    mutationFn: () =>
-      updateMaterialFn({
+    mutationFn: async () => {
+      let uploaded: Awaited<ReturnType<typeof uploadFile>> | null = null;
+      if (file) {
+        setUploading(true);
+        try {
+          uploaded = await uploadFile(file, "material");
+        } finally {
+          setUploading(false);
+        }
+      }
+      return updateMaterialFn({
         data: {
           disciplineId,
           materialId: material!.id,
           title,
           description: description || undefined,
+          fileUrl: uploaded?.url,
+          fileName: uploaded?.fileName,
+          filePathname: uploaded?.pathname,
+          fileContentType: uploaded?.contentType ?? undefined,
         },
-      }),
+      });
+    },
     onSuccess: async () => {
       toast.success("Material atualizado.");
       onOpenChange(false);
@@ -241,10 +260,22 @@ function EditMaterialDialog({
               onChange={(event) => setDescription(event.target.value)}
             />
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="material-edit-file">Trocar arquivo (opcional — PDF ou imagem)</Label>
+            <Input
+              id="material-edit-file"
+              type="file"
+              ref={fileInputRef}
+              accept=".pdf,image/png,image/jpeg"
+              onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+            />
+          </div>
           <DialogFooter>
-            <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
-              Salvar
+            <Button type="submit" disabled={mutation.isPending || uploading}>
+              {mutation.isPending || uploading ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden />
+              ) : null}
+              {uploading ? "Enviando…" : "Salvar"}
             </Button>
           </DialogFooter>
         </form>
@@ -342,12 +373,12 @@ function CreateMaterialDialog({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="material-file">Arquivo (PDF, Word, PowerPoint ou imagem)</Label>
+            <Label htmlFor="material-file">Arquivo (PDF ou imagem)</Label>
             <Input
               id="material-file"
               type="file"
               ref={fileInputRef}
-              accept=".pdf,.doc,.docx,.ppt,.pptx,image/png,image/jpeg"
+              accept=".pdf,image/png,image/jpeg"
               onChange={(event) => setFile(event.target.files?.[0] ?? null)}
               required
             />

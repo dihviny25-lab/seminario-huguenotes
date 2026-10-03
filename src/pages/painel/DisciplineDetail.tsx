@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { PainelShell } from "@/components/painel/PainelShell";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getMyDisciplineFn } from "@/functions/disciplines";
 import { AttendanceTab } from "@/pages/painel/AttendanceTab";
@@ -21,52 +22,63 @@ export function DisciplineDetail({ disciplineId }: { disciplineId: string }) {
       title={discipline?.discipline ?? (isLoading ? "Carregando…" : "Disciplina")}
       description={discipline ? `${discipline.module} — ${discipline.term}` : undefined}
     >
-      <Tabs
-        key={discipline?.canManageDiscipline === false ? "assigned" : "owner"}
-        defaultValue={discipline?.canManageDiscipline === false ? "frequencia" : "acompanhamento"}
-      >
-        <TabsList>
-          {discipline?.canManageDiscipline !== false ? (
-            <TabsTrigger value="acompanhamento">Acompanhamento</TabsTrigger>
+      {isLoading ? (
+        <div className="space-y-4">
+          <div className="flex gap-2">
+            <Skeleton className="h-9 w-32" />
+            <Skeleton className="h-9 w-28" />
+            <Skeleton className="h-9 w-28" />
+          </div>
+          <Skeleton className="h-48 w-full" />
+        </div>
+      ) : (
+        <Tabs
+          key={discipline?.canManageDiscipline === true ? "owner" : "assigned"}
+          defaultValue={discipline?.canManageDiscipline === true ? "acompanhamento" : "frequencia"}
+        >
+          <TabsList>
+            {discipline?.canManageDiscipline === true ? (
+              <TabsTrigger value="acompanhamento">Acompanhamento</TabsTrigger>
+            ) : null}
+            <TabsTrigger value="frequencia">Frequência</TabsTrigger>
+            {discipline?.canManageDiscipline === true ? (
+              <>
+                <TabsTrigger value="notas">Notas</TabsTrigger>
+                <TabsTrigger value="videos">Vídeo-aulas</TabsTrigger>
+                <TabsTrigger value="apostila">Apostila</TabsTrigger>
+                <TabsTrigger value="slides">Slides</TabsTrigger>
+              </>
+            ) : null}
+          </TabsList>
+          {discipline?.canManageDiscipline === true ? (
+            <TabsContent value="acompanhamento">
+              <DisciplineOverviewTab disciplineId={disciplineId} />
+            </TabsContent>
           ) : null}
-          <TabsTrigger value="frequencia">Frequência</TabsTrigger>
-          {discipline?.canManageDiscipline !== false ? (
+          <TabsContent value="frequencia">
+            <AttendanceTab
+              disciplineId={disciplineId}
+              canManageDiscipline={discipline?.canManageDiscipline === true}
+            />
+          </TabsContent>
+          {discipline?.canManageDiscipline === true ? (
             <>
-              <TabsTrigger value="notas">Notas</TabsTrigger>
-              <TabsTrigger value="videos">Vídeo-aulas</TabsTrigger>
-              <TabsTrigger value="apostila">Apostila</TabsTrigger>
-              <TabsTrigger value="slides">Slides</TabsTrigger>
+              <TabsContent value="notas">
+                <GradesTab disciplineId={disciplineId} />
+              </TabsContent>
+              <TabsContent value="videos">
+                <VideoLessonsTab disciplineId={disciplineId} />
+              </TabsContent>
+              <TabsContent value="apostila">
+                <ReadingMaterialsTab disciplineId={disciplineId} />
+              </TabsContent>
+              <TabsContent value="slides">
+                <SlidesTab disciplineId={disciplineId} />
+              </TabsContent>
             </>
           ) : null}
-        </TabsList>
-        {discipline?.canManageDiscipline !== false ? (
-          <TabsContent value="acompanhamento">
-            <DisciplineOverviewTab disciplineId={disciplineId} />
-          </TabsContent>
-        ) : null}
-        <TabsContent value="frequencia">
-          <AttendanceTab
-            disciplineId={disciplineId}
-            canManageDiscipline={discipline?.canManageDiscipline === true}
-          />
-        </TabsContent>
-        {discipline?.canManageDiscipline !== false ? (
-          <>
-            <TabsContent value="notas">
-              <GradesTab disciplineId={disciplineId} />
-            </TabsContent>
-            <TabsContent value="videos">
-              <VideoLessonsTab disciplineId={disciplineId} />
-            </TabsContent>
-            <TabsContent value="apostila">
-              <ReadingMaterialsTab disciplineId={disciplineId} />
-            </TabsContent>
-            <TabsContent value="slides">
-              <SlidesTab disciplineId={disciplineId} />
-            </TabsContent>
-          </>
-        ) : null}
-      </Tabs>
+        </Tabs>
+      )}
     </PainelShell>
   );
 }
