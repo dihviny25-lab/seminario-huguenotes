@@ -1,11 +1,11 @@
 import "dotenv/config";
-import { defineConfig } from "vite";
+import { defineConfig, type ConfigEnv, type ESBuildOptions, type UserConfig } from "vite";
 import tailwindcss from "@tailwindcss/vite";
 import tsConfigPaths from "vite-tsconfig-paths";
 import viteReact from "@vitejs/plugin-react";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 
-export default defineConfig(async ({ command, mode }) => {
+export default defineConfig(async ({ command, mode }: ConfigEnv): Promise<UserConfig> => {
   const isDevBuild = command === "build" && mode === "development";
 
   const plugins = [
@@ -37,7 +37,9 @@ export default defineConfig(async ({ command, mode }) => {
           environments: {
             client: { define: { "process.env.NODE_ENV": JSON.stringify("development") } },
           },
-          esbuild: { keepNames: true },
+          // `esbuild` itself isn't a direct dependency, so its type here is
+          // incomplete and omits `keepNames` even though Vite still reads it.
+          esbuild: { keepNames: true } as ESBuildOptions,
         }
       : {}),
     css: { transformer: "lightningcss" },

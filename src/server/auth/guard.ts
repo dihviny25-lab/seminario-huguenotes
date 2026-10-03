@@ -94,8 +94,7 @@ export async function requireAnyLogin(): Promise<void> {
 }
 
 export type AnyIdentity =
-  | { role: "teacher"; id: string; name: string }
-  | { role: "student"; id: string; name: string };
+  { role: "teacher"; id: string; name: string } | { role: "student"; id: string; name: string };
 
 /**
  * Garante que existe uma sessão válida (professor OU aluno) e devolve quem
