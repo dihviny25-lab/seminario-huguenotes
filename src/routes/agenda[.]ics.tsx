@@ -65,14 +65,12 @@ export const Route = createFileRoute("/agenda.ics")({
         const events: Array<IcsEvent> = [
           ...lessonRows
             .filter((l) => l.date !== null)
-            .map(
-              (lesson): IcsEvent => ({
-                uid: `aula-${lesson.id}@seminariohuguenotes`,
-                title: `Aula ${lesson.sequence} — ${lesson.disciplineName}`,
-                date: lesson.date!,
-                allDay: true,
-              }),
-            ),
+            .map((lesson): IcsEvent => ({
+              uid: `aula-${lesson.id}@seminariohuguenotes`,
+              title: `Aula ${lesson.sequence} — ${lesson.disciplineName}`,
+              date: lesson.date!,
+              allDay: true,
+            })),
           ...examRows
             .filter((e) => e.opensAt !== null)
             .map((exam): IcsEvent => {
