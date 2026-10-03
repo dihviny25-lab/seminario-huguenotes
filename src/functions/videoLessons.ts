@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { asc, eq, inArray } from "drizzle-orm";
+import { asc, eq, inArray, and } from "drizzle-orm";
 import { z } from "zod";
 
 import { extractYouTubeId } from "@/lib/youtube";
@@ -147,15 +147,16 @@ export const deleteVideoLessonFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const discipline = await requireOwnDiscipline(data.disciplineId);
     const [video] = await db
-      .select({ title: videoLessons.title, fileId: videoLessons.fileId })
-      .from(videoLessons)
-      .where(eq(videoLessons.id, data.videoId))
-      .limit(1);
-    await db.delete(videoLessons).where(eq(videoLessons.id, data.videoId));
-    await deletePrivateFile(video?.fileId ?? null);
+      .delete(videoLessons)
+      .where(
+        and(eq(videoLessons.id, data.videoId), eq(videoLessons.disciplineId, data.disciplineId)),
+      )
+      .returning({ title: videoLessons.title, fileId: videoLessons.fileId });
+    if (!video) throw new Error("Vídeo-aula não encontrada nesta disciplina.");
+    await deletePrivateFile(video.fileId);
     await logAudit(
       "video.apagar",
-      `Apagou a vídeo-aula "${video?.title ?? data.videoId}" em ${discipline.discipline}.`,
+      `Apagou a vídeo-aula "${video.title}" em ${discipline.discipline}.`,
     );
   });
 
