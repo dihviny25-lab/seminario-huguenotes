@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 
 import type { AnyIdentity } from "@/server/auth/guard";
 import { db } from "@/server/db/client";
-import { assignmentSubmissions, privateFiles } from "@/server/db/schema";
+import { assignmentSubmissions, charges, privateFiles } from "@/server/db/schema";
 
 import { canReadFileRecord, type FileOwnerRecord, type FileOwnerType } from "./access";
 
@@ -46,6 +46,15 @@ async function resolveFileOwnerRecord(
       .select({ studentId: assignmentSubmissions.studentId })
       .from(assignmentSubmissions)
       .where(eq(assignmentSubmissions.id, ownerId))
+      .limit(1);
+    if (!row) return null;
+    return { ownerType, studentId: row.studentId };
+  }
+  if (ownerType === "payment_proof") {
+    const [row] = await db
+      .select({ studentId: charges.studentId })
+      .from(charges)
+      .where(eq(charges.id, ownerId))
       .limit(1);
     if (!row) return null;
     return { ownerType, studentId: row.studentId };

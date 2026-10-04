@@ -12,7 +12,8 @@ export type UploadedFile = {
   pathname: string;
   contentType: string | null;
 };
-export type UploadPurpose = "assignment" | "material" | "library" | "video" | "slide";
+export type UploadPurpose =
+  "assignment" | "material" | "library" | "video" | "slide" | "payment_proof";
 
 type ProgressHandler = (percent: number) => void;
 
