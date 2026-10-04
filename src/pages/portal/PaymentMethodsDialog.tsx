@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { Banknote, Building2, Check, Copy, CreditCard } from "lucide-react";
+import { useRef, useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Banknote, Building2, Check, Copy, CreditCard, Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -10,7 +11,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { uploadChargeProofFn, type Charge } from "@/functions/payments";
 import { useDelayedUnmount } from "@/hooks/useDelayedUnmount";
+import { uploadFile } from "@/lib/blobUpload";
 import { PAYMENT_INFO } from "@/lib/paymentInfo";
 import { cn } from "@/lib/utils";
 
@@ -22,10 +25,33 @@ export function PaymentMethodsDialog({
   charge,
   onOpenChange,
 }: {
-  charge: { description: string; currentAmount: string } | null;
+  charge: Charge | null;
   onOpenChange: (open: boolean) => void;
 }) {
+  const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [copied, setCopied] = useState(false);
+
+  const uploadMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const uploaded = await uploadFile(file, "payment_proof");
+      return uploadChargeProofFn({
+        data: {
+          chargeId: charge!.id,
+          fileUrl: uploaded.url,
+          fileName: uploaded.fileName,
+          filePathname: uploaded.pathname,
+          fileContentType: uploaded.contentType ?? undefined,
+        },
+      });
+    },
+    onSuccess: async () => {
+      toast.success("Comprovante enviado — aguarde a confirmação da secretaria.");
+      await queryClient.invalidateQueries({ queryKey: ["my-charges"] });
+    },
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Não foi possível enviar."),
+  });
   // "Copiado!" desaparece sozinho depois de 2s — o delayed unmount dá tempo do
   // fade/slide de saída rodar antes de voltar pro rótulo "Copiar".
   const copiedMounted = useDelayedUnmount(copied, 200);
@@ -122,10 +148,60 @@ export function PaymentMethodsDialog({
             </Button>
           </div>
 
-          <p className="text-xs text-muted-foreground">
-            Depois de pagar via PIX ou transferência, avise a secretaria (ou envie o comprovante)
-            para que sua mensalidade seja confirmada aqui no portal.
-          </p>
+          <div className="rounded-md border border-border/70 bg-card/70 p-4 shadow-soft">
+            <h3 className="mb-1 font-medium text-foreground">Comprovante de pagamento</h3>
+            <p className="mb-3 text-xs text-muted-foreground">
+              Depois de pagar via PIX ou transferência, envie o comprovante aqui pra secretaria
+              confirmar sua mensalidade.
+            </p>
+
+            {charge?.proofStatus === "pending" ? (
+              <p className="text-sm font-medium text-accent">
+                Comprovante enviado — em análise pela secretaria.
+              </p>
+            ) : charge?.proofStatus === "rejected" ? (
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-destructive">
+                  Comprovante rejeitado
+                  {charge.proofRejectionNote ? `: ${charge.proofRejectionNote}` : "."}
+                </p>
+                <p className="text-xs text-muted-foreground">Envie outro comprovante abaixo.</p>
+              </div>
+            ) : null}
+
+            {charge?.proofStatus !== "approved" ? (
+              <div className="mt-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,image/png,image/jpeg"
+                  className="hidden"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    event.target.value = "";
+                    if (file) uploadMutation.mutate(file);
+                  }}
+                />
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  disabled={uploadMutation.isPending}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {uploadMutation.isPending ? (
+                    <Loader2 className="size-4 animate-spin" aria-hidden />
+                  ) : (
+                    <Upload className="size-4" aria-hidden />
+                  )}
+                  {uploadMutation.isPending
+                    ? "Enviando…"
+                    : charge?.proofStatus
+                      ? "Enviar outro comprovante"
+                      : "Enviar comprovante"}
+                </Button>
+              </div>
+            ) : null}
+          </div>
         </div>
       </DialogContent>
     </Dialog>

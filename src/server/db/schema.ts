@@ -22,6 +22,7 @@ import {
 export const scheduleStatus = pgEnum("schedule_status", ["confirmed", "pending"]);
 export const teacherRole = pgEnum("teacher_role", ["admin", "teacher", "super_admin"]);
 export const chargeStatus = pgEnum("charge_status", ["pending", "paid", "canceled"]);
+export const chargeProofStatus = pgEnum("charge_proof_status", ["pending", "approved", "rejected"]);
 export const paymentMethod = pgEnum("payment_method", [
   "pix",
   "dinheiro",
@@ -41,6 +42,7 @@ export const privateFileOwnerType = pgEnum("private_file_owner_type", [
   "library_book",
   "presentation_slide",
   "video_lesson",
+  "payment_proof",
 ]);
 
 // Referência de arquivo protegido. A store do Blob deste projeto é `access:
@@ -358,6 +360,13 @@ export const charges = pgTable("charges", {
   // etc.); pagamento pelo site já se sabe que foi Mercado Pago.
   paymentMethod: paymentMethod("payment_method"),
   note: text("note"),
+  // Comprovante enviado pelo próprio aluno (PIX/transferência) pro admin
+  // validar no Financeiro. Nulo = nenhum comprovante enviado ainda.
+  proofFileId: uuid("proof_file_id").references(() => privateFiles.id, { onDelete: "set null" }),
+  proofStatus: chargeProofStatus("proof_status"),
+  proofSubmittedAt: timestamp("proof_submitted_at", { withTimezone: true }),
+  // Preenchido só quando o admin rejeita — explica pro aluno o motivo.
+  proofRejectionNote: text("proof_rejection_note"),
   createdById: uuid("created_by_id").references(() => teachers.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   // Controla o lembrete de vencimento por e-mail — evita mandar duas vezes.
