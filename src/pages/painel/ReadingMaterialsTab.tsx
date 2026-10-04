@@ -4,6 +4,7 @@ import { BookOpen, Loader2, Pencil, Plus, Share2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { PrivateFileLink } from "@/components/PrivateFileLink";
+import { LessonSelect } from "@/components/painel/LessonSelect";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -181,6 +182,7 @@ function EditMaterialDialog({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [title, setTitle] = useState(material?.title ?? "");
   const [description, setDescription] = useState(material?.description ?? "");
+  const [lessonId, setLessonId] = useState<string | undefined>(material?.lessonId ?? undefined);
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
 
@@ -191,6 +193,7 @@ function EditMaterialDialog({
     if (material) {
       setTitle(material.title);
       setDescription(material.description ?? "");
+      setLessonId(material.lessonId ?? undefined);
       setFile(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
@@ -213,6 +216,7 @@ function EditMaterialDialog({
           materialId: material!.id,
           title,
           description: description || undefined,
+          lessonId,
           fileUrl: uploaded?.url,
           fileName: uploaded?.fileName,
           filePathname: uploaded?.pathname,
@@ -261,6 +265,10 @@ function EditMaterialDialog({
             />
           </div>
           <div className="space-y-2">
+            <Label>Aula (opcional)</Label>
+            <LessonSelect disciplineId={disciplineId} value={lessonId} onChange={setLessonId} />
+          </div>
+          <div className="space-y-2">
             <Label htmlFor="material-edit-file">Trocar arquivo (opcional — PDF ou imagem)</Label>
             <Input
               id="material-edit-file"
@@ -298,12 +306,14 @@ function CreateMaterialDialog({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [lessonId, setLessonId] = useState<string | undefined>(undefined);
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
 
   function reset() {
     setTitle("");
     setDescription("");
+    setLessonId(undefined);
     setFile(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
@@ -319,6 +329,7 @@ function CreateMaterialDialog({
             disciplineId,
             title,
             description: description || undefined,
+            lessonId,
             fileUrl: uploaded.url,
             fileName: uploaded.fileName,
             filePathname: uploaded.pathname,
@@ -371,6 +382,10 @@ function CreateMaterialDialog({
               value={description}
               onChange={(event) => setDescription(event.target.value)}
             />
+          </div>
+          <div className="space-y-2">
+            <Label>Aula (opcional)</Label>
+            <LessonSelect disciplineId={disciplineId} value={lessonId} onChange={setLessonId} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="material-file">Arquivo (PDF ou imagem)</Label>

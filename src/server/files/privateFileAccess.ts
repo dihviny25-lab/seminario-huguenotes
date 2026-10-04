@@ -3,7 +3,14 @@ import { eq } from "drizzle-orm";
 
 import type { AnyIdentity } from "@/server/auth/guard";
 import { db } from "@/server/db/client";
-import { assignmentSubmissions, privateFiles } from "@/server/db/schema";
+import {
+  assignmentSubmissions,
+  presentationSlides,
+  privateFiles,
+  readingMaterials,
+  videoLessons,
+} from "@/server/db/schema";
+import { getStudentAccessibleLessonIds } from "@/server/enrollment";
 
 import { canReadFileRecord, type FileOwnerRecord, type FileOwnerType } from "./access";
 
@@ -37,9 +44,16 @@ export async function registerPrivateFile(input: {
   return row.id;
 }
 
+const LESSON_SCOPED_TABLES = {
+  reading_material: readingMaterials,
+  presentation_slide: presentationSlides,
+  video_lesson: videoLessons,
+} as const;
+
 async function resolveFileOwnerRecord(
   ownerType: FileOwnerType,
   ownerId: string,
+  identity: AnyIdentity,
 ): Promise<FileOwnerRecord | null> {
   if (ownerType === "assignment_submission") {
     const [row] = await db
@@ -50,9 +64,24 @@ async function resolveFileOwnerRecord(
     if (!row) return null;
     return { ownerType, studentId: row.studentId };
   }
-  // reading_material, library_book, presentation_slide, video_lesson: não
-  // precisam de dado extra do dono — canReadFileRecord já libera qualquer
-  // identidade autenticada para esses tipos.
+  if (
+    ownerType === "reading_material" ||
+    ownerType === "presentation_slide" ||
+    ownerType === "video_lesson"
+  ) {
+    const table = LESSON_SCOPED_TABLES[ownerType];
+    const [row] = await db
+      .select({ lessonId: table.lessonId })
+      .from(table)
+      .where(eq(table.id, ownerId))
+      .limit(1);
+    if (!row) return null;
+    const accessibleLessonIds =
+      identity.role === "student" ? await getStudentAccessibleLessonIds(identity.id) : null;
+    return { ownerType, lessonId: row.lessonId, accessibleLessonIds };
+  }
+  // library_book: sem conceito de aula — canReadFileRecord libera qualquer
+  // identidade autenticada, como sempre foi.
   return { ownerType };
 }
 
@@ -123,7 +152,7 @@ export async function canReadPrivateFile(input: {
 }): Promise<boolean> {
   const file = await loadPrivateFile(input.fileId);
   if (!file) return false;
-  const record = await resolveFileOwnerRecord(file.ownerType, file.ownerId);
+  const record = await resolveFileOwnerRecord(file.ownerType, file.ownerId, input.identity);
   if (!record) return false;
   return canReadFileRecord(record, input.identity);
 }

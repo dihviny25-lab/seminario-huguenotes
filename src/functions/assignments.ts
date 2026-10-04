@@ -81,6 +81,7 @@ export const listMyDisciplineAssignmentsFn = createServerFn({ method: "GET" })
 
 const createSchema = z.object({
   disciplineId: z.string().uuid(),
+  lessonId: z.string().uuid().optional(),
   kind: z.enum(["open", "multiple_choice"]).default("open"),
   title: z.string().trim().min(1, "Informe um título."),
   instructions: z.string().trim().optional(),
@@ -109,6 +110,7 @@ export const createAssignmentFn = createServerFn({ method: "POST" })
       .insert(assignments)
       .values({
         disciplineId: data.disciplineId,
+        lessonId: data.lessonId || null,
         assessmentId: assessment.id,
         kind: data.kind,
         title: data.title,
@@ -124,6 +126,7 @@ export const createAssignmentFn = createServerFn({ method: "POST" })
 const updateAssignmentSchema = z.object({
   disciplineId: z.string().uuid(),
   assignmentId: z.string().uuid(),
+  lessonId: z.string().uuid().optional(),
   title: z.string().trim().min(1, "Informe um título."),
   instructions: z.string().trim().optional(),
   weight: z.number().positive("Deve ser maior que zero."),
@@ -144,6 +147,7 @@ export const updateAssignmentFn = createServerFn({ method: "POST" })
         title: data.title,
         instructions: data.instructions || null,
         dueAt: data.dueAt ? new Date(data.dueAt) : null,
+        lessonId: data.lessonId || null,
       })
       .where(eq(assignments.id, assignment.id));
     await db
@@ -177,6 +181,7 @@ export type AssignmentQuestionDetail = {
 export type AssignmentDetail = {
   id: string;
   disciplineId: string;
+  lessonId: string | null;
   kind: "open" | "multiple_choice";
   title: string;
   instructions: string | null;
@@ -236,6 +241,7 @@ async function buildAssignmentDetail(
   return {
     id: assignment.id,
     disciplineId: assignment.disciplineId,
+    lessonId: assignment.lessonId,
     kind: assignment.kind,
     title: assignment.title,
     instructions: assignment.instructions,
