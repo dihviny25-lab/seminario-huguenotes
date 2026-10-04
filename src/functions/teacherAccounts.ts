@@ -3,7 +3,12 @@ import { asc, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { logAudit } from "@/server/audit";
-import { requireAdminId, requireAdminOrSelf, requireTeacherId } from "@/server/auth/guard";
+import {
+  isSuperAdminTeacher,
+  requireAdminId,
+  requireAdminOrSelf,
+  requireTeacherId,
+} from "@/server/auth/guard";
 import { hashPassword } from "@/server/auth/password";
 import { db } from "@/server/db/client";
 import { isUniqueViolation } from "@/server/db/errors";
@@ -41,12 +46,17 @@ const createSchema = z.object({
   email: z.string().trim().toLowerCase().email("Informe um e-mail válido."),
   password: z.string().min(8, "A senha precisa ter ao menos 8 caracteres."),
   title: z.string().trim().optional(),
+  role: z.enum(["teacher", "admin", "super_admin"]).default("teacher"),
 });
 
+/** Admin comum só cria Professor/Admin; só o super admin cria outro super admin. */
 export const createTeacherAccountFn = createServerFn({ method: "POST" })
   .validator(createSchema)
   .handler(async ({ data }) => {
-    await requireAdminId();
+    const creatorId = await requireAdminId();
+    if (data.role === "super_admin" && !(await isSuperAdminTeacher(creatorId))) {
+      throw new Error("Só o super admin pode criar outra conta de super admin.");
+    }
     const passwordHash = await hashPassword(data.password);
     try {
       const [row] = await db
@@ -57,6 +67,7 @@ export const createTeacherAccountFn = createServerFn({ method: "POST" })
           passwordHash,
           mustChangePassword: true,
           title: data.title || null,
+          role: data.role,
         })
         .returning({ id: teachers.id });
       await logAudit("professor.criar", `Criou a conta do professor ${data.name} (${data.email}).`);
@@ -67,6 +78,45 @@ export const createTeacherAccountFn = createServerFn({ method: "POST" })
       }
       throw error;
     }
+  });
+
+const setRoleSchema = z.object({
+  id: z.string().uuid(),
+  role: z.enum(["teacher", "admin", "super_admin"]),
+});
+
+/**
+ * Promove/rebaixa o papel de uma conta já existente. Admin comum só troca
+ * entre Professor/Admin; mexer no papel de quem já é (ou vai virar) super
+ * admin exige ser super admin, e o super admin não remove o próprio papel
+ * (evitaria ficar sem nenhum super admin no sistema).
+ */
+export const setTeacherRoleFn = createServerFn({ method: "POST" })
+  .validator(setRoleSchema)
+  .handler(async ({ data }) => {
+    const requesterId = await requireAdminId();
+    const requesterIsSuperAdmin = await isSuperAdminTeacher(requesterId);
+
+    const [target] = await db
+      .select({ name: teachers.name, role: teachers.role })
+      .from(teachers)
+      .where(eq(teachers.id, data.id))
+      .limit(1);
+    if (!target) throw new Error("Professor não encontrado.");
+
+    const touchesSuperAdmin = data.role === "super_admin" || target.role === "super_admin";
+    if (touchesSuperAdmin && !requesterIsSuperAdmin) {
+      throw new Error("Só o super admin pode promover ou rebaixar outro super admin.");
+    }
+    if (requesterId === data.id && target.role === "super_admin" && data.role !== "super_admin") {
+      throw new Error("Você não pode remover o próprio papel de super admin.");
+    }
+
+    await db.update(teachers).set({ role: data.role }).where(eq(teachers.id, data.id));
+    await logAudit(
+      "professor.papel",
+      `Alterou o papel de ${target.name} de "${target.role}" para "${data.role}".`,
+    );
   });
 
 const updateSchema = z.object({
@@ -138,6 +188,11 @@ export const revokeTeacherLoginFn = createServerFn({ method: "POST" })
 
 const deleteSchema = z.object({ id: z.string().uuid() });
 
+/**
+ * Admin comum só exclui conta de Professor. Conta de Admin só o super admin
+ * exclui. Conta de super admin nunca é excluída pela interface — nem por
+ * outro super admin — pra nunca ficar sem ninguém no papel mais alto.
+ */
 export const deleteTeacherAccountFn = createServerFn({ method: "POST" })
   .validator(deleteSchema)
   .handler(async ({ data }) => {
@@ -146,10 +201,17 @@ export const deleteTeacherAccountFn = createServerFn({ method: "POST" })
       throw new Error("Você não pode excluir a própria conta.");
     }
     const [teacher] = await db
-      .select({ name: teachers.name })
+      .select({ name: teachers.name, role: teachers.role })
       .from(teachers)
       .where(eq(teachers.id, data.id))
       .limit(1);
+    if (!teacher) throw new Error("Professor não encontrado.");
+    if (teacher.role === "super_admin") {
+      throw new Error("A conta de super admin não pode ser excluída pela interface.");
+    }
+    if (teacher.role === "admin" && !(await isSuperAdminTeacher(adminId))) {
+      throw new Error("Só o super admin pode excluir uma conta de admin.");
+    }
     await db.delete(teachers).where(eq(teachers.id, data.id));
-    await logAudit("professor.apagar", `Apagou a conta do professor ${teacher?.name ?? data.id}.`);
+    await logAudit("professor.apagar", `Apagou a conta do professor ${teacher.name}.`);
   });

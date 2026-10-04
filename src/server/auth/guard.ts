@@ -56,6 +56,18 @@ export async function requireAdminId(): Promise<string> {
 }
 
 /**
+ * Garante que o professor logado é o super admin — gate exclusivo pra
+ * criar/promover outro super admin e excluir conta de admin.
+ */
+export async function requireSuperAdminId(): Promise<string> {
+  const teacherId = await requireTeacherId();
+  if (!(await isSuperAdminTeacher(teacherId))) {
+    throw new Error("Só o super admin pode fazer isso.");
+  }
+  return teacherId;
+}
+
+/**
  * Permite se o professor logado é admin OU se é o próprio alvo da ação —
  * usado para "editar meu próprio perfil" sem precisar ser admin.
  */
