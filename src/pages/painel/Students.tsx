@@ -104,7 +104,10 @@ export function Students() {
   const [settingPasswordFor, setSettingPasswordFor] = useState<Student | null>(null);
   const [deleting, setDeleting] = useState<Student | null>(null);
   const [settingScholarshipFor, setSettingScholarshipFor] = useState<Student | null>(null);
-  const [managingLessonsFor, setManagingLessonsFor] = useState<Student | null>(null);
+  const [managingLessonsFor, setManagingLessonsFor] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function invalidate() {
@@ -358,7 +361,15 @@ export function Students() {
         </Table>
       </div>
 
-      <CreateStudentDialog open={createOpen} onOpenChange={setCreateOpen} onCreated={invalidate} />
+      <CreateStudentDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onCreated={invalidate}
+        onCreatedSelective={async (student) => {
+          await invalidate();
+          setManagingLessonsFor(student);
+        }}
+      />
       {editing ? (
         <EditStudentDialog
           student={editing}
@@ -426,27 +437,38 @@ const studentSchema = z.object({
   phone: z.string().trim().optional().or(z.literal("")),
 });
 
+const createStudentSchema = studentSchema.extend({
+  selectiveEnrollment: z.boolean(),
+});
+
 function CreateStudentDialog({
   open,
   onOpenChange,
   onCreated,
+  onCreatedSelective,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreated: () => Promise<unknown>;
+  /** Chamado em vez de `onCreated` quando a matrícula seletiva foi marcada na criação. */
+  onCreatedSelective: (student: { id: string; name: string }) => void;
 }) {
-  const form = useForm<z.infer<typeof studentSchema>>({
-    resolver: zodResolver(studentSchema),
-    defaultValues: { name: "", email: "", phone: "" },
+  const form = useForm<z.infer<typeof createStudentSchema>>({
+    resolver: zodResolver(createStudentSchema),
+    defaultValues: { name: "", email: "", phone: "", selectiveEnrollment: false },
   });
 
   const mutation = useMutation({
-    mutationFn: (values: z.infer<typeof studentSchema>) => createStudentFn({ data: values }),
-    onSuccess: async () => {
+    mutationFn: (values: z.infer<typeof createStudentSchema>) => createStudentFn({ data: values }),
+    onSuccess: async (result, values) => {
       toast.success("Aluno cadastrado.");
-      form.reset();
       onOpenChange(false);
-      await onCreated();
+      if (values.selectiveEnrollment) {
+        onCreatedSelective({ id: result.id, name: values.name });
+      } else {
+        await onCreated();
+      }
+      form.reset();
     },
     onError: (error) => toast.error(errorMessage(error, "Não foi possível cadastrar.")),
   });
@@ -498,6 +520,23 @@ function CreateStudentDialog({
                     <Input inputMode="tel" {...field} />
                   </FormControl>
                   <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="selectiveEnrollment"
+              render={({ field }) => (
+                <FormItem className="flex items-center justify-between rounded-md border border-border/70 p-3">
+                  <div>
+                    <FormLabel>Matrícula seletiva</FormLabel>
+                    <p className="text-xs text-muted-foreground">
+                      Vai fazer só algumas aulas, em vez do curso completo.
+                    </p>
+                  </div>
+                  <FormControl>
+                    <Switch checked={field.value} onCheckedChange={field.onChange} />
+                  </FormControl>
                 </FormItem>
               )}
             />
@@ -767,7 +806,7 @@ function LessonAccessDialog({
   student,
   onOpenChange,
 }: {
-  student: Student;
+  student: { id: string; name: string };
   onOpenChange: (open: boolean) => void;
 }) {
   const queryClient = useQueryClient();

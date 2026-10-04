@@ -17,6 +17,7 @@ export type Student = {
   active: boolean;
   hasLogin: boolean;
   scholarshipPercent: number;
+  selectiveEnrollment: boolean;
 };
 
 export const listStudentsFn = createServerFn({ method: "GET" }).handler(
@@ -31,6 +32,7 @@ export const listStudentsFn = createServerFn({ method: "GET" }).handler(
         active: students.active,
         passwordHash: students.passwordHash,
         scholarshipPercent: students.scholarshipPercent,
+        selectiveEnrollment: students.selectiveEnrollment,
       })
       .from(students)
       .orderBy(asc(students.name));
@@ -52,6 +54,7 @@ const createSchema = z.object({
     .optional()
     .or(z.literal("")),
   phone: z.string().trim().optional().or(z.literal("")),
+  selectiveEnrollment: z.boolean().optional(),
 });
 
 export const createStudentFn = createServerFn({ method: "POST" })
@@ -61,7 +64,12 @@ export const createStudentFn = createServerFn({ method: "POST" })
     try {
       const [row] = await db
         .insert(students)
-        .values({ name: data.name, email: data.email || null, phone: data.phone?.trim() || null })
+        .values({
+          name: data.name,
+          email: data.email || null,
+          phone: data.phone?.trim() || null,
+          selectiveEnrollment: data.selectiveEnrollment ?? false,
+        })
         .returning({ id: students.id });
       await logAudit("aluno.criar", `Cadastrou o aluno ${data.name}.`);
       return row;
