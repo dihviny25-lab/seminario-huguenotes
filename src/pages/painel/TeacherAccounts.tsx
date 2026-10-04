@@ -161,11 +161,14 @@ export function TeacherAccounts() {
               teachers.map((teacher) => {
                 const isSelf = teacher.id === me?.id;
                 const canEdit = isAdmin || isSelf;
-                // Papel de super admin só o próprio super admin muda; conta de
-                // super admin nunca é excluível pela interface, e conta de
-                // admin só o super admin exclui.
+                // Mexer no papel de quem já é admin ou super admin (inclusive
+                // rebaixar) só o super admin faz — senão um admin comum
+                // rebaixaria outro admin a professor e o excluiria, contornando
+                // a proteção de exclusão. Conta de super admin nunca é
+                // excluível pela interface, e conta de admin só o super admin
+                // exclui.
                 const canChangeRole =
-                  isAdmin && !isSelf && (teacher.role !== "super_admin" || isSuperAdmin);
+                  isAdmin && !isSelf && (teacher.role === "teacher" || isSuperAdmin);
                 const canDelete =
                   isAdmin &&
                   !isSelf &&

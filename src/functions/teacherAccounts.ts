@@ -11,7 +11,7 @@ import {
 } from "@/server/auth/guard";
 import { hashPassword } from "@/server/auth/password";
 import { db } from "@/server/db/client";
-import { isUniqueViolation } from "@/server/db/errors";
+import { isLastSuperAdminViolation, isUniqueViolation } from "@/server/db/errors";
 import { teachers } from "@/server/db/schema";
 
 export type TeacherAccount = {
@@ -87,9 +87,13 @@ const setRoleSchema = z.object({
 
 /**
  * Promove/rebaixa o papel de uma conta já existente. Admin comum só troca
- * entre Professor/Admin; mexer no papel de quem já é (ou vai virar) super
- * admin exige ser super admin, e o super admin não remove o próprio papel
- * (evitaria ficar sem nenhum super admin no sistema).
+ * entre Professor/Admin — mexer no papel de quem já É admin ou super admin
+ * (inclusive rebaixar um admin pra professor) exige ser super admin, senão um
+ * admin comum poderia rebaixar outro admin pra professor e em seguida excluir
+ * a conta, contornando a proteção de `deleteTeacherAccountFn`. O super admin
+ * não remove o próprio papel (evitaria ficar sem nenhum super admin no
+ * sistema); a corrida entre dois super admins se rebaixando ao mesmo tempo é
+ * bloqueada no banco pelo trigger `teachers_min_super_admin`.
  */
 export const setTeacherRoleFn = createServerFn({ method: "POST" })
   .validator(setRoleSchema)
@@ -104,15 +108,25 @@ export const setTeacherRoleFn = createServerFn({ method: "POST" })
       .limit(1);
     if (!target) throw new Error("Professor não encontrado.");
 
-    const touchesSuperAdmin = data.role === "super_admin" || target.role === "super_admin";
-    if (touchesSuperAdmin && !requesterIsSuperAdmin) {
-      throw new Error("Só o super admin pode promover ou rebaixar outro super admin.");
+    const requiresSuperAdmin =
+      data.role === "super_admin" || target.role === "super_admin" || target.role === "admin";
+    if (requiresSuperAdmin && !requesterIsSuperAdmin) {
+      throw new Error(
+        "Só o super admin pode alterar o papel de uma conta de admin ou super admin.",
+      );
     }
     if (requesterId === data.id && target.role === "super_admin" && data.role !== "super_admin") {
       throw new Error("Você não pode remover o próprio papel de super admin.");
     }
 
-    await db.update(teachers).set({ role: data.role }).where(eq(teachers.id, data.id));
+    try {
+      await db.update(teachers).set({ role: data.role }).where(eq(teachers.id, data.id));
+    } catch (error) {
+      if (isLastSuperAdminViolation(error)) {
+        throw new Error("Não é possível remover o último super admin do sistema.");
+      }
+      throw error;
+    }
     await logAudit(
       "professor.papel",
       `Alterou o papel de ${target.name} de "${target.role}" para "${data.role}".`,
