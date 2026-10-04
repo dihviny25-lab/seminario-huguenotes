@@ -159,7 +159,12 @@ export const uploadChargeProofFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const studentId = await requireStudentId();
     const [charge] = await db
-      .select({ id: charges.id, studentId: charges.studentId, status: charges.status })
+      .select({
+        id: charges.id,
+        studentId: charges.studentId,
+        status: charges.status,
+        proofStatus: charges.proofStatus,
+      })
       .from(charges)
       .where(eq(charges.id, data.chargeId))
       .limit(1);
@@ -168,6 +173,9 @@ export const uploadChargeProofFn = createServerFn({ method: "POST" })
     }
     if (charge.status !== "pending") {
       throw new Error("Essa cobrança não está mais pendente.");
+    }
+    if (charge.proofStatus === "pending") {
+      throw new Error("Já tem um comprovante em análise pra essa cobrança.");
     }
 
     const fileId = await registerPrivateFile({
@@ -557,7 +565,14 @@ export const updateChargeFn = createServerFn({ method: "POST" })
 
 const revertChargeSchema = z.object({ chargeId: z.string().uuid() });
 
-/** Desfaz um "marcar como pago" feito por engano — volta a cobrança pra pendente. */
+/**
+ * Desfaz um "marcar como pago" feito por engano — volta a cobrança pra
+ * pendente. Se a baixa tinha aprovado um comprovante junto (ver
+ * `markChargePaidManuallyFn`), o comprovante volta pra "em análise" — senão
+ * ficaria com status "approved" numa cobrança pendente, sem caminho de volta
+ * pra revisão (nem o aluno reenvia, nem o admin vê o link pra aprovar/
+ * rejeitar de novo).
+ */
 export const revertChargeToPendingFn = createServerFn({ method: "POST" })
   .validator(revertChargeSchema)
   .handler(async ({ data }) => {
@@ -565,6 +580,7 @@ export const revertChargeToPendingFn = createServerFn({ method: "POST" })
     const [charge] = await db
       .select({
         status: charges.status,
+        proofStatus: charges.proofStatus,
         description: charges.description,
         studentName: students.name,
       })
@@ -586,6 +602,7 @@ export const revertChargeToPendingFn = createServerFn({ method: "POST" })
         paidManually: false,
         mpPaymentId: null,
         note: null,
+        ...(charge.proofStatus === "approved" ? { proofStatus: "pending" as const } : {}),
       })
       .where(eq(charges.id, data.chargeId));
     await logAudit(

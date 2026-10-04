@@ -169,7 +169,9 @@ export function PaymentMethodsDialog({
               </div>
             ) : null}
 
-            {charge?.proofStatus !== "approved" ? (
+            {charge?.proofStatus === undefined ||
+            charge?.proofStatus === null ||
+            charge?.proofStatus === "rejected" ? (
               <div className="mt-2">
                 <input
                   ref={fileInputRef}
@@ -195,7 +197,7 @@ export function PaymentMethodsDialog({
                   )}
                   {uploadMutation.isPending
                     ? "Enviando…"
-                    : charge?.proofStatus
+                    : charge?.proofStatus === "rejected"
                       ? "Enviar outro comprovante"
                       : "Enviar comprovante"}
                 </Button>

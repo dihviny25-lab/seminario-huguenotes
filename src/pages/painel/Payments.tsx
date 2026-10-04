@@ -296,7 +296,9 @@ export function Payments({ initialStudentId }: { initialStudentId?: string } = {
                             {paymentMethodLabel[charge.paymentMethod]}
                           </span>
                         ) : null}
-                        {charge.status === "pending" && charge.proofStatus === "pending" ? (
+                        {isAdmin &&
+                        charge.status === "pending" &&
+                        charge.proofStatus === "pending" ? (
                           <PrivateFileLink
                             fileId={charge.proofFileId}
                             fileUrl={null}
@@ -306,7 +308,9 @@ export function Payments({ initialStudentId }: { initialStudentId?: string } = {
                             <Paperclip className="size-3 shrink-0" aria-hidden />
                             Comprovante enviado
                           </PrivateFileLink>
-                        ) : charge.status === "pending" && charge.proofStatus === "rejected" ? (
+                        ) : isAdmin &&
+                          charge.status === "pending" &&
+                          charge.proofStatus === "rejected" ? (
                           <span className="mt-1 block text-xs text-destructive">
                             Comprovante rejeitado
                           </span>
