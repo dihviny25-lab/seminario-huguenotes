@@ -40,6 +40,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { getCurrentTeacherFn, logoutFn } from "@/functions/auth";
+import { isAdminRole } from "@/lib/teacherRole";
 import { cn } from "@/lib/utils";
 
 const painelNavItems = [
@@ -121,7 +122,7 @@ export function PainelShell({ title, description, children, fullWidth }: PainelS
     queryKey: ["current-teacher"],
     queryFn: () => getCurrentTeacherFn(),
   });
-  const isAdmin = me?.role === "admin";
+  const isAdmin = isAdminRole(me?.role);
   const mainNavItems = isAdmin
     ? painelNavItems.map((item) =>
         item.to === "/painel/minhas-materias" ? { ...item, label: "Materiais do seminário" } : item,

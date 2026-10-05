@@ -6,7 +6,7 @@ import { logAudit } from "@/server/audit";
 import { requireAnyLogin, requireOwnDiscipline, requireTeacherId } from "@/server/auth/guard";
 import { db } from "@/server/db/client";
 import { disciplines, presentationSlides } from "@/server/db/schema";
-import { registerPrivateFile } from "@/server/files/privateFileAccess";
+import { deletePrivateFile, registerPrivateFile } from "@/server/files/privateFileAccess";
 import { requireValidUploadOwnership } from "@/server/uploads/uploadToken";
 
 function todayIso(): string {
@@ -144,8 +144,9 @@ export const deleteSlideFn = createServerFn({ method: "POST" })
           eq(presentationSlides.disciplineId, data.disciplineId),
         ),
       )
-      .returning({ title: presentationSlides.title });
+      .returning({ title: presentationSlides.title, fileId: presentationSlides.fileId });
     if (!slide) throw new Error("Slide não encontrado nesta disciplina.");
+    await deletePrivateFile(slide.fileId);
     await logAudit(
       "slide.apagar",
       `Apagou o slide "${slide?.title ?? data.slideId}" em ${discipline.discipline}.`,

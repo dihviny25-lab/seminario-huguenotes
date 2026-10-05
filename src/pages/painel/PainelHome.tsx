@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getCurrentTeacherFn } from "@/functions/auth";
 import { getTeacherDashboardFn } from "@/functions/teacherDashboard";
 import { listMyDisciplinesFn } from "@/functions/disciplines";
+import { isAdminRole } from "@/lib/teacherRole";
 import { ActionCards, InfoCards } from "@/pages/painel/dashboard/cards";
 import { KpiStrip } from "@/pages/painel/dashboard/KpiStrip";
 
@@ -45,7 +46,7 @@ export function PainelHome() {
     queryKey: ["current-teacher"],
     queryFn: () => getCurrentTeacherFn(),
   });
-  const isAdmin = me?.role === "admin";
+  const isAdmin = isAdminRole(me?.role);
 
   const pendingCount = dashboard
     ? dashboard.counts.pendingGrading +

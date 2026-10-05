@@ -1,8 +1,10 @@
+import { del } from "@vercel/blob";
 import { eq } from "drizzle-orm";
 
 import type { AnyIdentity } from "@/server/auth/guard";
 import { db } from "@/server/db/client";
 import { assignmentSubmissions, privateFiles } from "@/server/db/schema";
+import { deleteObject, isStillOnVercelBlob } from "@/server/storage/r2";
 
 import { canReadFileRecord, type FileOwnerRecord, type FileOwnerType } from "./access";
 
@@ -78,6 +80,41 @@ export async function loadPrivateFile(fileId: string): Promise<PrivateFileRow | 
     .limit(1);
   if (!row || row.deletedAt) return null;
   return row;
+}
+
+/**
+ * Apaga um arquivo privado de verdade — chamar sempre que a linha dona
+ * (apostila, slide, vídeo-aula, livro) for apagada. Marca `deleted_at` (pra
+ * `loadPrivateFile`/`canReadPrivateFile` negarem acesso imediatamente, mesmo
+ * se a exclusão abaixo demorar ou falhar) e remove o objeto do storage real
+ * — Blob ou R2, dependendo de `blobPath` já ter sido migrado (mesmo teste
+ * usado pela leitura em `/api/arquivo/$fileId`). `fileId` nulo é registro
+ * legado sem migração — não há objeto desta aplicação pra apagar, só ignora.
+ * Falha da exclusão (rede, objeto já removido) não impede a exclusão do
+ * conteúdo no app — fica só um aviso no log; um objeto órfão remanescente é
+ * bem menos grave que travar o "apagar" por causa de uma falha transitória
+ * do storage.
+ */
+export async function deletePrivateFile(fileId: string | null): Promise<void> {
+  if (!fileId) return;
+  const [row] = await db
+    .select({ blobPath: privateFiles.blobPath })
+    .from(privateFiles)
+    .where(eq(privateFiles.id, fileId))
+    .limit(1);
+  if (!row) return;
+
+  await db.update(privateFiles).set({ deletedAt: new Date() }).where(eq(privateFiles.id, fileId));
+
+  try {
+    if (isStillOnVercelBlob(row.blobPath)) {
+      await del(row.blobPath);
+    } else {
+      await deleteObject(row.blobPath);
+    }
+  } catch (error) {
+    console.warn(`Falha ao apagar objeto "${row.blobPath}" (private_files.id=${fileId}):`, error);
+  }
 }
 
 /**

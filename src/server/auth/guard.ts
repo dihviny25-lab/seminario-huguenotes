@@ -17,13 +17,30 @@ export async function requireTeacherId(): Promise<string> {
   return teacherId;
 }
 
+/**
+ * `true` pra admin e super_admin — super_admin herda todo poder de admin
+ * (gerenciar qualquer disciplina/professor/aula, Financeiro, Auditoria
+ * etc.) e soma só uma coisa a mais: a visão da escola inteira, checada
+ * separadamente por `isSuperAdminTeacher`. Nenhum admin comum muda de
+ * comportamento com a adição do papel novo.
+ */
 export async function isAdminTeacher(teacherId: string): Promise<boolean> {
   const [teacher] = await db
     .select({ role: teachers.role })
     .from(teachers)
     .where(eq(teachers.id, teacherId))
     .limit(1);
-  return teacher?.role === "admin";
+  return teacher?.role === "admin" || teacher?.role === "super_admin";
+}
+
+/** `true` só pro papel mais alto — gate exclusivo da visão de escola inteira. */
+export async function isSuperAdminTeacher(teacherId: string): Promise<boolean> {
+  const [teacher] = await db
+    .select({ role: teachers.role })
+    .from(teachers)
+    .where(eq(teachers.id, teacherId))
+    .limit(1);
+  return teacher?.role === "super_admin";
 }
 
 /**
@@ -77,8 +94,7 @@ export async function requireAnyLogin(): Promise<void> {
 }
 
 export type AnyIdentity =
-  | { role: "teacher"; id: string; name: string }
-  | { role: "student"; id: string; name: string };
+  { role: "teacher"; id: string; name: string } | { role: "student"; id: string; name: string };
 
 /**
  * Garante que existe uma sessão válida (professor OU aluno) e devolve quem
