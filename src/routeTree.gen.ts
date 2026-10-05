@@ -44,8 +44,8 @@ import { Route as PortalTrocarSenhaRouteImport } from './routes/portal/trocar-se
 import { Route as PortalVideosRouteImport } from './routes/portal/videos'
 import { Route as SemestreSemesterRouteImport } from './routes/semestre/$semester'
 import { Route as ApiAdminMigrarArquivosLegadosRouteImport } from './routes/api/admin/migrar-arquivos-legados'
+import { Route as ApiAdminMigrarArquivosR2RouteImport } from './routes/api/admin/migrar-arquivos-r2'
 import { Route as ApiArquivoFileIdRouteImport } from './routes/api/arquivo/$fileId'
-import { Route as ApiBlobUploadRouteImport } from './routes/api/blob/upload'
 import { Route as ApiCronFinalizeExpiredExamsRouteImport } from './routes/api/cron/finalize-expired-exams'
 import { Route as ApiCronPaymentRemindersRouteImport } from './routes/api/cron/payment-reminders'
 import { Route as ApiMercadopagoWebhookRouteImport } from './routes/api/mercadopago/webhook'
@@ -265,14 +265,15 @@ const ApiAdminMigrarArquivosLegadosRoute =
     path: '/api/admin/migrar-arquivos-legados',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiAdminMigrarArquivosR2Route =
+  ApiAdminMigrarArquivosR2RouteImport.update({
+    id: '/api/admin/migrar-arquivos-r2',
+    path: '/api/admin/migrar-arquivos-r2',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiArquivoFileIdRoute = ApiArquivoFileIdRouteImport.update({
   id: '/api/arquivo/$fileId',
   path: '/api/arquivo/$fileId',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiBlobUploadRoute = ApiBlobUploadRouteImport.update({
-  id: '/api/blob/upload',
-  path: '/api/blob/upload',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiCronFinalizeExpiredExamsRoute =
@@ -502,8 +503,8 @@ export interface FileRoutesByFullPath {
   '/painel/': typeof PainelIndexRoute
   '/portal/': typeof PortalIndexRoute
   '/api/admin/migrar-arquivos-legados': typeof ApiAdminMigrarArquivosLegadosRoute
+  '/api/admin/migrar-arquivos-r2': typeof ApiAdminMigrarArquivosR2Route
   '/api/arquivo/$fileId': typeof ApiArquivoFileIdRoute
-  '/api/blob/upload': typeof ApiBlobUploadRoute
   '/api/cron/finalize-expired-exams': typeof ApiCronFinalizeExpiredExamsRoute
   '/api/cron/payment-reminders': typeof ApiCronPaymentRemindersRoute
   '/api/mercadopago/webhook': typeof ApiMercadopagoWebhookRoute
@@ -573,8 +574,8 @@ export interface FileRoutesByTo {
   '/painel': typeof PainelIndexRoute
   '/portal': typeof PortalIndexRoute
   '/api/admin/migrar-arquivos-legados': typeof ApiAdminMigrarArquivosLegadosRoute
+  '/api/admin/migrar-arquivos-r2': typeof ApiAdminMigrarArquivosR2Route
   '/api/arquivo/$fileId': typeof ApiArquivoFileIdRoute
-  '/api/blob/upload': typeof ApiBlobUploadRoute
   '/api/cron/finalize-expired-exams': typeof ApiCronFinalizeExpiredExamsRoute
   '/api/cron/payment-reminders': typeof ApiCronPaymentRemindersRoute
   '/api/mercadopago/webhook': typeof ApiMercadopagoWebhookRoute
@@ -647,8 +648,8 @@ export interface FileRoutesById {
   '/painel/': typeof PainelIndexRoute
   '/portal/': typeof PortalIndexRoute
   '/api/admin/migrar-arquivos-legados': typeof ApiAdminMigrarArquivosLegadosRoute
+  '/api/admin/migrar-arquivos-r2': typeof ApiAdminMigrarArquivosR2Route
   '/api/arquivo/$fileId': typeof ApiArquivoFileIdRoute
-  '/api/blob/upload': typeof ApiBlobUploadRoute
   '/api/cron/finalize-expired-exams': typeof ApiCronFinalizeExpiredExamsRoute
   '/api/cron/payment-reminders': typeof ApiCronPaymentRemindersRoute
   '/api/mercadopago/webhook': typeof ApiMercadopagoWebhookRoute
@@ -722,8 +723,8 @@ export interface FileRouteTypes {
     | '/painel/'
     | '/portal/'
     | '/api/admin/migrar-arquivos-legados'
+    | '/api/admin/migrar-arquivos-r2'
     | '/api/arquivo/$fileId'
-    | '/api/blob/upload'
     | '/api/cron/finalize-expired-exams'
     | '/api/cron/payment-reminders'
     | '/api/mercadopago/webhook'
@@ -793,8 +794,8 @@ export interface FileRouteTypes {
     | '/painel'
     | '/portal'
     | '/api/admin/migrar-arquivos-legados'
+    | '/api/admin/migrar-arquivos-r2'
     | '/api/arquivo/$fileId'
-    | '/api/blob/upload'
     | '/api/cron/finalize-expired-exams'
     | '/api/cron/payment-reminders'
     | '/api/mercadopago/webhook'
@@ -866,8 +867,8 @@ export interface FileRouteTypes {
     | '/painel/'
     | '/portal/'
     | '/api/admin/migrar-arquivos-legados'
+    | '/api/admin/migrar-arquivos-r2'
     | '/api/arquivo/$fileId'
-    | '/api/blob/upload'
     | '/api/cron/finalize-expired-exams'
     | '/api/cron/payment-reminders'
     | '/api/mercadopago/webhook'
@@ -918,8 +919,8 @@ export interface RootRouteChildren {
   RedefinirSenhaAlunoRoute: typeof RedefinirSenhaAlunoRoute
   SemestreSemesterRoute: typeof SemestreSemesterRoute
   ApiAdminMigrarArquivosLegadosRoute: typeof ApiAdminMigrarArquivosLegadosRoute
+  ApiAdminMigrarArquivosR2Route: typeof ApiAdminMigrarArquivosR2Route
   ApiArquivoFileIdRoute: typeof ApiArquivoFileIdRoute
-  ApiBlobUploadRoute: typeof ApiBlobUploadRoute
   ApiCronFinalizeExpiredExamsRoute: typeof ApiCronFinalizeExpiredExamsRoute
   ApiCronPaymentRemindersRoute: typeof ApiCronPaymentRemindersRoute
   ApiMercadopagoWebhookRoute: typeof ApiMercadopagoWebhookRoute
@@ -1172,18 +1173,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAdminMigrarArquivosLegadosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/admin/migrar-arquivos-r2': {
+      id: '/api/admin/migrar-arquivos-r2'
+      path: '/api/admin/migrar-arquivos-r2'
+      fullPath: '/api/admin/migrar-arquivos-r2'
+      preLoaderRoute: typeof ApiAdminMigrarArquivosR2RouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/arquivo/$fileId': {
       id: '/api/arquivo/$fileId'
       path: '/api/arquivo/$fileId'
       fullPath: '/api/arquivo/$fileId'
       preLoaderRoute: typeof ApiArquivoFileIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/blob/upload': {
-      id: '/api/blob/upload'
-      path: '/api/blob/upload'
-      fullPath: '/api/blob/upload'
-      preLoaderRoute: typeof ApiBlobUploadRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/cron/finalize-expired-exams': {
@@ -1598,8 +1599,8 @@ const rootRouteChildren: RootRouteChildren = {
   RedefinirSenhaAlunoRoute: RedefinirSenhaAlunoRoute,
   SemestreSemesterRoute: SemestreSemesterRoute,
   ApiAdminMigrarArquivosLegadosRoute: ApiAdminMigrarArquivosLegadosRoute,
+  ApiAdminMigrarArquivosR2Route: ApiAdminMigrarArquivosR2Route,
   ApiArquivoFileIdRoute: ApiArquivoFileIdRoute,
-  ApiBlobUploadRoute: ApiBlobUploadRoute,
   ApiCronFinalizeExpiredExamsRoute: ApiCronFinalizeExpiredExamsRoute,
   ApiCronPaymentRemindersRoute: ApiCronPaymentRemindersRoute,
   ApiMercadopagoWebhookRoute: ApiMercadopagoWebhookRoute,

@@ -4,18 +4,17 @@ import { eq } from "drizzle-orm";
 import type { AnyIdentity } from "@/server/auth/guard";
 import { db } from "@/server/db/client";
 import { assignmentSubmissions, privateFiles } from "@/server/db/schema";
+import { deleteObject, isStillOnVercelBlob } from "@/server/storage/r2";
 
 import { canReadFileRecord, type FileOwnerRecord, type FileOwnerType } from "./access";
 
 /**
- * Registra um arquivo (recém-subido ou legado já existente no Blob) como
- * dono de `ownerType`/`ownerId` e devolve o `id` do registro em
- * `private_files`, pra a chamadora gravar em `fileId` na tabela dona.
- * `pathname` aceita tanto um pathname relativo quanto a URL pública
- * completa — `get()` do SDK do Blob resolve os dois. Sempre cria um
- * registro novo (não faz upsert) — numa reedição, o registro antigo fica
- * órfão até uma rotina de retenção (fora do escopo desta tarefa); nunca
- * apagamos blob em lote aqui.
+ * Registra um arquivo (recém-subido) como dono de `ownerType`/`ownerId` e
+ * devolve o `id` do registro em `private_files`, pra a chamadora gravar em
+ * `fileId` na tabela dona. `pathname` é a chave do objeto no bucket R2.
+ * Sempre cria um registro novo (não faz upsert) — numa reedição, o
+ * registro antigo fica órfão até uma rotina de retenção (fora do escopo
+ * desta tarefa); nunca apagamos objeto em lote aqui.
  */
 export async function registerPrivateFile(input: {
   pathname: string;
@@ -86,13 +85,15 @@ export async function loadPrivateFile(fileId: string): Promise<PrivateFileRow | 
 /**
  * Apaga um arquivo privado de verdade — chamar sempre que a linha dona
  * (apostila, slide, vídeo-aula, livro) for apagada. Marca `deleted_at` (pra
- * `loadPrivateFile`/`canReadPrivateFile` negarem acesso imediatamente,
- * mesmo se o `del` abaixo demorar ou falhar) e remove o objeto do Blob.
- * `fileId` nulo é registro legado sem migração — não há blob desta
- * aplicação pra apagar, só ignora. Falha do `del` (rede, objeto já
- * removido) não impede a exclusão do conteúdo no app — fica só um aviso no
- * log; um blob órfão remanescente é bem menos grave que travar o "apagar"
- * por causa de uma falha transitória do storage.
+ * `loadPrivateFile`/`canReadPrivateFile` negarem acesso imediatamente, mesmo
+ * se a exclusão abaixo demorar ou falhar) e remove o objeto do storage real
+ * — Blob ou R2, dependendo de `blobPath` já ter sido migrado (mesmo teste
+ * usado pela leitura em `/api/arquivo/$fileId`). `fileId` nulo é registro
+ * legado sem migração — não há objeto desta aplicação pra apagar, só ignora.
+ * Falha da exclusão (rede, objeto já removido) não impede a exclusão do
+ * conteúdo no app — fica só um aviso no log; um objeto órfão remanescente é
+ * bem menos grave que travar o "apagar" por causa de uma falha transitória
+ * do storage.
  */
 export async function deletePrivateFile(fileId: string | null): Promise<void> {
   if (!fileId) return;
@@ -106,9 +107,13 @@ export async function deletePrivateFile(fileId: string | null): Promise<void> {
   await db.update(privateFiles).set({ deletedAt: new Date() }).where(eq(privateFiles.id, fileId));
 
   try {
-    await del(row.blobPath);
+    if (isStillOnVercelBlob(row.blobPath)) {
+      await del(row.blobPath);
+    } else {
+      await deleteObject(row.blobPath);
+    }
   } catch (error) {
-    console.warn(`Falha ao apagar blob "${row.blobPath}" (private_files.id=${fileId}):`, error);
+    console.warn(`Falha ao apagar objeto "${row.blobPath}" (private_files.id=${fileId}):`, error);
   }
 }
 
