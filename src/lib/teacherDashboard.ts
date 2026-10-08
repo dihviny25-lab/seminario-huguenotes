@@ -13,14 +13,21 @@ export const ENDING_DISCIPLINES_LIMIT = 8;
 
 export type DashboardInput = {
   /**
-   * Sempre "minhas": este dashboard mostra só as disciplinas do professor
-   * logado, mesmo para admin — ver "toda a escola" é outra funcionalidade.
-   * Mantido como campo (em vez de removido) para não quebrar o formato do
-   * payload; o valor é sempre o mesmo.
+   * "minhas" — professor comum ou admin, vê só as próprias disciplinas,
+   * igual sempre foi. "escola" — super_admin, vê a escola inteira (ver
+   * isSuperAdminTeacher em src/server/auth/guard.ts); nesse caso
+   * `disciplines[].teacherName` vem preenchido e os itens de cada card
+   * carregam o nome do professor responsável.
    */
-  scope: "minhas";
+  scope: "minhas" | "escola";
   today: string;
-  disciplines: Array<{ id: string; discipline: string; lessons: number | null }>;
+  disciplines: Array<{
+    id: string;
+    discipline: string;
+    lessons: number | null;
+    /** Só preenchido no escopo "escola" — ausente/null no escopo "minhas" (sempre o próprio professor). */
+    teacherName?: string | null;
+  }>;
   lessons: Array<{
     id: string;
     disciplineId: string;
@@ -53,6 +60,7 @@ export type DashboardInput = {
 export type DisciplineProgress = {
   disciplineId: string;
   disciplineName: string;
+  teacherName: string | null;
   lessonsGiven: number;
   lessonsPlanned: number;
   progress: number;
@@ -62,6 +70,7 @@ export type DisciplineProgress = {
 export type MaterialGap = {
   disciplineId: string;
   disciplineName: string;
+  teacherName: string | null;
   missingApostila: boolean;
   missingVideos: boolean;
   lessonsGiven: number;
@@ -72,6 +81,7 @@ export type PendingGradingItem = {
   assignmentId: string;
   title: string;
   disciplineName: string;
+  teacherName: string | null;
   awaitingCount: number;
   oldestSubmittedAt: string;
 };
@@ -80,16 +90,19 @@ export type MissingGradeItem = {
   disciplineId: string;
   title: string;
   disciplineName: string;
+  teacherName: string | null;
   studentsMissing: number;
 };
 export type MissingAttendanceItem = {
   disciplineId: string;
   disciplineName: string;
+  teacherName: string | null;
   lessonsWithoutAttendance: number;
 };
 export type EndingDisciplineItem = {
   disciplineId: string;
   disciplineName: string;
+  teacherName: string | null;
   lessonsGiven: number;
   lessonsPlanned: number;
   progress: number;
@@ -105,17 +118,22 @@ export type ForumActivityItem = {
 export type UpcomingLessonItem = {
   disciplineId: string;
   disciplineName: string;
+  teacherName: string | null;
   date: string;
   sequence: number;
 };
 export type AtRiskStudentItem = {
   studentId: string;
   studentName: string;
-  disciplines: Array<{ disciplineName: string; reason: "media" | "frequencia" | "ambos" }>;
+  disciplines: Array<{
+    disciplineName: string;
+    teacherName: string | null;
+    reason: "media" | "frequencia" | "ambos";
+  }>;
 };
 
 export type TeacherDashboard = {
-  scope: "minhas";
+  scope: "minhas" | "escola";
   counts: {
     pendingGrading: number;
     endingDisciplines: number;
@@ -145,7 +163,7 @@ function isPastLesson(date: string | null, today: string): boolean {
 }
 
 export function computeDisciplineProgress(
-  discipline: { id: string; discipline: string; lessons: number | null },
+  discipline: { id: string; discipline: string; lessons: number | null; teacherName?: string | null },
   lessons: Array<{ disciplineId: string; givenAt: string | null }>,
 ): DisciplineProgress {
   const mine = lessons.filter((l) => l.disciplineId === discipline.id);
@@ -155,6 +173,7 @@ export function computeDisciplineProgress(
   return {
     disciplineId: discipline.id,
     disciplineName: discipline.discipline,
+    teacherName: discipline.teacherName ?? null,
     lessonsGiven,
     lessonsPlanned,
     progress,
@@ -179,6 +198,7 @@ export function pickEndingDisciplines(input: DashboardInput): EndingDisciplineIt
     .map((p) => ({
       disciplineId: p.disciplineId,
       disciplineName: p.disciplineName,
+      teacherName: p.teacherName,
       lessonsGiven: p.lessonsGiven,
       lessonsPlanned: p.lessonsPlanned,
       progress: p.progress,
@@ -200,6 +220,7 @@ export function pickMaterialGaps(input: DashboardInput): MaterialGap[] {
     gaps.push({
       disciplineId: d.id,
       disciplineName: d.discipline,
+      teacherName: d.teacherName ?? null,
       missingApostila,
       missingVideos,
       lessonsGiven: p.lessonsGiven,
@@ -214,12 +235,17 @@ export function pickPendingGrading(input: DashboardInput): {
   items: PendingGradingItem[];
   total: number;
 } {
-  const disciplineName = new Map(input.disciplines.map((d) => [d.id, d.discipline]));
-  const byAssignment = new Map<string, { title: string; disciplineName: string }>();
+  const disciplineById = new Map(input.disciplines.map((d) => [d.id, d]));
+  const byAssignment = new Map<
+    string,
+    { title: string; disciplineName: string; teacherName: string | null }
+  >();
   for (const a of input.assignments) {
+    const discipline = disciplineById.get(a.disciplineId);
     byAssignment.set(a.id, {
       title: a.title,
-      disciplineName: disciplineName.get(a.disciplineId) ?? "",
+      disciplineName: discipline?.discipline ?? "",
+      teacherName: discipline?.teacherName ?? null,
     });
   }
   const pending = input.submissions.filter((s) => s.submittedAt !== null && s.gradedAt === null);
@@ -235,6 +261,7 @@ export function pickPendingGrading(input: DashboardInput): {
       assignmentId,
       title: meta.title,
       disciplineName: meta.disciplineName,
+      teacherName: meta.teacherName,
       awaitingCount: mine.length,
       oldestSubmittedAt: oldest,
     });
@@ -258,7 +285,6 @@ export function pickPendingGrading(input: DashboardInput): {
  */
 export function pickMissingGrades(input: DashboardInput): MissingGradeItem[] {
   const active = input.activeStudents.length;
-  const disciplineName = new Map(input.disciplines.map((d) => [d.id, d.discipline]));
   const progress = progressByDiscipline(input);
   const out: MissingGradeItem[] = [];
   for (const a of input.assessments) {
@@ -273,7 +299,8 @@ export function pickMissingGrades(input: DashboardInput): MissingGradeItem[] {
       assessmentId: a.id,
       disciplineId: a.disciplineId,
       title: a.title,
-      disciplineName: disciplineName.get(a.disciplineId) ?? "",
+      disciplineName: p.disciplineName,
+      teacherName: p.teacherName,
       studentsMissing,
     });
   }
@@ -302,6 +329,7 @@ export function pickMissingAttendance(input: DashboardInput): {
     items.push({
       disciplineId: d.id,
       disciplineName: d.discipline,
+      teacherName: d.teacherName ?? null,
       lessonsWithoutAttendance: missing,
     });
   }
@@ -316,7 +344,7 @@ export function pickMissingAttendance(input: DashboardInput): {
  * escondendo o que de fato está em curso.
  */
 export function pickUpcomingLessons(input: DashboardInput): UpcomingLessonItem[] {
-  const disciplineName = new Map(input.disciplines.map((d) => [d.id, d.discipline]));
+  const disciplineById = new Map(input.disciplines.map((d) => [d.id, d]));
   const progress = progressByDiscipline(input, input.allLessons);
   return input.lessons
     .filter((l) => l.date !== null && l.date > input.today)
@@ -328,7 +356,8 @@ export function pickUpcomingLessons(input: DashboardInput): UpcomingLessonItem[]
     .slice(0, UPCOMING_LESSONS_LIMIT)
     .map((l) => ({
       disciplineId: l.disciplineId,
-      disciplineName: disciplineName.get(l.disciplineId) ?? "",
+      disciplineName: disciplineById.get(l.disciplineId)?.discipline ?? "",
+      teacherName: disciplineById.get(l.disciplineId)?.teacherName ?? null,
       date: l.date!,
       sequence: l.sequence,
     }));
@@ -420,7 +449,11 @@ export function pickAtRiskStudents(input: DashboardInput): {
           disciplines: [],
         });
       }
-      byStudent.get(student.id)!.disciplines.push({ disciplineName: d.discipline, reason });
+      byStudent.get(student.id)!.disciplines.push({
+        disciplineName: d.discipline,
+        teacherName: d.teacherName ?? null,
+        reason,
+      });
     }
   }
 
