@@ -4,6 +4,7 @@ import { and, eq, isNotNull } from "drizzle-orm";
 import { buildIcsCalendar, type IcsEvent } from "@/lib/ics";
 import { db } from "@/server/db/client";
 import { assignments, disciplines, exams, lessons, students } from "@/server/db/schema";
+import { getStudentAccessibleLessonIds, isLessonContentVisible } from "@/server/enrollment";
 
 /**
  * Feed de calendário (.ics) do aluno — URL pública protegida por token opaco
@@ -27,8 +28,9 @@ export const Route = createFileRoute("/agenda.ics")({
         if (!student) {
           return new Response("Link inválido.", { status: 404 });
         }
+        const accessibleLessonIds = await getStudentAccessibleLessonIds(student.id);
 
-        const [lessonRows, examRows, assignmentRows] = await Promise.all([
+        const [lessonRowsRaw, examRowsRaw, assignmentRowsRaw] = await Promise.all([
           db
             .select({
               id: lessons.id,
@@ -42,6 +44,7 @@ export const Route = createFileRoute("/agenda.ics")({
           db
             .select({
               id: exams.id,
+              lessonId: exams.lessonId,
               title: exams.title,
               opensAt: exams.opensAt,
               durationMinutes: exams.durationMinutes,
@@ -53,6 +56,7 @@ export const Route = createFileRoute("/agenda.ics")({
           db
             .select({
               id: assignments.id,
+              lessonId: assignments.lessonId,
               title: assignments.title,
               dueAt: assignments.dueAt,
               disciplineName: disciplines.discipline,
@@ -61,6 +65,15 @@ export const Route = createFileRoute("/agenda.ics")({
             .innerJoin(disciplines, eq(disciplines.id, assignments.disciplineId))
             .where(and(isNotNull(assignments.dueAt))),
         ]);
+        const lessonRows = lessonRowsRaw.filter((row) =>
+          isLessonContentVisible(row.id, accessibleLessonIds),
+        );
+        const examRows = examRowsRaw.filter((row) =>
+          isLessonContentVisible(row.lessonId, accessibleLessonIds),
+        );
+        const assignmentRows = assignmentRowsRaw.filter((row) =>
+          isLessonContentVisible(row.lessonId, accessibleLessonIds),
+        );
 
         const events: Array<IcsEvent> = [
           ...lessonRows

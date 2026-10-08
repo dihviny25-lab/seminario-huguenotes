@@ -95,6 +95,7 @@ export const listMyDisciplineExamsFn = createServerFn({ method: "GET" })
 
 const createExamSchema = z.object({
   disciplineId: z.string().uuid(),
+  lessonId: z.string().uuid().optional(),
   title: z.string().trim().min(1, "Informe um título."),
   instructions: z.string().trim().optional(),
   durationMinutes: z.number().int().positive("Informe quantos minutos de duração."),
@@ -121,6 +122,7 @@ export const createExamFn = createServerFn({ method: "POST" })
       .insert(exams)
       .values({
         disciplineId: data.disciplineId,
+        lessonId: data.lessonId || null,
         assessmentId: assessment.id,
         title: data.title,
         instructions: data.instructions || null,
@@ -135,6 +137,7 @@ export const createExamFn = createServerFn({ method: "POST" })
 const updateExamSchema = z.object({
   disciplineId: z.string().uuid(),
   examId: z.string().uuid(),
+  lessonId: z.string().uuid().optional(),
   title: z.string().trim().min(1, "Informe um título."),
   instructions: z.string().trim().optional(),
   weight: z.number().positive("Deve ser maior que zero."),
@@ -153,7 +156,11 @@ export const updateExamFn = createServerFn({ method: "POST" })
 
     await db
       .update(exams)
-      .set({ title: data.title, instructions: data.instructions || null })
+      .set({
+        title: data.title,
+        instructions: data.instructions || null,
+        lessonId: data.lessonId || null,
+      })
       .where(eq(exams.id, exam.id));
     await db
       .update(assessments)
@@ -185,6 +192,7 @@ export type ExamQuestionDetail = {
 export type ExamDetail = {
   id: string;
   disciplineId: string;
+  lessonId: string | null;
   title: string;
   instructions: string | null;
   durationMinutes: number;
@@ -222,6 +230,7 @@ async function buildExamDetail(exam: typeof exams.$inferSelect): Promise<ExamDet
   return {
     id: exam.id,
     disciplineId: exam.disciplineId,
+    lessonId: exam.lessonId,
     title: exam.title,
     instructions: exam.instructions,
     durationMinutes: exam.durationMinutes,

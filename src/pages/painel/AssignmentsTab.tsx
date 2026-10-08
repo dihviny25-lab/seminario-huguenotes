@@ -7,6 +7,7 @@ import { CalendarClock, FileText, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
+import { LessonSelect } from "@/components/painel/LessonSelect";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -128,6 +129,7 @@ const assignmentSchema = z
     kind: z.enum(["open", "multiple_choice"]),
     title: z.string().trim().min(1, "Informe um título."),
     instructions: z.string().trim().optional(),
+    lessonId: z.string().uuid().optional(),
     maxScore: z.coerce.number().positive("Deve ser maior que zero.").optional(),
     weight: z.coerce.number().positive("Deve ser maior que zero."),
     dueAt: z.string().optional(),
@@ -154,6 +156,7 @@ function CreateAssignmentDialog({
       kind: "open",
       title: "",
       instructions: "",
+      lessonId: undefined,
       maxScore: 10,
       weight: 1,
       dueAt: "",
@@ -168,6 +171,7 @@ function CreateAssignmentDialog({
           kind: values.kind,
           title: values.title,
           instructions: values.instructions,
+          lessonId: values.lessonId,
           maxScore: values.maxScore ?? 10,
           weight: values.weight,
           dueAt: values.dueAt ? new Date(values.dueAt).toISOString() : undefined,
@@ -277,6 +281,23 @@ function CreateAssignmentDialog({
                 )}
               />
             </div>
+            <FormField
+              control={form.control}
+              name="lessonId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Aula (opcional)</FormLabel>
+                  <FormControl>
+                    <LessonSelect
+                      disciplineId={disciplineId}
+                      value={field.value}
+                      onChange={field.onChange}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="dueAt"

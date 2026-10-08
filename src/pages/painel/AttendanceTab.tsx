@@ -50,6 +50,16 @@ function formatLessonLabel(lesson: { date: string | null; sequence: number }): s
   return `${day}/${month}`;
 }
 
+function hasLessonAccess(
+  restrictedStudentLessonIds: AttendanceBoard["restrictedStudentLessonIds"],
+  studentId: string,
+  lessonId: string,
+): boolean {
+  const allowed = restrictedStudentLessonIds[studentId];
+  if (allowed === undefined) return true; // aluno sem matrícula seletiva, sem restrição
+  return allowed.includes(lessonId);
+}
+
 function formatGivenAt(givenAt: string): string {
   return new Date(givenAt).toLocaleString("pt-BR", {
     day: "2-digit",
@@ -220,11 +230,14 @@ export function AttendanceTab({
             <TableRow>
               <TableHead>Aluno</TableHead>
               {data.lessons.map((lesson) => {
-                const presentCount = data.students.filter(
+                const expectedStudents = data.students.filter((student) =>
+                  hasLessonAccess(data.restrictedStudentLessonIds, student.id, lesson.id),
+                );
+                const presentCount = expectedStudents.filter(
                   (student) => (presentByKey.get(`${lesson.id}:${student.id}`) ?? true) === true,
                 ).length;
                 const allPresent =
-                  data.students.length > 0 && presentCount === data.students.length;
+                  expectedStudents.length > 0 && presentCount === expectedStudents.length;
                 const nonePresent = presentCount === 0;
                 return (
                   <TableHead key={lesson.id} className="text-center">
@@ -310,7 +323,9 @@ export function AttendanceTab({
             ) : (
               data.students.map((student) => {
                 const totalFaltas = givenLessons.filter(
-                  (lesson) => presentByKey.get(`${lesson.id}:${student.id}`) === false,
+                  (lesson) =>
+                    hasLessonAccess(data.restrictedStudentLessonIds, student.id, lesson.id) &&
+                    presentByKey.get(`${lesson.id}:${student.id}`) === false,
                 ).length;
 
                 return (
@@ -321,6 +336,19 @@ export function AttendanceTab({
                     <TableCell className="font-medium text-foreground">{student.name}</TableCell>
                     {data.lessons.map((lesson) => {
                       const key = `${lesson.id}:${student.id}`;
+                      if (
+                        !hasLessonAccess(data.restrictedStudentLessonIds, student.id, lesson.id)
+                      ) {
+                        return (
+                          <TableCell
+                            key={lesson.id}
+                            className="text-center text-muted-foreground"
+                            title="Aluno não matriculado nesta aula"
+                          >
+                            —
+                          </TableCell>
+                        );
+                      }
                       // Sem registro = presente por padrão (ninguém marcou falta ainda).
                       const present = presentByKey.get(key) ?? true;
                       return (

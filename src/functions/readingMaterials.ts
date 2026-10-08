@@ -3,9 +3,10 @@ import { and, asc, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { logAudit } from "@/server/audit";
-import { requireAnyLogin, requireOwnDiscipline } from "@/server/auth/guard";
+import { requireAnyIdentity, requireOwnDiscipline } from "@/server/auth/guard";
 import { db } from "@/server/db/client";
 import { disciplines, readingMaterials } from "@/server/db/schema";
+import { getStudentAccessibleLessonIds, isLessonContentVisible } from "@/server/enrollment";
 import { deletePrivateFile, registerPrivateFile } from "@/server/files/privateFileAccess";
 
 function todayIso(): string {
@@ -15,6 +16,7 @@ function todayIso(): string {
 export type ReadingMaterial = {
   id: string;
   disciplineId: string;
+  lessonId: string | null;
   title: string;
   description: string | null;
   fileUrl: string;
@@ -44,6 +46,7 @@ export const listMyDisciplineMaterialsFn = createServerFn({ method: "GET" })
 
 const createSchema = z.object({
   disciplineId: z.string().uuid(),
+  lessonId: z.string().uuid().optional(),
   title: z.string().trim().min(1, "Informe um título."),
   description: z.string().trim().optional(),
   fileUrl: z.string().trim().url("URL de arquivo inválida."),
@@ -67,6 +70,7 @@ export const createMaterialFn = createServerFn({ method: "POST" })
       .insert(readingMaterials)
       .values({
         disciplineId: data.disciplineId,
+        lessonId: data.lessonId || null,
         title: data.title,
         description: data.description || null,
         fileUrl: data.fileUrl,
@@ -94,6 +98,7 @@ export const createMaterialFn = createServerFn({ method: "POST" })
 const updateSchema = z.object({
   disciplineId: z.string().uuid(),
   materialId: z.string().uuid(),
+  lessonId: z.string().uuid().optional(),
   title: z.string().trim().min(1, "Informe um título."),
   description: z.string().trim().optional(),
   // Presentes só quando um arquivo novo foi subido nesta chamada — vêm do
@@ -110,7 +115,11 @@ export const updateMaterialFn = createServerFn({ method: "POST" })
     const discipline = await requireOwnDiscipline(data.disciplineId);
     const [updated] = await db
       .update(readingMaterials)
-      .set({ title: data.title, description: data.description || null })
+      .set({
+        title: data.title,
+        description: data.description || null,
+        lessonId: data.lessonId || null,
+      })
       .where(
         and(
           eq(readingMaterials.id, data.materialId),
@@ -167,6 +176,7 @@ function selectMaterialColumns() {
   return {
     id: readingMaterials.id,
     disciplineId: readingMaterials.disciplineId,
+    lessonId: readingMaterials.lessonId,
     title: readingMaterials.title,
     description: readingMaterials.description,
     fileUrl: readingMaterials.fileUrl,
@@ -192,13 +202,17 @@ function withAvailability(
  */
 export const listAllReadingMaterialsFn = createServerFn({ method: "GET" }).handler(
   async (): Promise<Array<ReadingMaterial>> => {
-    await requireAnyLogin();
+    const identity = await requireAnyIdentity();
+    const accessibleLessonIds =
+      identity.role === "student" ? await getStudentAccessibleLessonIds(identity.id) : null;
     const rows = await db
       .select(selectMaterialColumns())
       .from(readingMaterials)
       .innerJoin(disciplines, eq(disciplines.id, readingMaterials.disciplineId))
       .orderBy(asc(readingMaterials.sequence));
-    return rows.map(withAvailability);
+    return rows
+      .filter((row) => isLessonContentVisible(row.lessonId, accessibleLessonIds))
+      .map(withAvailability);
   },
 );
 
@@ -206,12 +220,16 @@ export const listAllReadingMaterialsFn = createServerFn({ method: "GET" }).handl
 export const listDisciplineMaterialsFn = createServerFn({ method: "GET" })
   .validator(disciplineIdSchema)
   .handler(async ({ data }): Promise<Array<ReadingMaterial>> => {
-    await requireAnyLogin();
+    const identity = await requireAnyIdentity();
+    const accessibleLessonIds =
+      identity.role === "student" ? await getStudentAccessibleLessonIds(identity.id) : null;
     const rows = await db
       .select(selectMaterialColumns())
       .from(readingMaterials)
       .innerJoin(disciplines, eq(disciplines.id, readingMaterials.disciplineId))
       .where(eq(readingMaterials.disciplineId, data.disciplineId))
       .orderBy(asc(readingMaterials.sequence));
-    return rows.map(withAvailability);
+    return rows
+      .filter((row) => isLessonContentVisible(row.lessonId, accessibleLessonIds))
+      .map(withAvailability);
   });

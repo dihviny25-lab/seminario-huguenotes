@@ -7,6 +7,7 @@ import { ArrowLeft, CheckCircle2, Loader2, Pencil, Plus, Trash2 } from "lucide-r
 import { toast } from "sonner";
 import { z } from "zod";
 
+import { LessonSelect } from "@/components/painel/LessonSelect";
 import { PainelShell } from "@/components/painel/PainelShell";
 import {
   AlertDialog,
@@ -286,6 +287,7 @@ export function ExamEditor({ examId }: { examId: string }) {
 const editExamSchema = z.object({
   title: z.string().trim().min(1, "Informe um título."),
   instructions: z.string().trim().optional(),
+  lessonId: z.string().uuid().optional(),
   weight: z.coerce.number().positive("Deve ser maior que zero."),
 });
 
@@ -309,6 +311,7 @@ function EditExamDialog({
     values: {
       title: exam.title,
       instructions: exam.instructions ?? "",
+      lessonId: exam.lessonId ?? undefined,
       weight: exam.weight,
     },
   });
@@ -370,6 +373,23 @@ function EditExamDialog({
                   <FormLabel>Peso na média final</FormLabel>
                   <FormControl>
                     <Input type="number" step="0.1" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="lessonId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Aula (opcional)</FormLabel>
+                  <FormControl>
+                    <LessonSelect
+                      disciplineId={disciplineId}
+                      value={field.value}
+                      onChange={field.onChange}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

@@ -16,6 +16,7 @@ import {
   grades,
 } from "@/server/db/schema";
 import { finalizeAssignmentSubmission } from "@/server/assignments/scoring";
+import { getStudentAccessibleLessonIds, isLessonContentVisible } from "@/server/enrollment";
 import { registerPrivateFile } from "@/server/files/privateFileAccess";
 
 export type AvailableAssignment = {
@@ -33,10 +34,12 @@ export type AvailableAssignment = {
 export const listAvailableAssignmentsFn = createServerFn({ method: "GET" }).handler(
   async (): Promise<Array<AvailableAssignment>> => {
     const studentId = await requireStudentId();
+    const accessibleLessonIds = await getStudentAccessibleLessonIds(studentId);
 
-    const rows = await db
+    const allRows = await db
       .select({
         id: assignments.id,
+        lessonId: assignments.lessonId,
         title: assignments.title,
         instructions: assignments.instructions,
         dueAt: assignments.dueAt,
@@ -48,6 +51,7 @@ export const listAvailableAssignmentsFn = createServerFn({ method: "GET" }).hand
       .innerJoin(disciplines, eq(assignments.disciplineId, disciplines.id))
       .innerJoin(assessments, eq(assignments.assessmentId, assessments.id))
       .orderBy(asc(assignments.createdAt));
+    const rows = allRows.filter((row) => isLessonContentVisible(row.lessonId, accessibleLessonIds));
 
     const ids = rows.map((r) => r.id);
     const [submissionRows, gradeRows] = await Promise.all([
@@ -105,10 +109,12 @@ export const listDisciplineAssignmentsFn = createServerFn({ method: "GET" })
   .validator(disciplineIdSchema)
   .handler(async ({ data }): Promise<Array<AvailableAssignment>> => {
     const studentId = await requireStudentId();
+    const accessibleLessonIds = await getStudentAccessibleLessonIds(studentId);
 
-    const rows = await db
+    const allRows = await db
       .select({
         id: assignments.id,
+        lessonId: assignments.lessonId,
         title: assignments.title,
         instructions: assignments.instructions,
         dueAt: assignments.dueAt,
@@ -121,6 +127,7 @@ export const listDisciplineAssignmentsFn = createServerFn({ method: "GET" })
       .innerJoin(assessments, eq(assignments.assessmentId, assessments.id))
       .where(eq(assignments.disciplineId, data.disciplineId))
       .orderBy(asc(assignments.createdAt));
+    const rows = allRows.filter((row) => isLessonContentVisible(row.lessonId, accessibleLessonIds));
 
     const ids = rows.map((r) => r.id);
     const [submissionRows, gradeRows] = await Promise.all([
@@ -210,6 +217,7 @@ export const getMySubmissionFn = createServerFn({ method: "GET" })
     const [row] = await db
       .select({
         id: assignments.id,
+        lessonId: assignments.lessonId,
         kind: assignments.kind,
         title: assignments.title,
         instructions: assignments.instructions,
@@ -222,6 +230,10 @@ export const getMySubmissionFn = createServerFn({ method: "GET" })
       .where(eq(assignments.id, data.assignmentId))
       .limit(1);
     if (!row) throw new Error("Tarefa não encontrada.");
+    const accessibleLessonIds = await getStudentAccessibleLessonIds(studentId);
+    if (!isLessonContentVisible(row.lessonId, accessibleLessonIds)) {
+      throw new Error("Essa tarefa não está disponível pra você.");
+    }
 
     const [submission] = await db
       .select()
@@ -331,6 +343,7 @@ export const submitAssignmentFn = createServerFn({ method: "POST" })
     const [assignment] = await db
       .select({
         assessmentId: assignments.assessmentId,
+        lessonId: assignments.lessonId,
         title: assignments.title,
         kind: assignments.kind,
       })
@@ -340,6 +353,10 @@ export const submitAssignmentFn = createServerFn({ method: "POST" })
     if (!assignment) throw new Error("Tarefa não encontrada.");
     if (assignment.kind !== "open") {
       throw new Error("Essa tarefa é de múltipla escolha — responda pelas alternativas.");
+    }
+    const accessibleLessonIds = await getStudentAccessibleLessonIds(studentId);
+    if (!isLessonContentVisible(assignment.lessonId, accessibleLessonIds)) {
+      throw new Error("Essa tarefa não está disponível pra você.");
     }
 
     const [existingGrade] = await db
@@ -418,6 +435,10 @@ export const submitAssignmentAnswersFn = createServerFn({ method: "POST" })
     if (!assignment) throw new Error("Tarefa não encontrada.");
     if (assignment.kind !== "multiple_choice") {
       throw new Error("Essa tarefa não é de múltipla escolha.");
+    }
+    const accessibleLessonIds = await getStudentAccessibleLessonIds(studentId);
+    if (!isLessonContentVisible(assignment.lessonId, accessibleLessonIds)) {
+      throw new Error("Essa tarefa não está disponível pra você.");
     }
 
     const [existing] = await db
