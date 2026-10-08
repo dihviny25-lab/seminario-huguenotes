@@ -59,10 +59,16 @@ export function PainelHome() {
       ? "Tudo em dia — nenhuma pendência agora."
       : `Você tem ${pendingCount} ${pendingCount === 1 ? "pendência" : "pendências"} pra resolver hoje.`;
 
+  const isSchoolWide = dashboard?.scope === "escola";
+
   return (
     <PainelShell
-      title="Painel do professor"
-      description="O que precisa da sua atenção agora: correções, notas, chamada, materiais e fórum."
+      title={isSchoolWide ? "Painel da escola" : "Painel do professor"}
+      description={
+        isSchoolWide
+          ? "O que precisa de atenção agora em toda a escola: correções, notas, chamada, materiais e fórum de qualquer professor."
+          : "O que precisa da sua atenção agora: correções, notas, chamada, materiais e fórum."
+      }
     >
       {dashboardError ? (
         <>

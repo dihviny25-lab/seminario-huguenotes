@@ -36,6 +36,12 @@ function actionItemClass(severity: "destructive" | "accent") {
 const INFO_ITEM_CLASS =
   "flex animate-in items-start gap-2.5 px-1 py-2.5 fade-in slide-in-from-top-1 duration-200 transition-colors hover:bg-muted/40";
 
+/** Nome do professor responsável — só aparece quando a pergunta faz sentido (escopo "escola"). */
+function TeacherHint({ teacherName }: { teacherName: string | null | undefined }) {
+  if (!teacherName) return null;
+  return <> · {teacherName}</>;
+}
+
 function fmtDate(iso: string): string {
   return new Date(`${iso}T00:00:00`).toLocaleDateString("pt-BR", {
     day: "2-digit",
@@ -47,12 +53,16 @@ function fmtDate(iso: string): string {
  * Agrupa aulas consecutivas por disciplina — sem isso, uma disciplina com
  * várias aulas seguidas repete o nome dela em cada linha da lista.
  */
-function groupUpcomingLessons(
-  lessons: UpcomingLessonItem[],
-): Array<{ disciplineId: string; disciplineName: string; lessons: UpcomingLessonItem[] }> {
+function groupUpcomingLessons(lessons: UpcomingLessonItem[]): Array<{
+  disciplineId: string;
+  disciplineName: string;
+  teacherName: string | null;
+  lessons: UpcomingLessonItem[];
+}> {
   const groups: Array<{
     disciplineId: string;
     disciplineName: string;
+    teacherName: string | null;
     lessons: UpcomingLessonItem[];
   }> = [];
   for (const lesson of lessons) {
@@ -62,6 +72,7 @@ function groupUpcomingLessons(
       groups.push({
         disciplineId: lesson.disciplineId,
         disciplineName: lesson.disciplineName,
+        teacherName: lesson.teacherName ?? null,
         lessons: [lesson],
       });
   }
@@ -108,6 +119,7 @@ export function ActionCards({
                   </span>
                   <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                     {item.disciplineName}
+                    <TeacherHint teacherName={item.teacherName} />
                     <Badge variant="outline" className="text-[10px]">
                       {item.awaitingCount} {item.awaitingCount === 1 ? "entrega" : "entregas"}
                     </Badge>
@@ -144,6 +156,7 @@ export function ActionCards({
                     {item.lessonsWithoutAttendance === 1
                       ? "aula sem chamada lançada"
                       : "aulas sem chamada lançada"}
+                    <TeacherHint teacherName={item.teacherName} />
                   </span>
                 </span>
               </Link>
@@ -162,6 +175,7 @@ export function ActionCards({
                   </span>
                   <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                     {item.disciplineName}
+                    <TeacherHint teacherName={item.teacherName} />
                     <Badge variant="outline" className="text-[10px]">
                       {item.studentsMissing} sem nota
                     </Badge>
@@ -195,13 +209,14 @@ export function ActionCards({
                   </span>
                   <span className="block truncate text-xs text-muted-foreground">
                     {item.disciplines
-                      .map((x) =>
-                        x.reason === "ambos"
-                          ? `${x.disciplineName} (nota e frequência)`
+                      .map((x) => {
+                        const teacher = x.teacherName ? ` — ${x.teacherName}` : "";
+                        return x.reason === "ambos"
+                          ? `${x.disciplineName} (nota e frequência)${teacher}`
                           : x.reason === "media"
-                            ? `${x.disciplineName} (nota)`
-                            : `${x.disciplineName} (frequência)`,
-                      )
+                            ? `${x.disciplineName} (nota)${teacher}`
+                            : `${x.disciplineName} (frequência)${teacher}`;
+                      })
                       .join(" · ")}
                   </span>
                 </span>
@@ -249,6 +264,7 @@ export function InfoCards({
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium text-foreground">
                     {item.disciplineName}
+                    <TeacherHint teacherName={item.teacherName} />
                   </span>
                   <span className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
                     {item.missingApostila ? (
@@ -296,6 +312,7 @@ export function InfoCards({
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium text-foreground">
                     {item.disciplineName}
+                    <TeacherHint teacherName={item.teacherName} />
                   </span>
                   <span className="text-xs text-muted-foreground">
                     {item.lessonsGiven}/{item.lessonsPlanned} aulas
@@ -376,6 +393,7 @@ export function InfoCards({
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-medium text-foreground">
                         {group.disciplineName}
+                        <TeacherHint teacherName={group.teacherName} />
                       </span>
                       <span className="mt-0.5 flex flex-wrap gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
                         {group.lessons.map((lesson) => (

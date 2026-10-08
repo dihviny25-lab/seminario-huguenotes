@@ -289,6 +289,7 @@ describe("pickMissingGrades", () => {
         disciplineId: "d1",
         title: "Prova",
         disciplineName: "Disc",
+        teacherName: null,
         studentsMissing: 2,
       },
     ]);
@@ -353,7 +354,7 @@ describe("pickMissingAttendance", () => {
     const { items, total } = pickMissingAttendance(input);
     expect(total).toBe(1);
     expect(items).toEqual([
-      { disciplineId: "d1", disciplineName: "Disc", lessonsWithoutAttendance: 1 },
+      { disciplineId: "d1", disciplineName: "Disc", teacherName: null, lessonsWithoutAttendance: 1 },
     ]);
   });
 
@@ -533,7 +534,7 @@ describe("pickAtRiskStudents", () => {
       {
         studentId: "s1",
         studentName: "Ana",
-        disciplines: [{ disciplineName: "Disc", reason: "ambos" }],
+        disciplines: [{ disciplineName: "Disc", teacherName: null, reason: "ambos" }],
       },
     ]);
   });
