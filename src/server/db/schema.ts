@@ -132,8 +132,31 @@ export const students = pgTable("students", {
   // calendário (.ics) — não é sessão de login, é só pra identificar de quem
   // é o feed quando o Google Calendar/Outlook busca a URL sozinho.
   calendarToken: text("calendar_token").unique(),
+  // false (padrão) = currículo inteiro, como sempre foi. true = só enxerga/
+  // participa das aulas liberadas em `studentLessonAccess` — caso excepcional
+  // de aluno que não faz o curso completo.
+  selectiveEnrollment: boolean("selective_enrollment").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+/**
+ * Aulas liberadas pra um aluno de matrícula seletiva (`students.selectiveEnrollment
+ * = true`). Só é consultada pra esses alunos — os demais nunca passam por aqui.
+ */
+export const studentLessonAccess = pgTable(
+  "student_lesson_access",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    studentId: uuid("student_id")
+      .notNull()
+      .references(() => students.id, { onDelete: "cascade" }),
+    lessonId: uuid("lesson_id")
+      .notNull()
+      .references(() => lessons.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [unique().on(table.studentId, table.lessonId)],
+);
 
 export const assessments = pgTable("assessments", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -208,6 +231,9 @@ export const videoLessons = pgTable("video_lessons", {
   disciplineId: uuid("discipline_id")
     .notNull()
     .references(() => disciplines.id, { onDelete: "cascade" }),
+  // Nulo = conteúdo geral da disciplina (sempre visível). Preenchido = só
+  // visível pra alunos de matrícula seletiva que têm acesso a essa aula.
+  lessonId: uuid("lesson_id").references(() => lessons.id, { onDelete: "set null" }),
   title: text("title").notNull(),
   // "youtube" usa youtubeUrl; "upload" usa fileUrl (vídeo hospedado no Vercel Blob).
   source: videoSource("source").notNull().default("youtube"),
@@ -241,6 +267,9 @@ export const exams = pgTable("exams", {
   disciplineId: uuid("discipline_id")
     .notNull()
     .references(() => disciplines.id, { onDelete: "cascade" }),
+  // Nulo = conteúdo geral da disciplina (sempre visível). Preenchido = só
+  // visível pra alunos de matrícula seletiva que têm acesso a essa aula.
+  lessonId: uuid("lesson_id").references(() => lessons.id, { onDelete: "set null" }),
   // Elo com a aba Notas — a nota da prova é a nota dessa avaliação.
   assessmentId: uuid("assessment_id")
     .notNull()
@@ -403,6 +432,9 @@ export const readingMaterials = pgTable("reading_materials", {
   disciplineId: uuid("discipline_id")
     .notNull()
     .references(() => disciplines.id, { onDelete: "cascade" }),
+  // Nulo = conteúdo geral da disciplina (sempre visível). Preenchido = só
+  // visível pra alunos de matrícula seletiva que têm acesso a essa aula.
+  lessonId: uuid("lesson_id").references(() => lessons.id, { onDelete: "set null" }),
   title: text("title").notNull(),
   description: text("description"),
   fileUrl: text("file_url").notNull(),
@@ -453,6 +485,9 @@ export const presentationSlides = pgTable("presentation_slides", {
   disciplineId: uuid("discipline_id")
     .notNull()
     .references(() => disciplines.id, { onDelete: "cascade" }),
+  // Nulo = conteúdo geral da disciplina (sempre visível). Preenchido = só
+  // visível pra alunos de matrícula seletiva que têm acesso a essa aula.
+  lessonId: uuid("lesson_id").references(() => lessons.id, { onDelete: "set null" }),
   title: text("title").notNull(),
   description: text("description"),
   fileUrl: text("file_url").notNull(),
@@ -467,6 +502,9 @@ export const assignments = pgTable("assignments", {
   disciplineId: uuid("discipline_id")
     .notNull()
     .references(() => disciplines.id, { onDelete: "cascade" }),
+  // Nulo = conteúdo geral da disciplina (sempre visível). Preenchido = só
+  // visível pra alunos de matrícula seletiva que têm acesso a essa aula.
+  lessonId: uuid("lesson_id").references(() => lessons.id, { onDelete: "set null" }),
   assessmentId: uuid("assessment_id")
     .notNull()
     .unique()

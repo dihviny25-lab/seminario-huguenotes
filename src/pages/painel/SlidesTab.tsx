@@ -4,6 +4,7 @@ import { Loader2, MonitorPlay, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { PrivateFileLink } from "@/components/PrivateFileLink";
+import { LessonSelect } from "@/components/painel/LessonSelect";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -160,11 +161,13 @@ function EditSlideDialog({
 }) {
   const [title, setTitle] = useState(slide?.title ?? "");
   const [description, setDescription] = useState(slide?.description ?? "");
+  const [lessonId, setLessonId] = useState<string | undefined>(slide?.lessonId ?? undefined);
 
   useEffect(() => {
     if (slide) {
       setTitle(slide.title);
       setDescription(slide.description ?? "");
+      setLessonId(slide.lessonId ?? undefined);
     }
   }, [slide]);
 
@@ -176,6 +179,7 @@ function EditSlideDialog({
           slideId: slide!.id,
           title,
           description: description || undefined,
+          lessonId,
         },
       }),
     onSuccess: async () => {
@@ -218,6 +222,10 @@ function EditSlideDialog({
               onChange={(event) => setDescription(event.target.value)}
             />
           </div>
+          <div className="space-y-2">
+            <Label>Aula (opcional)</Label>
+            <LessonSelect disciplineId={disciplineId} value={lessonId} onChange={setLessonId} />
+          </div>
           <DialogFooter>
             <Button type="submit" disabled={mutation.isPending}>
               {mutation.isPending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
@@ -244,12 +252,14 @@ function CreateSlideDialog({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [lessonId, setLessonId] = useState<string | undefined>(undefined);
   const [file, setFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
   function reset() {
     setTitle("");
     setDescription("");
+    setLessonId(undefined);
     setFile(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
@@ -265,6 +275,7 @@ function CreateSlideDialog({
             disciplineId,
             title,
             description: description || undefined,
+            lessonId,
             fileUrl: uploaded.url,
             fileName: uploaded.fileName,
             filePathname: uploaded.pathname,
@@ -317,6 +328,10 @@ function CreateSlideDialog({
               value={description}
               onChange={(event) => setDescription(event.target.value)}
             />
+          </div>
+          <div className="space-y-2">
+            <Label>Aula (opcional)</Label>
+            <LessonSelect disciplineId={disciplineId} value={lessonId} onChange={setLessonId} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="slide-file">Arquivo (PDF)</Label>

@@ -7,6 +7,7 @@ import { ArrowLeft, CheckCircle2, Download, Loader2, Pencil, Plus, Trash2 } from
 import { toast } from "sonner";
 import { z } from "zod";
 
+import { LessonSelect } from "@/components/painel/LessonSelect";
 import { PainelShell } from "@/components/painel/PainelShell";
 import {
   AlertDialog,
@@ -315,6 +316,7 @@ function EditAssignmentDialog({
 }) {
   const [title, setTitle] = useState(assignment.title);
   const [instructions, setInstructions] = useState(assignment.instructions ?? "");
+  const [lessonId, setLessonId] = useState<string | undefined>(assignment.lessonId ?? undefined);
   const [maxScore, setMaxScore] = useState(String(assignment.maxScore));
   const [weight, setWeight] = useState(String(assignment.weight));
   const [dueAt, setDueAt] = useState(assignment.dueAt ? assignment.dueAt.slice(0, 16) : "");
@@ -322,6 +324,7 @@ function EditAssignmentDialog({
   useEffect(() => {
     setTitle(assignment.title);
     setInstructions(assignment.instructions ?? "");
+    setLessonId(assignment.lessonId ?? undefined);
     setMaxScore(String(assignment.maxScore));
     setWeight(String(assignment.weight));
     setDueAt(assignment.dueAt ? assignment.dueAt.slice(0, 16) : "");
@@ -335,6 +338,7 @@ function EditAssignmentDialog({
           assignmentId: assignment.id,
           title,
           instructions: instructions || undefined,
+          lessonId,
           maxScore: Number(maxScore),
           weight: Number(weight),
           dueAt: dueAt ? new Date(dueAt).toISOString() : undefined,
@@ -402,6 +406,14 @@ function EditAssignmentDialog({
                 required
               />
             </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Aula (opcional)</Label>
+            <LessonSelect
+              disciplineId={assignment.disciplineId}
+              value={lessonId}
+              onChange={setLessonId}
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="assignment-edit-due">Prazo (opcional)</Label>

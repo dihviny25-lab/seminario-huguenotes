@@ -7,6 +7,7 @@ import { CalendarClock, ClipboardList, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
+import { LessonSelect } from "@/components/painel/LessonSelect";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -114,6 +115,7 @@ export function ExamsTab({ disciplineId }: { disciplineId: string }) {
 const examSchema = z.object({
   title: z.string().trim().min(1, "Informe um título."),
   instructions: z.string().trim().optional(),
+  lessonId: z.string().uuid().optional(),
   durationMinutes: z.coerce.number().int().positive("Informe quantos minutos de duração."),
   weight: z.coerce.number().positive("Deve ser maior que zero."),
 });
@@ -131,7 +133,13 @@ function CreateExamDialog({
   const navigate = useNavigate();
   const form = useForm<z.infer<typeof examSchema>>({
     resolver: zodResolver(examSchema),
-    defaultValues: { title: "", instructions: "", durationMinutes: 60, weight: 1 },
+    defaultValues: {
+      title: "",
+      instructions: "",
+      lessonId: undefined,
+      durationMinutes: 60,
+      weight: 1,
+    },
   });
 
   const mutation = useMutation({
@@ -180,6 +188,23 @@ function CreateExamDialog({
                   <FormLabel>Instruções (opcional)</FormLabel>
                   <FormControl>
                     <Textarea placeholder="Leia cada pergunta com atenção…" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="lessonId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Aula (opcional)</FormLabel>
+                  <FormControl>
+                    <LessonSelect
+                      disciplineId={disciplineId}
+                      value={field.value}
+                      onChange={field.onChange}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

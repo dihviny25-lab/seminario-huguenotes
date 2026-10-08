@@ -14,6 +14,7 @@ import {
   examQuestions,
   exams,
 } from "@/server/db/schema";
+import { getStudentAccessibleLessonIds, isLessonContentVisible } from "@/server/enrollment";
 import { finalizeExamAttempt } from "@/server/exams/scoring";
 import { computeExamDeadline, endOfDayBrazil } from "@/lib/examSchedule";
 
@@ -34,10 +35,12 @@ export type AvailableExam = {
 export const listAvailableExamsFn = createServerFn({ method: "GET" }).handler(
   async (): Promise<Array<AvailableExam>> => {
     const studentId = await requireStudentId();
+    const accessibleLessonIds = await getStudentAccessibleLessonIds(studentId);
 
     const examRows = await db
       .select({
         id: exams.id,
+        lessonId: exams.lessonId,
         title: exams.title,
         durationMinutes: exams.durationMinutes,
         opensAt: exams.opensAt,
@@ -62,26 +65,28 @@ export const listAvailableExamsFn = createServerFn({ method: "GET" }).handler(
             );
 
     const now = new Date();
-    return examRows.map((exam) => {
-      const attempt = attemptRows.find((a) => a.examId === exam.id);
-      const opensAt = exam.opensAt as Date;
-      let status: AvailableExam["status"];
-      if (attempt?.submittedAt) status = "submitted";
-      else if (attempt) status = "in_progress";
-      else if (opensAt > now) status = "upcoming";
-      else status = "available";
+    return examRows
+      .filter((exam) => isLessonContentVisible(exam.lessonId, accessibleLessonIds))
+      .map((exam) => {
+        const attempt = attemptRows.find((a) => a.examId === exam.id);
+        const opensAt = exam.opensAt as Date;
+        let status: AvailableExam["status"];
+        if (attempt?.submittedAt) status = "submitted";
+        else if (attempt) status = "in_progress";
+        else if (opensAt > now) status = "upcoming";
+        else status = "available";
 
-      return {
-        id: exam.id,
-        title: exam.title,
-        durationMinutes: exam.durationMinutes,
-        opensAt: opensAt.toISOString(),
-        disciplineName: exam.disciplineName,
-        status,
-        score: attempt?.score ?? null,
-        maxScore: exam.maxScore,
-      };
-    });
+        return {
+          id: exam.id,
+          title: exam.title,
+          durationMinutes: exam.durationMinutes,
+          opensAt: opensAt.toISOString(),
+          disciplineName: exam.disciplineName,
+          status,
+          score: attempt?.score ?? null,
+          maxScore: exam.maxScore,
+        };
+      });
   },
 );
 
@@ -92,10 +97,12 @@ export const listDisciplineExamsFn = createServerFn({ method: "GET" })
   .validator(disciplineIdSchema)
   .handler(async ({ data }): Promise<Array<AvailableExam>> => {
     const studentId = await requireStudentId();
+    const accessibleLessonIds = await getStudentAccessibleLessonIds(studentId);
 
     const examRows = await db
       .select({
         id: exams.id,
+        lessonId: exams.lessonId,
         title: exams.title,
         durationMinutes: exams.durationMinutes,
         opensAt: exams.opensAt,
@@ -120,26 +127,28 @@ export const listDisciplineExamsFn = createServerFn({ method: "GET" })
             );
 
     const now = new Date();
-    return examRows.map((exam) => {
-      const attempt = attemptRows.find((a) => a.examId === exam.id);
-      const opensAt = exam.opensAt as Date;
-      let status: AvailableExam["status"];
-      if (attempt?.submittedAt) status = "submitted";
-      else if (attempt) status = "in_progress";
-      else if (opensAt > now) status = "upcoming";
-      else status = "available";
+    return examRows
+      .filter((exam) => isLessonContentVisible(exam.lessonId, accessibleLessonIds))
+      .map((exam) => {
+        const attempt = attemptRows.find((a) => a.examId === exam.id);
+        const opensAt = exam.opensAt as Date;
+        let status: AvailableExam["status"];
+        if (attempt?.submittedAt) status = "submitted";
+        else if (attempt) status = "in_progress";
+        else if (opensAt > now) status = "upcoming";
+        else status = "available";
 
-      return {
-        id: exam.id,
-        title: exam.title,
-        durationMinutes: exam.durationMinutes,
-        opensAt: opensAt.toISOString(),
-        disciplineName: exam.disciplineName,
-        status,
-        score: attempt?.score ?? null,
-        maxScore: exam.maxScore,
-      };
-    });
+        return {
+          id: exam.id,
+          title: exam.title,
+          durationMinutes: exam.durationMinutes,
+          opensAt: opensAt.toISOString(),
+          disciplineName: exam.disciplineName,
+          status,
+          score: attempt?.score ?? null,
+          maxScore: exam.maxScore,
+        };
+      });
   });
 
 export type ExamAttemptState = {
@@ -248,6 +257,10 @@ export const startExamAttemptFn = createServerFn({ method: "POST" })
     if (!exam) throw new Error("Prova não encontrada.");
     if (!exam.opensAt || exam.opensAt > new Date()) {
       throw new Error("Essa prova ainda não está disponível.");
+    }
+    const accessibleLessonIds = await getStudentAccessibleLessonIds(studentId);
+    if (!isLessonContentVisible(exam.lessonId, accessibleLessonIds)) {
+      throw new Error("Essa prova não está disponível pra você.");
     }
 
     const [existing] = await db

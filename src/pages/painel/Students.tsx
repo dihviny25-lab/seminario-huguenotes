@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import {
   GraduationCap,
   KeyRound,
+  ListChecks,
   Loader2,
   Pencil,
   Plus,
@@ -30,6 +31,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -46,6 +48,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import {
   Table,
   TableBody,
@@ -70,6 +73,11 @@ import {
   updateStudentFn,
   type Student,
 } from "@/functions/students";
+import {
+  getStudentEnrollmentFn,
+  setSelectiveEnrollmentFn,
+  setStudentLessonAccessFn,
+} from "@/functions/studentEnrollment";
 import { isAdminRole } from "@/lib/teacherRole";
 
 const STUDENTS_KEY = ["students"] as const;
@@ -96,6 +104,10 @@ export function Students() {
   const [settingPasswordFor, setSettingPasswordFor] = useState<Student | null>(null);
   const [deleting, setDeleting] = useState<Student | null>(null);
   const [settingScholarshipFor, setSettingScholarshipFor] = useState<Student | null>(null);
+  const [managingLessonsFor, setManagingLessonsFor] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function invalidate() {
@@ -274,6 +286,14 @@ export function Students() {
                         <Button
                           variant="ghost"
                           size="icon"
+                          title="Aulas atribuídas (matrícula seletiva)"
+                          onClick={() => setManagingLessonsFor(student)}
+                        >
+                          <ListChecks className="size-4" aria-hidden />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           title={
                             student.hasLogin
                               ? "Redefinir senha do portal"
@@ -341,7 +361,15 @@ export function Students() {
         </Table>
       </div>
 
-      <CreateStudentDialog open={createOpen} onOpenChange={setCreateOpen} onCreated={invalidate} />
+      <CreateStudentDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onCreated={invalidate}
+        onCreatedSelective={async (student) => {
+          await invalidate();
+          setManagingLessonsFor(student);
+        }}
+      />
       {editing ? (
         <EditStudentDialog
           student={editing}
@@ -361,6 +389,12 @@ export function Students() {
           student={settingPasswordFor}
           onOpenChange={(open) => !open && setSettingPasswordFor(null)}
           onSaved={invalidate}
+        />
+      ) : null}
+      {managingLessonsFor ? (
+        <LessonAccessDialog
+          student={managingLessonsFor}
+          onOpenChange={(open) => !open && setManagingLessonsFor(null)}
         />
       ) : null}
 
@@ -403,27 +437,38 @@ const studentSchema = z.object({
   phone: z.string().trim().optional().or(z.literal("")),
 });
 
+const createStudentSchema = studentSchema.extend({
+  selectiveEnrollment: z.boolean(),
+});
+
 function CreateStudentDialog({
   open,
   onOpenChange,
   onCreated,
+  onCreatedSelective,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreated: () => Promise<unknown>;
+  /** Chamado em vez de `onCreated` quando a matrícula seletiva foi marcada na criação. */
+  onCreatedSelective: (student: { id: string; name: string }) => void;
 }) {
-  const form = useForm<z.infer<typeof studentSchema>>({
-    resolver: zodResolver(studentSchema),
-    defaultValues: { name: "", email: "", phone: "" },
+  const form = useForm<z.infer<typeof createStudentSchema>>({
+    resolver: zodResolver(createStudentSchema),
+    defaultValues: { name: "", email: "", phone: "", selectiveEnrollment: false },
   });
 
   const mutation = useMutation({
-    mutationFn: (values: z.infer<typeof studentSchema>) => createStudentFn({ data: values }),
-    onSuccess: async () => {
+    mutationFn: (values: z.infer<typeof createStudentSchema>) => createStudentFn({ data: values }),
+    onSuccess: async (result, values) => {
       toast.success("Aluno cadastrado.");
-      form.reset();
       onOpenChange(false);
-      await onCreated();
+      if (values.selectiveEnrollment) {
+        onCreatedSelective({ id: result.id, name: values.name });
+      } else {
+        await onCreated();
+      }
+      form.reset();
     },
     onError: (error) => toast.error(errorMessage(error, "Não foi possível cadastrar.")),
   });
@@ -475,6 +520,23 @@ function CreateStudentDialog({
                     <Input inputMode="tel" {...field} />
                   </FormControl>
                   <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="selectiveEnrollment"
+              render={({ field }) => (
+                <FormItem className="flex items-center justify-between rounded-md border border-border/70 p-3">
+                  <div>
+                    <FormLabel>Matrícula seletiva</FormLabel>
+                    <p className="text-xs text-muted-foreground">
+                      Vai fazer só algumas aulas, em vez do curso completo.
+                    </p>
+                  </div>
+                  <FormControl>
+                    <Switch checked={field.value} onCheckedChange={field.onChange} />
+                  </FormControl>
                 </FormItem>
               )}
             />
@@ -727,6 +789,130 @@ function SetScholarshipDialog({
           <Button type="button" onClick={() => mutation.mutate()} disabled={mutation.isPending}>
             {mutation.isPending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
             {mutation.isPending ? "Salvando…" : "Salvar"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/**
+ * Matrícula seletiva: por padrão todo aluno faz o currículo inteiro. Liga
+ * aqui pra um aluno que só vai fazer aulas específicas (ex.: Denis) — cada
+ * aula liberada/revogada já salva na hora, sem botão de salvar separado,
+ * pra dar pra ir atribuindo aula a aula conforme o curso anda.
+ */
+function LessonAccessDialog({
+  student,
+  onOpenChange,
+}: {
+  student: { id: string; name: string };
+  onOpenChange: (open: boolean) => void;
+}) {
+  const queryClient = useQueryClient();
+  const queryKey = ["student-enrollment", student.id] as const;
+
+  const { data, isLoading } = useQuery({
+    queryKey,
+    queryFn: () => getStudentEnrollmentFn({ data: { studentId: student.id } }),
+  });
+
+  function invalidate() {
+    return queryClient.invalidateQueries({ queryKey });
+  }
+
+  const toggleSelectiveMutation = useMutation({
+    mutationFn: (enabled: boolean) =>
+      setSelectiveEnrollmentFn({ data: { studentId: student.id, enabled } }),
+    onSuccess: () => invalidate(),
+    onError: () => toast.error("Não foi possível atualizar a matrícula seletiva."),
+  });
+
+  const toggleLessonMutation = useMutation({
+    mutationFn: (input: { lessonId: string; granted: boolean }) =>
+      setStudentLessonAccessFn({ data: { studentId: student.id, ...input } }),
+    onSuccess: () => invalidate(),
+    onError: () => toast.error("Não foi possível atualizar essa aula."),
+  });
+
+  return (
+    <Dialog open onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Aulas atribuídas — {student.name}</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">
+          Por padrão todo aluno ativo participa do currículo inteiro. Ligue a matrícula seletiva pra
+          um aluno que só vai fazer aulas específicas — escolha abaixo quais, podendo liberar mais
+          aulas depois, conforme o curso anda.
+        </p>
+
+        {isLoading || !data ? (
+          <div className="flex justify-center py-8">
+            <Loader2 className="size-5 animate-spin text-muted-foreground" aria-hidden />
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center justify-between rounded-md border border-border/70 p-3">
+              <div>
+                <p className="text-sm font-medium text-foreground">Matrícula seletiva</p>
+                <p className="text-xs text-muted-foreground">
+                  Ligada: só vê/participa das aulas marcadas abaixo.
+                </p>
+              </div>
+              <Switch
+                checked={data.selectiveEnrollment}
+                onCheckedChange={(checked) => toggleSelectiveMutation.mutate(checked)}
+                disabled={toggleSelectiveMutation.isPending}
+              />
+            </div>
+
+            {data.selectiveEnrollment ? (
+              <div className="divide-y divide-border/70 rounded-md border border-border/70">
+                {data.disciplines.length === 0 ? (
+                  <p className="p-4 text-center text-sm text-muted-foreground">
+                    Nenhuma disciplina com aulas cadastradas ainda.
+                  </p>
+                ) : (
+                  data.disciplines.map((discipline) => (
+                    <div key={discipline.id} className="p-3">
+                      <p className="mb-2 text-sm font-medium text-foreground">
+                        {discipline.discipline}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {discipline.lessons.map((lesson) => (
+                          <label
+                            key={lesson.id}
+                            className="flex items-center gap-1.5 rounded-md border border-border/70 px-2 py-1 text-xs"
+                          >
+                            <Checkbox
+                              checked={lesson.granted}
+                              disabled={
+                                toggleLessonMutation.isPending &&
+                                toggleLessonMutation.variables?.lessonId === lesson.id
+                              }
+                              onCheckedChange={(checked) =>
+                                toggleLessonMutation.mutate({
+                                  lessonId: lesson.id,
+                                  granted: checked === true,
+                                })
+                              }
+                            />
+                            Aula {lesson.sequence}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            ) : null}
+          </>
+        )}
+
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            Fechar
           </Button>
         </DialogFooter>
       </DialogContent>

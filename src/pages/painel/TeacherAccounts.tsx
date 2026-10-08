@@ -2,7 +2,7 @@ import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
-import { KeyRound, Loader2, Pencil, Plus, ShieldOff, Trash2 } from "lucide-react";
+import { KeyRound, Loader2, Pencil, Plus, ShieldOff, Trash2, UserCog } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -35,6 +35,13 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Table,
   TableBody,
   TableCell,
@@ -51,10 +58,11 @@ import {
   listTeacherAccountsFn,
   revokeTeacherLoginFn,
   setTeacherPasswordFn,
+  setTeacherRoleFn,
   updateTeacherAccountFn,
   type TeacherAccount,
 } from "@/functions/teacherAccounts";
-import { isAdminRole } from "@/lib/teacherRole";
+import { isAdminRole, isSuperAdminRole } from "@/lib/teacherRole";
 
 const TEACHER_ACCOUNTS_KEY = ["teacher-accounts"] as const;
 
@@ -85,11 +93,13 @@ export function TeacherAccounts() {
     queryFn: () => getCurrentTeacherFn(),
   });
   const isAdmin = isAdminRole(me?.role);
+  const isSuperAdmin = isSuperAdminRole(me?.role);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<TeacherAccount | null>(null);
   const [settingPasswordFor, setSettingPasswordFor] = useState<TeacherAccount | null>(null);
   const [deleting, setDeleting] = useState<TeacherAccount | null>(null);
+  const [changingRoleFor, setChangingRoleFor] = useState<TeacherAccount | null>(null);
 
   function invalidate() {
     return queryClient.invalidateQueries({ queryKey: TEACHER_ACCOUNTS_KEY });
@@ -151,6 +161,19 @@ export function TeacherAccounts() {
               teachers.map((teacher) => {
                 const isSelf = teacher.id === me?.id;
                 const canEdit = isAdmin || isSelf;
+                // Mexer no papel de quem já é admin ou super admin (inclusive
+                // rebaixar) só o super admin faz — senão um admin comum
+                // rebaixaria outro admin a professor e o excluiria, contornando
+                // a proteção de exclusão. Conta de super admin nunca é
+                // excluível pela interface, e conta de admin só o super admin
+                // exclui.
+                const canChangeRole =
+                  isAdmin && !isSelf && (teacher.role === "teacher" || isSuperAdmin);
+                const canDelete =
+                  isAdmin &&
+                  !isSelf &&
+                  teacher.role !== "super_admin" &&
+                  (teacher.role !== "admin" || isSuperAdmin);
                 return (
                   <TableRow
                     key={teacher.id}
@@ -207,7 +230,17 @@ export function TeacherAccounts() {
                             )}
                           </Button>
                         ) : null}
-                        {isAdmin ? (
+                        {canChangeRole ? (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Alterar papel"
+                            onClick={() => setChangingRoleFor(teacher)}
+                          >
+                            <UserCog className="size-4" aria-hidden />
+                          </Button>
+                        ) : null}
+                        {canDelete ? (
                           <Button
                             variant="ghost"
                             size="icon"
@@ -233,7 +266,12 @@ export function TeacherAccounts() {
         </Table>
       </div>
 
-      <CreateTeacherDialog open={createOpen} onOpenChange={setCreateOpen} onCreated={invalidate} />
+      <CreateTeacherDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onCreated={invalidate}
+        isSuperAdmin={isSuperAdmin}
+      />
       {editing ? (
         <EditTeacherDialog
           teacher={editing}
@@ -245,6 +283,14 @@ export function TeacherAccounts() {
         <SetPasswordDialog
           teacher={settingPasswordFor}
           onOpenChange={(open) => !open && setSettingPasswordFor(null)}
+          onSaved={invalidate}
+        />
+      ) : null}
+      {changingRoleFor ? (
+        <ChangeRoleDialog
+          teacher={changingRoleFor}
+          isSuperAdmin={isSuperAdmin}
+          onOpenChange={(open) => !open && setChangingRoleFor(null)}
           onSaved={invalidate}
         />
       ) : null}
@@ -281,20 +327,23 @@ const createSchema = z.object({
   email: z.string().trim().toLowerCase().email("Informe um e-mail válido."),
   password: z.string().min(8, "Mínimo de 8 caracteres."),
   title: z.string().trim().optional(),
+  role: z.enum(["teacher", "admin", "super_admin"]),
 });
 
 function CreateTeacherDialog({
   open,
   onOpenChange,
   onCreated,
+  isSuperAdmin,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreated: () => Promise<unknown>;
+  isSuperAdmin: boolean;
 }) {
   const form = useForm<z.infer<typeof createSchema>>({
     resolver: zodResolver(createSchema),
-    defaultValues: { name: "", email: "", password: "", title: "" },
+    defaultValues: { name: "", email: "", password: "", title: "", role: "teacher" },
   });
 
   const mutation = useMutation({
@@ -367,6 +416,30 @@ function CreateTeacherDialog({
                   <FormControl>
                     <Input placeholder="Ex.: Gerente" {...field} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="role"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Papel</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="teacher">Professor</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                      {isSuperAdmin ? (
+                        <SelectItem value="super_admin">Super Admin</SelectItem>
+                      ) : null}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
@@ -552,6 +625,85 @@ function SetPasswordDialog({
                   <FormControl>
                     <Input type="password" {...field} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <DialogFooter>
+              <Button type="submit" disabled={mutation.isPending}>
+                {mutation.isPending ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                ) : null}
+                Salvar
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+const roleSchema = z.object({ role: z.enum(["teacher", "admin", "super_admin"]) });
+
+function ChangeRoleDialog({
+  teacher,
+  isSuperAdmin,
+  onOpenChange,
+  onSaved,
+}: {
+  teacher: TeacherAccount;
+  isSuperAdmin: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSaved: () => Promise<unknown>;
+}) {
+  const form = useForm<z.infer<typeof roleSchema>>({
+    resolver: zodResolver(roleSchema),
+    defaultValues: { role: teacher.role },
+  });
+
+  const mutation = useMutation({
+    mutationFn: (values: z.infer<typeof roleSchema>) =>
+      setTeacherRoleFn({ data: { id: teacher.id, role: values.role } }),
+    onSuccess: async () => {
+      toast.success("Papel atualizado.");
+      onOpenChange(false);
+      await onSaved();
+    },
+    onError: (error) => toast.error(errorMessage(error, "Não foi possível alterar o papel.")),
+  });
+
+  return (
+    <Dialog open onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Alterar papel de {teacher.name}</DialogTitle>
+        </DialogHeader>
+        <Form {...form}>
+          <form
+            className="space-y-4"
+            onSubmit={form.handleSubmit((values) => mutation.mutate(values))}
+          >
+            <FormField
+              control={form.control}
+              name="role"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Papel</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="teacher">Professor</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                      {isSuperAdmin ? (
+                        <SelectItem value="super_admin">Super Admin</SelectItem>
+                      ) : null}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
