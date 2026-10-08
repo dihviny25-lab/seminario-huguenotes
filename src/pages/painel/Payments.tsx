@@ -8,14 +8,17 @@ import {
   CheckCircle2,
   Download,
   Loader2,
+  Paperclip,
   Pencil,
   Plus,
   RefreshCcw,
   Undo2,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
+import { PrivateFileLink } from "@/components/PrivateFileLink";
 import { PainelShell } from "@/components/painel/PainelShell";
 import {
   AlertDialog,
@@ -72,6 +75,7 @@ import {
   generateMonthlyChargesFn,
   listStudentChargesFn,
   markChargePaidManuallyFn,
+  rejectChargeProofFn,
   revertChargeToPendingFn,
   updateChargeFn,
   type Charge,
@@ -292,6 +296,25 @@ export function Payments({ initialStudentId }: { initialStudentId?: string } = {
                             {paymentMethodLabel[charge.paymentMethod]}
                           </span>
                         ) : null}
+                        {isAdmin &&
+                        charge.status === "pending" &&
+                        charge.proofStatus === "pending" ? (
+                          <PrivateFileLink
+                            fileId={charge.proofFileId}
+                            fileUrl={null}
+                            fileName="comprovante"
+                            className="mt-1 inline-flex items-center gap-1 text-xs text-accent hover:underline"
+                          >
+                            <Paperclip className="size-3 shrink-0" aria-hidden />
+                            Comprovante enviado
+                          </PrivateFileLink>
+                        ) : isAdmin &&
+                          charge.status === "pending" &&
+                          charge.proofStatus === "rejected" ? (
+                          <span className="mt-1 block text-xs text-destructive">
+                            Comprovante rejeitado
+                          </span>
+                        ) : null}
                       </TableCell>
                       <TableCell>
                         {isAdmin && charge.status === "pending" ? (
@@ -304,6 +327,9 @@ export function Payments({ initialStudentId }: { initialStudentId?: string } = {
                             >
                               <Pencil className="size-4" aria-hidden />
                             </Button>
+                            {charge.proofStatus === "pending" ? (
+                              <RejectProofButton chargeId={charge.id} onDone={invalidate} />
+                            ) : null}
                             <MarkPaidButton
                               chargeId={charge.id}
                               suggestedAmount={charge.currentAmount}
@@ -602,6 +628,66 @@ function MarkPaidButton({
             <Button onClick={() => mutation.mutate()} disabled={mutation.isPending}>
               {mutation.isPending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
               Confirmar pagamento
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+function RejectProofButton({
+  chargeId,
+  onDone,
+}: {
+  chargeId: string;
+  onDone: () => Promise<unknown>;
+}) {
+  const [open, setOpen] = useState(false);
+  const [note, setNote] = useState("");
+
+  const mutation = useMutation({
+    mutationFn: () => rejectChargeProofFn({ data: { chargeId, note: note || undefined } }),
+    onSuccess: async () => {
+      toast.success("Comprovante rejeitado.");
+      setOpen(false);
+      setNote("");
+      await onDone();
+    },
+    onError: (error) => toast.error(errorMessage(error, "Não foi possível rejeitar.")),
+  });
+
+  return (
+    <>
+      <Button
+        variant="ghost"
+        size="icon"
+        title="Rejeitar comprovante"
+        onClick={() => setOpen(true)}
+      >
+        <X className="size-4" aria-hidden />
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rejeitar comprovante</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            A cobrança continua pendente e o aluno pode enviar outro comprovante.
+          </p>
+          <Textarea
+            placeholder="Motivo (opcional, o aluno vê isso)"
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+          />
+          <DialogFooter>
+            <Button
+              variant="destructive"
+              onClick={() => mutation.mutate()}
+              disabled={mutation.isPending}
+            >
+              {mutation.isPending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
+              Rejeitar
             </Button>
           </DialogFooter>
         </DialogContent>

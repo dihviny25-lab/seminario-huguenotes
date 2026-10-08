@@ -5,13 +5,14 @@ export type FileOwnerType =
   | "reading_material"
   | "library_book"
   | "presentation_slide"
-  | "video_lesson";
+  | "video_lesson"
+  | "payment_proof";
 
 /**
  * Fato resolvido sobre o dono de um arquivo privado, já carregado do banco —
  * o suficiente pra decidir se `identity` pode ler o arquivo. `studentId` só
- * é preenchido (e só importa) para `assignment_submission`. `lessonId` e
- * `accessibleLessonIds` só importam para `reading_material`/
+ * é preenchido (e só importa) para `assignment_submission`/`payment_proof`.
+ * `lessonId` e `accessibleLessonIds` só importam para `reading_material`/
  * `presentation_slide`/`video_lesson` — o dado do aluno (se restrito por
  * matrícula seletiva) já vem pronto, essa checagem continua pura/sem banco.
  */
@@ -44,14 +45,24 @@ export function isLessonContentVisible(
  * `src/server/files/privateFileAccess.ts`) monta o `FileOwnerRecord` e chama
  * esta função.
  *
- * Professor/admin sempre passa — a tela que chega até aqui já aplicou a
- * permissão de leitura própria dela (ex.: só lista entregas da disciplina
- * que o professor leciona). Aluno só lê entrega de tarefa própria; material/
+ * Professor/admin sempre passa (exceto comprovante de pagamento, abaixo) — a
+ * tela que chega até aqui já aplicou a permissão de leitura própria dela
+ * (ex.: só lista entregas da disciplina que o professor leciona). Aluno só
+ * lê entrega de tarefa própria ou comprovante de pagamento próprio; material/
  * slide/vídeo são abertos a qualquer aluno logado, exceto quando o aluno é
  * de matrícula seletiva e o conteúdo está vinculado a uma aula que ele não
  * tem acesso. Livro da biblioteca não tem esse conceito, continua aberto.
+ *
+ * Comprovante de pagamento é dado financeiro sensível: só o próprio aluno
+ * dono da cobrança ou um professor com papel de admin (validação é tarefa do
+ * Financeiro/secretaria) pode ler — um professor comum não entra, mesmo que
+ * a tela que lista cobranças do aluno não seja exclusiva de admin.
  */
 export function canReadFileRecord(record: FileOwnerRecord, identity: AnyIdentity): boolean {
+  if (record.ownerType === "payment_proof") {
+    if (identity.role === "teacher") return identity.isAdmin;
+    return record.studentId === identity.id;
+  }
   if (identity.role === "teacher") return true;
   if (record.ownerType === "assignment_submission") {
     return record.studentId === identity.id;

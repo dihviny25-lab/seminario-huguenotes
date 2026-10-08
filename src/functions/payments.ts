@@ -14,6 +14,7 @@ import { logAudit } from "@/server/audit";
 import { requireAdminId, requireStudentId, requireTeacherId } from "@/server/auth/guard";
 import { db } from "@/server/db/client";
 import { charges, disciplines, students } from "@/server/db/schema";
+import { registerPrivateFile } from "@/server/files/privateFileAccess";
 import { createPreference } from "@/server/payments/mercadopago";
 
 export type Charge = {
@@ -32,6 +33,10 @@ export type Charge = {
   paidManually: boolean;
   paymentMethod: "pix" | "dinheiro" | "cartao" | "transferencia" | "outro" | null;
   note: string | null;
+  proofFileId: string | null;
+  proofStatus: "pending" | "approved" | "rejected" | null;
+  proofSubmittedAt: string | null;
+  proofRejectionNote: string | null;
 };
 
 function todayIso(): string {
@@ -68,6 +73,10 @@ function toCharge(row: typeof charges.$inferSelect): Charge {
     paidManually: row.paidManually,
     paymentMethod: row.paymentMethod,
     note: row.note,
+    proofFileId: row.proofFileId,
+    proofStatus: row.proofStatus,
+    proofSubmittedAt: row.proofSubmittedAt ? row.proofSubmittedAt.toISOString() : null,
+    proofRejectionNote: row.proofRejectionNote,
   };
 }
 
@@ -134,6 +143,57 @@ export const payMyChargeFn = createServerFn({ method: "POST" })
       .where(eq(charges.id, charge.id));
 
     return { initPoint };
+  });
+
+const uploadProofSchema = z.object({
+  chargeId: z.string().uuid(),
+  fileUrl: z.string().trim().url("URL de arquivo inválida."),
+  fileName: z.string().trim().min(1),
+  filePathname: z.string().trim().min(1),
+  fileContentType: z.string().trim().optional(),
+});
+
+/** O próprio aluno envia o comprovante de uma cobrança pendente pro admin validar. */
+export const uploadChargeProofFn = createServerFn({ method: "POST" })
+  .validator(uploadProofSchema)
+  .handler(async ({ data }) => {
+    const studentId = await requireStudentId();
+    const [charge] = await db
+      .select({
+        id: charges.id,
+        studentId: charges.studentId,
+        status: charges.status,
+        proofStatus: charges.proofStatus,
+      })
+      .from(charges)
+      .where(eq(charges.id, data.chargeId))
+      .limit(1);
+    if (!charge || charge.studentId !== studentId) {
+      throw new Error("Cobrança não encontrada.");
+    }
+    if (charge.status !== "pending") {
+      throw new Error("Essa cobrança não está mais pendente.");
+    }
+    if (charge.proofStatus === "pending") {
+      throw new Error("Já tem um comprovante em análise pra essa cobrança.");
+    }
+
+    const fileId = await registerPrivateFile({
+      pathname: data.filePathname,
+      originalName: data.fileName,
+      contentType: data.fileContentType ?? null,
+      ownerType: "payment_proof",
+      ownerId: data.chargeId,
+    });
+    await db
+      .update(charges)
+      .set({
+        proofFileId: fileId,
+        proofStatus: "pending",
+        proofSubmittedAt: new Date(),
+        proofRejectionNote: null,
+      })
+      .where(eq(charges.id, data.chargeId));
   });
 
 const studentIdSchema = z.object({ studentId: z.string().uuid() });
@@ -381,11 +441,21 @@ const markPaidSchema = z.object({
   note: z.string().trim().optional(),
 });
 
-/** Admin marca uma cobrança como paga manualmente (dinheiro/Pix direto na secretaria). */
+/**
+ * Admin marca uma cobrança como paga manualmente (dinheiro/Pix direto na
+ * secretaria) — é a mesma ação usada pra "aprovar" um comprovante enviado
+ * pelo aluno: se já tem comprovante pendente de análise, ele passa a
+ * "approved" junto com a baixa.
+ */
 export const markChargePaidManuallyFn = createServerFn({ method: "POST" })
   .validator(markPaidSchema)
   .handler(async ({ data }) => {
     await requireAdminId();
+    const [existing] = await db
+      .select({ proofStatus: charges.proofStatus })
+      .from(charges)
+      .where(eq(charges.id, data.chargeId))
+      .limit(1);
     await db
       .update(charges)
       .set({
@@ -395,6 +465,7 @@ export const markChargePaidManuallyFn = createServerFn({ method: "POST" })
         paidAmount: String(data.paidAmount),
         paymentMethod: data.paymentMethod,
         note: data.note || null,
+        ...(existing?.proofStatus === "pending" ? { proofStatus: "approved" as const } : {}),
       })
       .where(eq(charges.id, data.chargeId));
     const [row] = await db
@@ -406,6 +477,33 @@ export const markChargePaidManuallyFn = createServerFn({ method: "POST" })
     await logAudit(
       "financeiro.marcar_pago",
       `Marcou como pago manualmente: ${row?.description ?? data.chargeId} de ${row?.studentName ?? "aluno"} (R$ ${data.paidAmount.toFixed(2)}, ${paymentMethodLabels[data.paymentMethod]}).`,
+    );
+  });
+
+const rejectProofSchema = z.object({
+  chargeId: z.string().uuid(),
+  note: z.string().trim().optional(),
+});
+
+/** Admin rejeita o comprovante enviado — cobrança continua pendente, aluno vê o motivo. */
+export const rejectChargeProofFn = createServerFn({ method: "POST" })
+  .validator(rejectProofSchema)
+  .handler(async ({ data }) => {
+    await requireAdminId();
+    const [row] = await db
+      .select({ description: charges.description, studentName: students.name })
+      .from(charges)
+      .innerJoin(students, eq(charges.studentId, students.id))
+      .where(eq(charges.id, data.chargeId))
+      .limit(1);
+    if (!row) throw new Error("Cobrança não encontrada.");
+    await db
+      .update(charges)
+      .set({ proofStatus: "rejected", proofRejectionNote: data.note || null })
+      .where(eq(charges.id, data.chargeId));
+    await logAudit(
+      "financeiro.comprovante_rejeitar",
+      `Rejeitou o comprovante de ${row.description} de ${row.studentName}.`,
     );
   });
 
@@ -467,7 +565,14 @@ export const updateChargeFn = createServerFn({ method: "POST" })
 
 const revertChargeSchema = z.object({ chargeId: z.string().uuid() });
 
-/** Desfaz um "marcar como pago" feito por engano — volta a cobrança pra pendente. */
+/**
+ * Desfaz um "marcar como pago" feito por engano — volta a cobrança pra
+ * pendente. Se a baixa tinha aprovado um comprovante junto (ver
+ * `markChargePaidManuallyFn`), o comprovante volta pra "em análise" — senão
+ * ficaria com status "approved" numa cobrança pendente, sem caminho de volta
+ * pra revisão (nem o aluno reenvia, nem o admin vê o link pra aprovar/
+ * rejeitar de novo).
+ */
 export const revertChargeToPendingFn = createServerFn({ method: "POST" })
   .validator(revertChargeSchema)
   .handler(async ({ data }) => {
@@ -475,6 +580,7 @@ export const revertChargeToPendingFn = createServerFn({ method: "POST" })
     const [charge] = await db
       .select({
         status: charges.status,
+        proofStatus: charges.proofStatus,
         description: charges.description,
         studentName: students.name,
       })
@@ -496,6 +602,7 @@ export const revertChargeToPendingFn = createServerFn({ method: "POST" })
         paidManually: false,
         mpPaymentId: null,
         note: null,
+        ...(charge.proofStatus === "approved" ? { proofStatus: "pending" as const } : {}),
       })
       .where(eq(charges.id, data.chargeId));
     await logAudit(

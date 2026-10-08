@@ -113,6 +113,13 @@ export function PortalPayments() {
                     >
                       {statusLabel[charge.status]}
                     </Badge>
+                    {charge.status === "pending" && charge.proofStatus === "pending" ? (
+                      <span className="mt-1 block text-xs text-accent">Comprovante em análise</span>
+                    ) : charge.status === "pending" && charge.proofStatus === "rejected" ? (
+                      <span className="mt-1 block text-xs text-destructive">
+                        Comprovante rejeitado
+                      </span>
+                    ) : null}
                   </TableCell>
                   <TableCell>
                     {charge.status === "pending" ? (

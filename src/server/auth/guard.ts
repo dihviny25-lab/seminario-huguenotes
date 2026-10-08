@@ -106,12 +106,16 @@ export async function requireAnyLogin(): Promise<void> {
 }
 
 export type AnyIdentity =
-  { role: "teacher"; id: string; name: string } | { role: "student"; id: string; name: string };
+  | { role: "teacher"; id: string; name: string; isAdmin: boolean }
+  | { role: "student"; id: string; name: string };
 
 /**
  * Garante que existe uma sessão válida (professor OU aluno) e devolve quem
  * é — usado por conteúdo que os dois públicos podem criar (ex.: fórum),
- * onde a autoria precisa ser registrada.
+ * onde a autoria precisa ser registrada. `isAdmin` existe só pro professor
+ * (ex.: `canReadFileRecord` usa pra restringir comprovante de pagamento a
+ * admin/secretaria, já que professor comum não deveria ver comprovante
+ * bancário de aluno).
  */
 export async function requireAnyIdentity(): Promise<AnyIdentity> {
   const [teacherSession, studentSession] = await Promise.all([
@@ -121,7 +125,7 @@ export async function requireAnyIdentity(): Promise<AnyIdentity> {
 
   if (teacherSession.data.teacherId) {
     const [teacher] = await db
-      .select({ name: teachers.name })
+      .select({ name: teachers.name, role: teachers.role })
       .from(teachers)
       .where(eq(teachers.id, teacherSession.data.teacherId))
       .limit(1);
@@ -129,6 +133,7 @@ export async function requireAnyIdentity(): Promise<AnyIdentity> {
       role: "teacher",
       id: teacherSession.data.teacherId,
       name: teacher?.name ?? "Professor",
+      isAdmin: teacher?.role === "admin" || teacher?.role === "super_admin",
     };
   }
 
