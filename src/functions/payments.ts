@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNull, ne, or, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import {
@@ -185,7 +185,10 @@ export const uploadChargeProofFn = createServerFn({ method: "POST" })
       ownerType: "payment_proof",
       ownerId: data.chargeId,
     });
-    await db
+    // Condiciona a escrita ao mesmo estado checado acima — fecha a corrida de
+    // dois reenvios quase simultâneos (neon-http não tem transação pra travar
+    // a leitura-e-escrita como uma coisa só).
+    const [updated] = await db
       .update(charges)
       .set({
         proofFileId: fileId,
@@ -193,7 +196,17 @@ export const uploadChargeProofFn = createServerFn({ method: "POST" })
         proofSubmittedAt: new Date(),
         proofRejectionNote: null,
       })
-      .where(eq(charges.id, data.chargeId));
+      .where(
+        and(
+          eq(charges.id, data.chargeId),
+          eq(charges.status, "pending"),
+          or(isNull(charges.proofStatus), ne(charges.proofStatus, "pending")),
+        ),
+      )
+      .returning({ id: charges.id });
+    if (!updated) {
+      throw new Error("Já tem um comprovante em análise pra essa cobrança.");
+    }
   });
 
 const studentIdSchema = z.object({ studentId: z.string().uuid() });
@@ -445,17 +458,15 @@ const markPaidSchema = z.object({
  * Admin marca uma cobrança como paga manualmente (dinheiro/Pix direto na
  * secretaria) — é a mesma ação usada pra "aprovar" um comprovante enviado
  * pelo aluno: se já tem comprovante pendente de análise, ele passa a
- * "approved" junto com a baixa.
+ * "approved" junto com a baixa. O `CASE` decide isso dentro do próprio
+ * `UPDATE` (em vez de ler `proofStatus` antes e condicionar o `set`) pra não
+ * ter uma janela entre leitura e escrita em que um `rejectChargeProofFn`
+ * concorrente mude o estado sem essa função perceber.
  */
 export const markChargePaidManuallyFn = createServerFn({ method: "POST" })
   .validator(markPaidSchema)
   .handler(async ({ data }) => {
     await requireAdminId();
-    const [existing] = await db
-      .select({ proofStatus: charges.proofStatus })
-      .from(charges)
-      .where(eq(charges.id, data.chargeId))
-      .limit(1);
     await db
       .update(charges)
       .set({
@@ -465,7 +476,7 @@ export const markChargePaidManuallyFn = createServerFn({ method: "POST" })
         paidAmount: String(data.paidAmount),
         paymentMethod: data.paymentMethod,
         note: data.note || null,
-        ...(existing?.proofStatus === "pending" ? { proofStatus: "approved" as const } : {}),
+        proofStatus: sql`case when ${charges.proofStatus} = 'pending' then 'approved' else ${charges.proofStatus} end`,
       })
       .where(eq(charges.id, data.chargeId));
     const [row] = await db
@@ -497,10 +508,17 @@ export const rejectChargeProofFn = createServerFn({ method: "POST" })
       .where(eq(charges.id, data.chargeId))
       .limit(1);
     if (!row) throw new Error("Cobrança não encontrada.");
-    await db
+    // Só rejeita quem ainda está "em análise" — fecha a corrida com uma
+    // aprovação (dar baixa) concorrente, que teria te mudado proofStatus pra
+    // "approved" sem essa função saber.
+    const [updated] = await db
       .update(charges)
       .set({ proofStatus: "rejected", proofRejectionNote: data.note || null })
-      .where(eq(charges.id, data.chargeId));
+      .where(and(eq(charges.id, data.chargeId), eq(charges.proofStatus, "pending")))
+      .returning({ id: charges.id });
+    if (!updated) {
+      throw new Error("Esse comprovante não está mais em análise.");
+    }
     await logAudit(
       "financeiro.comprovante_rejeitar",
       `Rejeitou o comprovante de ${row.description} de ${row.studentName}.`,
