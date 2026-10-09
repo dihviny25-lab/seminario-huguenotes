@@ -354,7 +354,12 @@ describe("pickMissingAttendance", () => {
     const { items, total } = pickMissingAttendance(input);
     expect(total).toBe(1);
     expect(items).toEqual([
-      { disciplineId: "d1", disciplineName: "Disc", teacherName: null, lessonsWithoutAttendance: 1 },
+      {
+        disciplineId: "d1",
+        disciplineName: "Disc",
+        teacherName: null,
+        lessonsWithoutAttendance: 1,
+      },
     ]);
   });
 

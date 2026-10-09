@@ -163,7 +163,12 @@ function isPastLesson(date: string | null, today: string): boolean {
 }
 
 export function computeDisciplineProgress(
-  discipline: { id: string; discipline: string; lessons: number | null; teacherName?: string | null },
+  discipline: {
+    id: string;
+    discipline: string;
+    lessons: number | null;
+    teacherName?: string | null;
+  },
   lessons: Array<{ disciplineId: string; givenAt: string | null }>,
 ): DisciplineProgress {
   const mine = lessons.filter((l) => l.disciplineId === discipline.id);
