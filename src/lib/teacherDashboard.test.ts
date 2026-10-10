@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildTeacherDashboard,
+  buildSchoolOverview,
   computeDisciplineProgress,
   MISSING_GRADES_LIMIT,
   pickAtRiskStudents,
@@ -354,7 +355,12 @@ describe("pickMissingAttendance", () => {
     const { items, total } = pickMissingAttendance(input);
     expect(total).toBe(1);
     expect(items).toEqual([
-      { disciplineId: "d1", disciplineName: "Disc", teacherName: null, lessonsWithoutAttendance: 1 },
+      {
+        disciplineId: "d1",
+        disciplineName: "Disc",
+        teacherName: null,
+        lessonsWithoutAttendance: 1,
+      },
     ]);
   });
 
@@ -682,5 +688,112 @@ describe("buildTeacherDashboard", () => {
     ] as const) {
       expect(out[key]).toEqual([]);
     }
+  });
+});
+
+describe("buildSchoolOverview", () => {
+  function schoolInput(): DashboardInput {
+    return emptyInput({
+      scope: "escola",
+      disciplines: [
+        {
+          id: "d1",
+          discipline: "Teologia",
+          lessons: 10,
+          teacherId: "t1",
+          teacherName: "João",
+        },
+        {
+          id: "d2",
+          discipline: "História",
+          lessons: 8,
+          teacherId: "t2",
+          teacherName: "Maria",
+        },
+        {
+          id: "d3",
+          discipline: "Línguas",
+          lessons: 8,
+          teacherId: "t1",
+          teacherName: "João",
+        },
+      ],
+      activeStudents: [
+        { id: "s1", name: "Ana" },
+        { id: "s2", name: "Bia" },
+        { id: "s3", name: "Cida" },
+        { id: "s4", name: "Dora" },
+      ],
+      lessons: [
+        ...lessonsFor("d1", 4, 0),
+        { id: "draft", disciplineId: "d1", date: "2026-08-10", sequence: 5, givenAt: null },
+      ],
+      assessments: [{ id: "a1", disciplineId: "d1", title: "Prova", weight: 1 }],
+      grades: [
+        { assessmentId: "a1", studentId: "s1", score: 5 },
+        { assessmentId: "a1", studentId: "s2", score: 9 },
+        { assessmentId: "a1", studentId: "s3", score: 5 },
+        { assessmentId: "a1", studentId: "s4", score: 9 },
+      ],
+      attendance: [
+        { lessonId: "d1-p0", studentId: "s2", present: false },
+        { lessonId: "d1-p1", studentId: "s2", present: false },
+        { lessonId: "d1-p0", studentId: "s3", present: false },
+        { lessonId: "d1-p1", studentId: "s3", present: false },
+        // Linhas duplicadas e chamada em rascunho não podem distorcer a frequência.
+        { lessonId: "d1-p1", studentId: "s3", present: false },
+        { lessonId: "draft", studentId: "s4", present: false },
+      ],
+    });
+  }
+
+  it("só existe no escopo da escola", () => {
+    expect(buildSchoolOverview(emptyInput())).toBeNull();
+  });
+
+  it("consolida totais, riscos e métricas sem contar duplicidades", () => {
+    const overview = buildSchoolOverview(schoolInput())!;
+    expect(overview.totals).toEqual({
+      activeStudents: 4,
+      teachers: 2,
+      disciplines: 3,
+      lessonsGiven: 4,
+    });
+    expect(overview.riskDistribution).toEqual({
+      onTrack: 1,
+      gradeOnly: 1,
+      attendanceOnly: 1,
+      both: 1,
+    });
+    expect(overview.disciplineMetrics[0]).toMatchObject({
+      disciplineId: "d1",
+      average: 7,
+      attendancePercent: 75,
+      progressPercent: 40,
+      lessonsGiven: 4,
+      lessonsPlanned: 10,
+    });
+    expect(overview.disciplineMetrics[1]).toMatchObject({
+      average: null,
+      attendancePercent: null,
+      progressPercent: 0,
+    });
+  });
+
+  it("mantém uma visão vazia válida quando a escola ainda não tem dados", () => {
+    const overview = buildSchoolOverview(emptyInput({ scope: "escola" }))!;
+    expect(overview.totals).toEqual({
+      activeStudents: 0,
+      teachers: 0,
+      disciplines: 0,
+      lessonsGiven: 0,
+    });
+    expect(overview.riskDistribution).toEqual({
+      onTrack: 0,
+      gradeOnly: 0,
+      attendanceOnly: 0,
+      both: 0,
+    });
+    expect(overview.disciplineMetrics).toEqual([]);
   });
 });
