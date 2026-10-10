@@ -25,6 +25,7 @@ export type DashboardInput = {
     id: string;
     discipline: string;
     lessons: number | null;
+    teacherId?: string | null;
     /** Só preenchido no escopo "escola" — ausente/null no escopo "minhas" (sempre o próprio professor). */
     teacherName?: string | null;
   }>;
@@ -132,8 +133,36 @@ export type AtRiskStudentItem = {
   }>;
 };
 
+export type SchoolDisciplineMetric = {
+  disciplineId: string;
+  disciplineName: string;
+  teacherName: string | null;
+  average: number | null;
+  attendancePercent: number | null;
+  progressPercent: number;
+  lessonsGiven: number;
+  lessonsPlanned: number;
+};
+
+export type SchoolOverview = {
+  totals: {
+    activeStudents: number;
+    teachers: number;
+    disciplines: number;
+    lessonsGiven: number;
+  };
+  riskDistribution: {
+    onTrack: number;
+    gradeOnly: number;
+    attendanceOnly: number;
+    both: number;
+  };
+  disciplineMetrics: SchoolDisciplineMetric[];
+};
+
 export type TeacherDashboard = {
   scope: "minhas" | "escola";
+  schoolOverview: SchoolOverview | null;
   counts: {
     pendingGrading: number;
     endingDisciplines: number;
@@ -163,7 +192,12 @@ function isPastLesson(date: string | null, today: string): boolean {
 }
 
 export function computeDisciplineProgress(
-  discipline: { id: string; discipline: string; lessons: number | null; teacherName?: string | null },
+  discipline: {
+    id: string;
+    discipline: string;
+    lessons: number | null;
+    teacherName?: string | null;
+  },
   lessons: Array<{ disciplineId: string; givenAt: string | null }>,
 ): DisciplineProgress {
   const mine = lessons.filter((l) => l.disciplineId === discipline.id);
@@ -389,7 +423,10 @@ export function pickForumActivity(input: DashboardInput): ForumActivityItem[] {
     .slice(0, FORUM_ITEMS_LIMIT);
 }
 
-export function pickAtRiskStudents(input: DashboardInput): {
+export function pickAtRiskStudents(
+  input: DashboardInput,
+  limit = AT_RISK_LIMIT,
+): {
   items: AtRiskStudentItem[];
   total: number;
 } {
@@ -458,11 +495,118 @@ export function pickAtRiskStudents(input: DashboardInput): {
   }
 
   const all = [...byStudent.values()].sort((a, b) => b.disciplines.length - a.disciplines.length);
-  const items = all.slice(0, AT_RISK_LIMIT).map((s) => ({
+  const items = all.slice(0, limit).map((s) => ({
     ...s,
-    disciplines: s.disciplines.slice(0, AT_RISK_LIMIT),
+    disciplines: s.disciplines.slice(0, limit),
   }));
   return { items, total: all.length };
+}
+
+/** Indicadores consolidados exibidos somente no painel do super admin. */
+export function buildSchoolOverview(input: DashboardInput): SchoolOverview | null {
+  if (input.scope !== "escola") return null;
+
+  const progress = progressByDiscipline(input);
+  const gradeByKey = new Map(
+    input.grades.map((grade) => [`${grade.assessmentId}:${grade.studentId}`, grade.score]),
+  );
+  const givenLessons = input.lessons.filter((lesson) => lesson.givenAt !== null);
+  const assessmentsByDiscipline = new Map<string, DashboardInput["assessments"]>();
+  for (const assessment of input.assessments) {
+    const group = assessmentsByDiscipline.get(assessment.disciplineId) ?? [];
+    group.push(assessment);
+    assessmentsByDiscipline.set(assessment.disciplineId, group);
+  }
+  const givenLessonIdsByDiscipline = new Map<string, Set<string>>();
+  for (const lesson of givenLessons) {
+    const group = givenLessonIdsByDiscipline.get(lesson.disciplineId) ?? new Set<string>();
+    group.add(lesson.id);
+    givenLessonIdsByDiscipline.set(lesson.disciplineId, group);
+  }
+  const absentByStudent = new Map<string, Set<string>>();
+  for (const attendance of input.attendance) {
+    if (attendance.present) continue;
+    if (!absentByStudent.has(attendance.studentId)) {
+      absentByStudent.set(attendance.studentId, new Set());
+    }
+    absentByStudent.get(attendance.studentId)!.add(attendance.lessonId);
+  }
+
+  const disciplineMetrics = input.disciplines.map((discipline) => {
+    const disciplineProgress = progress.get(discipline.id)!;
+    const disciplineAssessments = assessmentsByDiscipline.get(discipline.id) ?? [];
+    const studentAverages = input.activeStudents
+      .map((student) =>
+        computeWeightedAverage(
+          disciplineAssessments.flatMap((assessment) => {
+            const score = gradeByKey.get(`${assessment.id}:${student.id}`);
+            return score === undefined ? [] : [{ score, weight: assessment.weight }];
+          }),
+        ),
+      )
+      .filter((average): average is number => average !== null);
+    const average =
+      studentAverages.length === 0
+        ? null
+        : studentAverages.reduce((sum, value) => sum + value, 0) / studentAverages.length;
+
+    const lessonIds = givenLessonIdsByDiscipline.get(discipline.id) ?? new Set<string>();
+    const possibleAttendances = lessonIds.size * input.activeStudents.length;
+    const absences = input.activeStudents.reduce((total, student) => {
+      const studentAbsences = absentByStudent.get(student.id) ?? new Set<string>();
+      return total + [...studentAbsences].filter((lessonId) => lessonIds.has(lessonId)).length;
+    }, 0);
+    const attendancePercent =
+      possibleAttendances === 0
+        ? null
+        : ((possibleAttendances - absences) / possibleAttendances) * 100;
+
+    return {
+      disciplineId: discipline.id,
+      disciplineName: discipline.discipline,
+      teacherName: discipline.teacherName ?? null,
+      average,
+      attendancePercent,
+      progressPercent: Math.min(disciplineProgress.progress * 100, 100),
+      lessonsGiven: disciplineProgress.lessonsGiven,
+      lessonsPlanned: disciplineProgress.lessonsPlanned,
+    };
+  });
+
+  const atRisk = pickAtRiskStudents(input, Number.POSITIVE_INFINITY).items;
+  const riskDistribution = {
+    onTrack: input.activeStudents.length,
+    gradeOnly: 0,
+    attendanceOnly: 0,
+    both: 0,
+  };
+  for (const student of atRisk) {
+    const hasGradeRisk = student.disciplines.some(
+      (discipline) => discipline.reason === "media" || discipline.reason === "ambos",
+    );
+    const hasAttendanceRisk = student.disciplines.some(
+      (discipline) => discipline.reason === "frequencia" || discipline.reason === "ambos",
+    );
+    if (hasGradeRisk && hasAttendanceRisk) riskDistribution.both += 1;
+    else if (hasGradeRisk) riskDistribution.gradeOnly += 1;
+    else riskDistribution.attendanceOnly += 1;
+  }
+  riskDistribution.onTrack -= atRisk.length;
+
+  return {
+    totals: {
+      activeStudents: input.activeStudents.length,
+      teachers: new Set(
+        input.disciplines.flatMap((discipline) =>
+          discipline.teacherId ? [discipline.teacherId] : [],
+        ),
+      ).size,
+      disciplines: input.disciplines.length,
+      lessonsGiven: givenLessons.length,
+    },
+    riskDistribution,
+    disciplineMetrics,
+  };
 }
 
 export function buildTeacherDashboard(input: DashboardInput): TeacherDashboard {
@@ -472,6 +616,7 @@ export function buildTeacherDashboard(input: DashboardInput): TeacherDashboard {
   const atRiskStudents = pickAtRiskStudents(input);
   return {
     scope: input.scope,
+    schoolOverview: buildSchoolOverview(input),
     counts: {
       pendingGrading: pendingGrading.total,
       endingDisciplines: endingDisciplines.length,

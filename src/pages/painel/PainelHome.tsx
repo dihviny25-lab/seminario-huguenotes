@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { BookOpen, GraduationCap, Users } from "lucide-react";
@@ -8,9 +9,37 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getCurrentTeacherFn } from "@/functions/auth";
 import { getTeacherDashboardFn } from "@/functions/teacherDashboard";
 import { listMyDisciplinesFn } from "@/functions/disciplines";
-import { isAdminRole } from "@/lib/teacherRole";
+import { isAdminRole, isSuperAdminRole } from "@/lib/teacherRole";
 import { ActionCards, InfoCards } from "@/pages/painel/dashboard/cards";
 import { KpiStrip } from "@/pages/painel/dashboard/KpiStrip";
+
+const SchoolOverview = lazy(() =>
+  import("@/pages/painel/dashboard/SchoolOverview").then((module) => ({
+    default: module.SchoolOverview,
+  })),
+);
+
+function SchoolOverviewLoading() {
+  return (
+    <section className="mt-8 space-y-6" aria-label="Carregando visão geral da escola">
+      <div className="space-y-2">
+        <Skeleton className="h-3 w-32" />
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-4 w-full max-w-xl" />
+      </div>
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <Skeleton key={index} className="h-28 w-full" />
+        ))}
+      </div>
+      <div className="grid gap-4 xl:grid-cols-2">
+        <Skeleton className="h-96 w-full" />
+        <Skeleton className="h-96 w-full" />
+      </div>
+      <Skeleton className="h-[28rem] w-full" />
+    </section>
+  );
+}
 
 const shortcuts = [
   {
@@ -47,6 +76,7 @@ export function PainelHome() {
     queryFn: () => getCurrentTeacherFn(),
   });
   const isAdmin = isAdminRole(me?.role);
+  const isSuperAdmin = isSuperAdminRole(me?.role);
 
   const pendingCount = dashboard
     ? dashboard.counts.pendingGrading +
@@ -113,6 +143,14 @@ export function PainelHome() {
 
             <NotificationToggle />
           </div>
+
+          {isSuperAdmin && loadingDashboard ? (
+            <SchoolOverviewLoading />
+          ) : dashboard?.schoolOverview ? (
+            <Suspense fallback={<SchoolOverviewLoading />}>
+              <SchoolOverview overview={dashboard.schoolOverview} />
+            </Suspense>
+          ) : null}
 
           <div className="mt-8 space-y-10">
             {loadingDashboard || pendingCount > 0 ? (
