@@ -1,7 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { eq, inArray } from "drizzle-orm";
 
-import { buildTeacherDashboard, computeDisciplineProgress } from "@/lib/teacherDashboard";
+import {
+  AT_RISK_LIMIT,
+  buildTeacherDashboard,
+  computeDisciplineProgress,
+} from "@/lib/teacherDashboard";
 import { effectiveTeacherId, isFutureOrToday } from "@/lib/teachingAssignments";
 import { isSuperAdminTeacher, requireTeacherId } from "@/server/auth/guard";
 import { db } from "@/server/db/client";
@@ -29,12 +33,22 @@ export type { TeacherDashboard } from "@/lib/teacherDashboard";
  * pra saber por quê isso não muda pra admin). super_admin: escopo "escola
  * inteira" — todas as disciplinas, de qualquer professor.
  */
-export const getTeacherDashboardFn = createServerFn({ method: "GET" }).handler(async () => {
+export const getTeacherDashboardFn = createServerFn({ method: "GET" }).handler(() =>
+  getTeacherDashboard(),
+);
+
+/** Lista completa, com o mesmo escopo e autorização do painel. */
+export const getAtRiskStudentsFn = createServerFn({ method: "GET" }).handler(async () => {
+  const dashboard = await getTeacherDashboard(Infinity);
+  return { scope: dashboard.scope, students: dashboard.atRiskStudents };
+});
+
+async function getTeacherDashboard(atRiskLimit = AT_RISK_LIMIT) {
   const teacherId = await requireTeacherId();
   const today = new Date().toISOString().slice(0, 10);
 
   if (await isSuperAdminTeacher(teacherId)) {
-    return getSchoolDashboard(today);
+    return getSchoolDashboard(today, atRiskLimit);
   }
 
   const disciplineRows = await db
@@ -129,22 +143,25 @@ export const getTeacherDashboardFn = createServerFn({ method: "GET" }).handler(a
 
   if (disciplineIds.length === 0) {
     return addAssignedUpcoming(
-      buildTeacherDashboard({
-        scope: "minhas",
-        today,
-        disciplines: [],
-        lessons: [],
-        attendance: [],
-        readingMaterials: [],
-        videoLessons: [],
-        assessments: [],
-        grades: [],
-        assignments: [],
-        submissions: [],
-        threads: [],
-        posts: [],
-        activeStudents: activeStudentRows,
-      }),
+      buildTeacherDashboard(
+        {
+          scope: "minhas",
+          today,
+          disciplines: [],
+          lessons: [],
+          attendance: [],
+          readingMaterials: [],
+          videoLessons: [],
+          assessments: [],
+          grades: [],
+          assignments: [],
+          submissions: [],
+          threads: [],
+          posts: [],
+          activeStudents: activeStudentRows,
+        },
+        atRiskLimit,
+      ),
     );
   }
 
@@ -255,47 +272,50 @@ export const getTeacherDashboardFn = createServerFn({ method: "GET" }).handler(a
   ]);
 
   return addAssignedUpcoming(
-    buildTeacherDashboard({
-      scope: "minhas",
-      today,
-      disciplines: disciplineRows,
-      lessons: effectiveLessonRows.map(({ teacherId: _teacherId, ...lesson }) => ({
-        ...lesson,
-        givenAt: lesson.givenAt ? lesson.givenAt.toISOString() : null,
-      })),
-      // Sem o filtro de professor efetivo — ver doc de DashboardInput.allLessons.
-      // Uma disciplina cujas aulas dadas foram todas substituídas por outro
-      // professor não pode parecer "não iniciada" pra quem é dono dela.
-      allLessons: lessonRows.map((lesson) => ({
-        disciplineId: lesson.disciplineId,
-        givenAt: lesson.givenAt ? lesson.givenAt.toISOString() : null,
-      })),
-      attendance: attendanceRows,
-      readingMaterials: readingMaterialRows,
-      videoLessons: videoLessonRows,
-      assessments: assessmentRows.map((a) => ({ ...a, weight: Number(a.weight) })),
-      grades: gradeRows.map((g) => ({ ...g, score: Number(g.score) })),
-      assignments: assignmentRows,
-      submissions: submissionRows.map((s) => ({
-        assignmentId: s.assignmentId,
-        submittedAt: s.submittedAt ? s.submittedAt.toISOString() : null,
-        gradedAt: s.gradedAt ? s.gradedAt.toISOString() : null,
-      })),
-      threads: threadRows.map((t) => ({
-        id: t.id,
-        disciplineId: t.disciplineId,
-        title: t.title,
-        createdAt: t.createdAt.toISOString(),
-      })),
-      posts: postRows.map((p) => ({
-        threadId: p.threadId,
-        authorRole: p.authorRole,
-        createdAt: p.createdAt.toISOString(),
-      })),
-      activeStudents: activeStudentRows,
-    }),
+    buildTeacherDashboard(
+      {
+        scope: "minhas",
+        today,
+        disciplines: disciplineRows,
+        lessons: effectiveLessonRows.map(({ teacherId: _teacherId, ...lesson }) => ({
+          ...lesson,
+          givenAt: lesson.givenAt ? lesson.givenAt.toISOString() : null,
+        })),
+        // Sem o filtro de professor efetivo — ver doc de DashboardInput.allLessons.
+        // Uma disciplina cujas aulas dadas foram todas substituídas por outro
+        // professor não pode parecer "não iniciada" pra quem é dono dela.
+        allLessons: lessonRows.map((lesson) => ({
+          disciplineId: lesson.disciplineId,
+          givenAt: lesson.givenAt ? lesson.givenAt.toISOString() : null,
+        })),
+        attendance: attendanceRows,
+        readingMaterials: readingMaterialRows,
+        videoLessons: videoLessonRows,
+        assessments: assessmentRows.map((a) => ({ ...a, weight: Number(a.weight) })),
+        grades: gradeRows.map((g) => ({ ...g, score: Number(g.score) })),
+        assignments: assignmentRows,
+        submissions: submissionRows.map((s) => ({
+          assignmentId: s.assignmentId,
+          submittedAt: s.submittedAt ? s.submittedAt.toISOString() : null,
+          gradedAt: s.gradedAt ? s.gradedAt.toISOString() : null,
+        })),
+        threads: threadRows.map((t) => ({
+          id: t.id,
+          disciplineId: t.disciplineId,
+          title: t.title,
+          createdAt: t.createdAt.toISOString(),
+        })),
+        posts: postRows.map((p) => ({
+          threadId: p.threadId,
+          authorRole: p.authorRole,
+          createdAt: p.createdAt.toISOString(),
+        })),
+        activeStudents: activeStudentRows,
+      },
+      atRiskLimit,
+    ),
   );
-});
+}
 
 /**
  * Mesma forma do dashboard do professor, só que sem filtro de dono — todas
@@ -305,7 +325,7 @@ export const getTeacherDashboardFn = createServerFn({ method: "GET" }).handler(a
  * (assignedLessonRows/addAssignedUpcoming) não faz sentido aqui — toda
  * disciplina já está incluída, não tem "aula emprestada" pra adicionar.
  */
-async function getSchoolDashboard(today: string) {
+async function getSchoolDashboard(today: string, atRiskLimit: number) {
   const disciplineRows = await db
     .select({
       id: disciplines.id,
@@ -323,71 +343,80 @@ async function getSchoolDashboard(today: string) {
     .where(eq(students.active, true));
 
   if (disciplineIds.length === 0) {
-    return buildTeacherDashboard({
-      scope: "escola",
-      today,
-      disciplines: [],
-      lessons: [],
-      attendance: [],
-      readingMaterials: [],
-      videoLessons: [],
-      assessments: [],
-      grades: [],
-      assignments: [],
-      submissions: [],
-      threads: [],
-      posts: [],
-      activeStudents: activeStudentRows,
-    });
+    return buildTeacherDashboard(
+      {
+        scope: "escola",
+        today,
+        disciplines: [],
+        lessons: [],
+        attendance: [],
+        readingMaterials: [],
+        videoLessons: [],
+        assessments: [],
+        grades: [],
+        assignments: [],
+        submissions: [],
+        threads: [],
+        posts: [],
+        activeStudents: activeStudentRows,
+      },
+      atRiskLimit,
+    );
   }
 
-  const [lessonRows, readingMaterialRows, videoLessonRows, assessmentRows, assignmentRows, threadRows] =
-    await Promise.all([
-      db
-        .select({
-          id: lessons.id,
-          disciplineId: lessons.disciplineId,
-          date: lessons.date,
-          sequence: lessons.sequence,
-          givenAt: lessons.givenAt,
-        })
-        .from(lessons)
-        .where(inArray(lessons.disciplineId, disciplineIds)),
-      db
-        .select({ disciplineId: readingMaterials.disciplineId })
-        .from(readingMaterials)
-        .where(inArray(readingMaterials.disciplineId, disciplineIds)),
-      db
-        .select({ disciplineId: videoLessons.disciplineId })
-        .from(videoLessons)
-        .where(inArray(videoLessons.disciplineId, disciplineIds)),
-      db
-        .select({
-          id: assessments.id,
-          disciplineId: assessments.disciplineId,
-          title: assessments.title,
-          weight: assessments.weight,
-        })
-        .from(assessments)
-        .where(inArray(assessments.disciplineId, disciplineIds)),
-      db
-        .select({
-          id: assignments.id,
-          disciplineId: assignments.disciplineId,
-          title: assignments.title,
-        })
-        .from(assignments)
-        .where(inArray(assignments.disciplineId, disciplineIds)),
-      db
-        .select({
-          id: forumThreads.id,
-          disciplineId: forumThreads.disciplineId,
-          title: forumThreads.title,
-          createdAt: forumThreads.createdAt,
-        })
-        .from(forumThreads)
-        .where(inArray(forumThreads.disciplineId, disciplineIds)),
-    ]);
+  const [
+    lessonRows,
+    readingMaterialRows,
+    videoLessonRows,
+    assessmentRows,
+    assignmentRows,
+    threadRows,
+  ] = await Promise.all([
+    db
+      .select({
+        id: lessons.id,
+        disciplineId: lessons.disciplineId,
+        date: lessons.date,
+        sequence: lessons.sequence,
+        givenAt: lessons.givenAt,
+      })
+      .from(lessons)
+      .where(inArray(lessons.disciplineId, disciplineIds)),
+    db
+      .select({ disciplineId: readingMaterials.disciplineId })
+      .from(readingMaterials)
+      .where(inArray(readingMaterials.disciplineId, disciplineIds)),
+    db
+      .select({ disciplineId: videoLessons.disciplineId })
+      .from(videoLessons)
+      .where(inArray(videoLessons.disciplineId, disciplineIds)),
+    db
+      .select({
+        id: assessments.id,
+        disciplineId: assessments.disciplineId,
+        title: assessments.title,
+        weight: assessments.weight,
+      })
+      .from(assessments)
+      .where(inArray(assessments.disciplineId, disciplineIds)),
+    db
+      .select({
+        id: assignments.id,
+        disciplineId: assignments.disciplineId,
+        title: assignments.title,
+      })
+      .from(assignments)
+      .where(inArray(assignments.disciplineId, disciplineIds)),
+    db
+      .select({
+        id: forumThreads.id,
+        disciplineId: forumThreads.disciplineId,
+        title: forumThreads.title,
+        createdAt: forumThreads.createdAt,
+      })
+      .from(forumThreads)
+      .where(inArray(forumThreads.disciplineId, disciplineIds)),
+  ]);
 
   const lessonIds = lessonRows.map((l) => l.id);
   const assessmentIds = assessmentRows.map((a) => a.id);
@@ -437,36 +466,39 @@ async function getSchoolDashboard(today: string) {
           .where(inArray(forumPosts.threadId, threadIds)),
   ]);
 
-  return buildTeacherDashboard({
-    scope: "escola",
-    today,
-    disciplines: disciplineRows,
-    lessons: lessonRows.map((lesson) => ({
-      ...lesson,
-      givenAt: lesson.givenAt ? lesson.givenAt.toISOString() : null,
-    })),
-    attendance: attendanceRows,
-    readingMaterials: readingMaterialRows,
-    videoLessons: videoLessonRows,
-    assessments: assessmentRows.map((a) => ({ ...a, weight: Number(a.weight) })),
-    grades: gradeRows.map((g) => ({ ...g, score: Number(g.score) })),
-    assignments: assignmentRows,
-    submissions: submissionRows.map((s) => ({
-      assignmentId: s.assignmentId,
-      submittedAt: s.submittedAt ? s.submittedAt.toISOString() : null,
-      gradedAt: s.gradedAt ? s.gradedAt.toISOString() : null,
-    })),
-    threads: threadRows.map((t) => ({
-      id: t.id,
-      disciplineId: t.disciplineId,
-      title: t.title,
-      createdAt: t.createdAt.toISOString(),
-    })),
-    posts: postRows.map((p) => ({
-      threadId: p.threadId,
-      authorRole: p.authorRole,
-      createdAt: p.createdAt.toISOString(),
-    })),
-    activeStudents: activeStudentRows,
-  });
+  return buildTeacherDashboard(
+    {
+      scope: "escola",
+      today,
+      disciplines: disciplineRows,
+      lessons: lessonRows.map((lesson) => ({
+        ...lesson,
+        givenAt: lesson.givenAt ? lesson.givenAt.toISOString() : null,
+      })),
+      attendance: attendanceRows,
+      readingMaterials: readingMaterialRows,
+      videoLessons: videoLessonRows,
+      assessments: assessmentRows.map((a) => ({ ...a, weight: Number(a.weight) })),
+      grades: gradeRows.map((g) => ({ ...g, score: Number(g.score) })),
+      assignments: assignmentRows,
+      submissions: submissionRows.map((s) => ({
+        assignmentId: s.assignmentId,
+        submittedAt: s.submittedAt ? s.submittedAt.toISOString() : null,
+        gradedAt: s.gradedAt ? s.gradedAt.toISOString() : null,
+      })),
+      threads: threadRows.map((t) => ({
+        id: t.id,
+        disciplineId: t.disciplineId,
+        title: t.title,
+        createdAt: t.createdAt.toISOString(),
+      })),
+      posts: postRows.map((p) => ({
+        threadId: p.threadId,
+        authorRole: p.authorRole,
+        createdAt: p.createdAt.toISOString(),
+      })),
+      activeStudents: activeStudentRows,
+    },
+    atRiskLimit,
+  );
 }
