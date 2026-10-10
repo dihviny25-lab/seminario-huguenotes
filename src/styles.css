@@ -70,6 +70,7 @@
   --font-display: "Fraunces", Georgia, serif;
   --font-sans: "Public Sans", ui-sans-serif, system-ui, sans-serif;
   --shadow-soft: var(--shadow-soft-value);
+  --shadow-hero: var(--shadow-hero-value);
 }
 
 :root {
@@ -116,6 +117,14 @@
   --accent-soft: oklch(0.94 0.05 75);
   --shadow-soft-value:
     0 1px 2px oklch(0.25 0.03 260 / 0.04), 0 8px 24px -12px oklch(0.25 0.03 260 / 0.12);
+  /* Sombra com o próprio tom do card (mesma cadeia de --primary/--sidebar)
+     em vez de cinza genérico — usada só no card de destaque do topo do
+     painel, pra dar profundidade sem repetir a mesma sombra de todo card. */
+  --shadow-hero-value:
+    inset 0 1px 0 oklch(1 0 0 / 14%),
+    0 1px 2px oklch(0.25 0.03 260 / 0.06),
+    0 16px 32px -12px oklch(0.286 0.071 257.3 / 0.35),
+    0 32px 64px -28px oklch(0.286 0.071 257.3 / 0.22);
 }
 
 .dark {
@@ -160,6 +169,10 @@
   --warning-border: oklch(0.42 0.07 80);
   --accent-soft: oklch(0.3 0.05 78);
   --shadow-soft-value: 0 1px 2px oklch(0 0 0 / 0.3), 0 8px 24px -12px oklch(0 0 0 / 0.5);
+  --shadow-hero-value:
+    inset 0 1px 0 oklch(1 0 0 / 8%),
+    0 1px 2px oklch(0 0 0 / 0.4),
+    0 20px 40px -16px oklch(0 0 0 / 0.65);
 }
 
 @layer base {
@@ -229,4 +242,17 @@
   .blur-reveal-char {
     animation-delay: 0ms !important;
   }
+}
+
+/* Card navy de destaque no topo do painel (PainelHome) — degradê estático nos
+   tons já usados pela sidebar (--sidebar/--sidebar-accent) com um brilho
+   radial fixo no canto superior, tipo luz batendo numa superfície polida.
+   Sem animação contínua: é uma ferramenta de uso frequente (painel), e
+   movimento decorativo sem propósito é exatamente o que MOTION.md pede pra
+   evitar — só as classes animate-in aplicadas no elemento (entrada única ao
+   montar) animam aqui. */
+.hero-card {
+  background-image:
+    radial-gradient(48rem 24rem at 10% -10%, oklch(1 0 0 / 12%), transparent 60%),
+    linear-gradient(135deg, var(--sidebar), var(--sidebar-accent) 130%);
 }

@@ -82,14 +82,12 @@ export function PainelHome() {
       ) : (
         <>
           <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
-            <div className="rounded-lg bg-sidebar p-6 text-sidebar-foreground shadow-soft">
-              <p className="text-xs font-semibold uppercase tracking-wide text-sidebar-primary">
-                Hoje
-              </p>
+            <div className="hero-card animate-in fade-in slide-in-from-bottom-1 relative overflow-hidden rounded-lg p-5 text-sidebar-foreground shadow-hero duration-200 sm:p-6 lg:p-8">
+              <p className="text-xs font-semibold text-sidebar-primary">Hoje</p>
               {loadingDashboard ? (
                 <Skeleton className="mt-3 h-9 w-2/3 bg-sidebar-foreground/10" />
               ) : (
-                <p className="mt-2 font-display text-2xl font-semibold sm:text-3xl">
+                <p className="animate-in fade-in mt-2 text-balance font-display text-2xl font-semibold duration-200 sm:text-3xl">
                   {heroMessage}
                 </p>
               )}
