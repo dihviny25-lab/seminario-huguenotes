@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getPublicDisciplinesFn } from "@/functions/schedule";
 import { DisciplineAssignmentsTab } from "@/pages/portal/discipline/DisciplineAssignmentsTab";
 import { DisciplineExamsTab } from "@/pages/portal/discipline/DisciplineExamsTab";
+import { DisciplineFeedbackTab } from "@/pages/portal/discipline/DisciplineFeedbackTab";
 import { DisciplineGradesTab } from "@/pages/portal/discipline/DisciplineGradesTab";
 import { DisciplineHelpDialog } from "@/pages/portal/discipline/DisciplineHelpDialog";
 import { DisciplineMaterialsTab } from "@/pages/portal/discipline/DisciplineMaterialsTab";
@@ -32,17 +33,20 @@ export function PortalDisciplineDetail({ disciplineId }: { disciplineId: string 
       }
     >
       <Tabs defaultValue="aulas">
-        <div className="flex items-center justify-between gap-3">
-          <TabsList>
-            <TabsTrigger value="aulas">Aulas</TabsTrigger>
-            <TabsTrigger value="apostila">Apostila</TabsTrigger>
-            <TabsTrigger value="slides">Slides</TabsTrigger>
-            <TabsTrigger value="tarefas">Tarefas</TabsTrigger>
-            <TabsTrigger value="provas">Provas</TabsTrigger>
-            <TabsTrigger value="notas">Notas</TabsTrigger>
-            <TabsTrigger value="anotacoes">Anotações</TabsTrigger>
-            <TabsTrigger value="forum">Fórum</TabsTrigger>
-          </TabsList>
+        <div className="flex min-w-0 items-center justify-between gap-3">
+          <div className="min-w-0 flex-1 overflow-x-auto pb-1">
+            <TabsList>
+              <TabsTrigger value="aulas">Aulas</TabsTrigger>
+              <TabsTrigger value="apostila">Apostila</TabsTrigger>
+              <TabsTrigger value="slides">Slides</TabsTrigger>
+              <TabsTrigger value="tarefas">Tarefas</TabsTrigger>
+              <TabsTrigger value="provas">Provas</TabsTrigger>
+              <TabsTrigger value="notas">Notas</TabsTrigger>
+              <TabsTrigger value="anotacoes">Anotações</TabsTrigger>
+              <TabsTrigger value="forum">Fórum</TabsTrigger>
+              <TabsTrigger value="avaliacao">Avaliação</TabsTrigger>
+            </TabsList>
+          </div>
           <DisciplineHelpDialog />
         </div>
         <TabsContent value="aulas">
@@ -68,6 +72,9 @@ export function PortalDisciplineDetail({ disciplineId }: { disciplineId: string 
         </TabsContent>
         <TabsContent value="forum">
           <PortalForumThreadList disciplineId={disciplineId} />
+        </TabsContent>
+        <TabsContent value="avaliacao">
+          <DisciplineFeedbackTab disciplineId={disciplineId} />
         </TabsContent>
       </Tabs>
     </PortalShell>

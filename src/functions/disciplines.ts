@@ -41,13 +41,13 @@ const disciplineIdSchema = z.object({ disciplineId: z.string().uuid() });
 export const getMyDisciplineFn = createServerFn({ method: "GET" })
   .validator(disciplineIdSchema)
   .handler(async ({ data }) => {
-    const { discipline, teacherId } = await requireAttendanceDiscipline(data.disciplineId);
+    const { discipline, teacherId, isAdmin } = await requireAttendanceDiscipline(data.disciplineId);
     return {
       id: discipline.id,
       semester: discipline.semester,
       term: discipline.term,
       module: discipline.module,
       discipline: discipline.discipline,
-      canManageDiscipline: discipline.teacherId === teacherId,
+      canManageDiscipline: discipline.teacherId === teacherId || isAdmin,
     };
   });

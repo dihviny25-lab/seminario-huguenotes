@@ -1,5 +1,7 @@
+import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   date,
   index,
   integer,
@@ -224,6 +226,35 @@ export const attendance = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [unique().on(table.lessonId, table.studentId)],
+);
+
+/**
+ * Avaliação formativa da disciplina feita pelo aluno após o encerramento.
+ * O vínculo com studentId existe apenas para garantir uma resposta por aluno
+ * e permitir que ele edite a própria avaliação. As consultas do corpo docente
+ * nunca retornam esse identificador.
+ */
+export const disciplineFeedback = pgTable(
+  "discipline_feedback",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    disciplineId: uuid("discipline_id")
+      .notNull()
+      .references(() => disciplines.id, { onDelete: "cascade" }),
+    studentId: uuid("student_id")
+      .notNull()
+      .references(() => students.id, { onDelete: "cascade" }),
+    rating: integer("rating").notNull(),
+    likedMost: text("liked_most").notNull(),
+    couldImprove: text("could_improve").notNull(),
+    additionalComments: text("additional_comments"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    unique().on(table.disciplineId, table.studentId),
+    check("discipline_feedback_rating_check", sql`${table.rating} BETWEEN 1 AND 5`),
+  ],
 );
 
 export const videoLessons = pgTable("video_lessons", {
