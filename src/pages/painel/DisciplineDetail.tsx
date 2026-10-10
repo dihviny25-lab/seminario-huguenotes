@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getMyDisciplineFn } from "@/functions/disciplines";
 import { AttendanceTab } from "@/pages/painel/AttendanceTab";
 import { DisciplineOverviewTab } from "@/pages/painel/DisciplineOverviewTab";
+import { DisciplineFeedbackTab } from "@/pages/painel/DisciplineFeedbackTab";
 import { GradesTab } from "@/pages/painel/GradesTab";
 import { ReadingMaterialsTab } from "@/pages/painel/ReadingMaterialsTab";
 import { SlidesTab } from "@/pages/painel/SlidesTab";
@@ -36,20 +37,23 @@ export function DisciplineDetail({ disciplineId }: { disciplineId: string }) {
           key={discipline?.canManageDiscipline === true ? "owner" : "assigned"}
           defaultValue={discipline?.canManageDiscipline === true ? "acompanhamento" : "frequencia"}
         >
-          <TabsList>
-            {discipline?.canManageDiscipline === true ? (
-              <TabsTrigger value="acompanhamento">Acompanhamento</TabsTrigger>
-            ) : null}
-            <TabsTrigger value="frequencia">Frequência</TabsTrigger>
-            {discipline?.canManageDiscipline === true ? (
-              <>
-                <TabsTrigger value="notas">Notas</TabsTrigger>
-                <TabsTrigger value="videos">Vídeo-aulas</TabsTrigger>
-                <TabsTrigger value="apostila">Apostila</TabsTrigger>
-                <TabsTrigger value="slides">Slides</TabsTrigger>
-              </>
-            ) : null}
-          </TabsList>
+          <div className="overflow-x-auto pb-1">
+            <TabsList>
+              {discipline?.canManageDiscipline === true ? (
+                <TabsTrigger value="acompanhamento">Acompanhamento</TabsTrigger>
+              ) : null}
+              <TabsTrigger value="frequencia">Frequência</TabsTrigger>
+              {discipline?.canManageDiscipline === true ? (
+                <>
+                  <TabsTrigger value="notas">Notas</TabsTrigger>
+                  <TabsTrigger value="videos">Vídeo-aulas</TabsTrigger>
+                  <TabsTrigger value="apostila">Apostila</TabsTrigger>
+                  <TabsTrigger value="slides">Slides</TabsTrigger>
+                  <TabsTrigger value="avaliacoes">Avaliações</TabsTrigger>
+                </>
+              ) : null}
+            </TabsList>
+          </div>
           {discipline?.canManageDiscipline === true ? (
             <TabsContent value="acompanhamento">
               <DisciplineOverviewTab disciplineId={disciplineId} />
@@ -74,6 +78,9 @@ export function DisciplineDetail({ disciplineId }: { disciplineId: string }) {
               </TabsContent>
               <TabsContent value="slides">
                 <SlidesTab disciplineId={disciplineId} />
+              </TabsContent>
+              <TabsContent value="avaliacoes">
+                <DisciplineFeedbackTab disciplineId={disciplineId} />
               </TabsContent>
             </>
           ) : null}

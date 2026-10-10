@@ -341,53 +341,59 @@ async function getSchoolDashboard(today: string) {
     });
   }
 
-  const [lessonRows, readingMaterialRows, videoLessonRows, assessmentRows, assignmentRows, threadRows] =
-    await Promise.all([
-      db
-        .select({
-          id: lessons.id,
-          disciplineId: lessons.disciplineId,
-          date: lessons.date,
-          sequence: lessons.sequence,
-          givenAt: lessons.givenAt,
-        })
-        .from(lessons)
-        .where(inArray(lessons.disciplineId, disciplineIds)),
-      db
-        .select({ disciplineId: readingMaterials.disciplineId })
-        .from(readingMaterials)
-        .where(inArray(readingMaterials.disciplineId, disciplineIds)),
-      db
-        .select({ disciplineId: videoLessons.disciplineId })
-        .from(videoLessons)
-        .where(inArray(videoLessons.disciplineId, disciplineIds)),
-      db
-        .select({
-          id: assessments.id,
-          disciplineId: assessments.disciplineId,
-          title: assessments.title,
-          weight: assessments.weight,
-        })
-        .from(assessments)
-        .where(inArray(assessments.disciplineId, disciplineIds)),
-      db
-        .select({
-          id: assignments.id,
-          disciplineId: assignments.disciplineId,
-          title: assignments.title,
-        })
-        .from(assignments)
-        .where(inArray(assignments.disciplineId, disciplineIds)),
-      db
-        .select({
-          id: forumThreads.id,
-          disciplineId: forumThreads.disciplineId,
-          title: forumThreads.title,
-          createdAt: forumThreads.createdAt,
-        })
-        .from(forumThreads)
-        .where(inArray(forumThreads.disciplineId, disciplineIds)),
-    ]);
+  const [
+    lessonRows,
+    readingMaterialRows,
+    videoLessonRows,
+    assessmentRows,
+    assignmentRows,
+    threadRows,
+  ] = await Promise.all([
+    db
+      .select({
+        id: lessons.id,
+        disciplineId: lessons.disciplineId,
+        date: lessons.date,
+        sequence: lessons.sequence,
+        givenAt: lessons.givenAt,
+      })
+      .from(lessons)
+      .where(inArray(lessons.disciplineId, disciplineIds)),
+    db
+      .select({ disciplineId: readingMaterials.disciplineId })
+      .from(readingMaterials)
+      .where(inArray(readingMaterials.disciplineId, disciplineIds)),
+    db
+      .select({ disciplineId: videoLessons.disciplineId })
+      .from(videoLessons)
+      .where(inArray(videoLessons.disciplineId, disciplineIds)),
+    db
+      .select({
+        id: assessments.id,
+        disciplineId: assessments.disciplineId,
+        title: assessments.title,
+        weight: assessments.weight,
+      })
+      .from(assessments)
+      .where(inArray(assessments.disciplineId, disciplineIds)),
+    db
+      .select({
+        id: assignments.id,
+        disciplineId: assignments.disciplineId,
+        title: assignments.title,
+      })
+      .from(assignments)
+      .where(inArray(assignments.disciplineId, disciplineIds)),
+    db
+      .select({
+        id: forumThreads.id,
+        disciplineId: forumThreads.disciplineId,
+        title: forumThreads.title,
+        createdAt: forumThreads.createdAt,
+      })
+      .from(forumThreads)
+      .where(inArray(forumThreads.disciplineId, disciplineIds)),
+  ]);
 
   const lessonIds = lessonRows.map((l) => l.id);
   const assessmentIds = assessmentRows.map((a) => a.id);
