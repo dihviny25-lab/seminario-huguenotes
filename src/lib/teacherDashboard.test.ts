@@ -354,7 +354,12 @@ describe("pickMissingAttendance", () => {
     const { items, total } = pickMissingAttendance(input);
     expect(total).toBe(1);
     expect(items).toEqual([
-      { disciplineId: "d1", disciplineName: "Disc", teacherName: null, lessonsWithoutAttendance: 1 },
+      {
+        disciplineId: "d1",
+        disciplineName: "Disc",
+        teacherName: null,
+        lessonsWithoutAttendance: 1,
+      },
     ]);
   });
 
@@ -534,9 +539,95 @@ describe("pickAtRiskStudents", () => {
       {
         studentId: "s1",
         studentName: "Ana",
-        disciplines: [{ disciplineName: "Disc", teacherName: null, reason: "ambos" }],
+        disciplines: [
+          {
+            disciplineId: "d1",
+            disciplineName: "Disc",
+            teacherName: null,
+            reason: "ambos",
+            average: 5,
+            totalLessons: 4,
+            totalFaltas: 2,
+            attendanceRatio: 0.5,
+          },
+        ],
       },
     ]);
+  });
+
+  it("expõe média ponderada e frequência para risco só de nota", () => {
+    const input = riskInput();
+    input.attendance = [];
+    input.assessments.push({ id: "av2", disciplineId: "d1", title: "P2", weight: 3 });
+    input.grades.push({ assessmentId: "av2", studentId: "s1", score: 6 });
+    expect(pickAtRiskStudents(input).items[0].disciplines[0]).toMatchObject({
+      reason: "media",
+      average: 5.75,
+      totalLessons: 4,
+      totalFaltas: 0,
+      attendanceRatio: 1,
+    });
+  });
+
+  it("não inventa nota para aluno em risco apenas por faltas", () => {
+    const input = riskInput();
+    input.grades = [];
+    expect(pickAtRiskStudents(input).items[0].disciplines[0]).toMatchObject({
+      reason: "frequencia",
+      average: null,
+      totalLessons: 4,
+      totalFaltas: 2,
+      attendanceRatio: 0.5,
+    });
+  });
+
+  it("ignora faltas em rascunho e duplicadas nos detalhes", () => {
+    const input = riskInput();
+    input.lessons.push({
+      id: "rascunho",
+      disciplineId: "d1",
+      date: null,
+      sequence: 5,
+      givenAt: null,
+    });
+    input.attendance.push({ lessonId: "rascunho", studentId: "s1", present: false });
+    input.attendance.push({ lessonId: "l1", studentId: "s1", present: false });
+    expect(pickAtRiskStudents(input).items[0].disciplines[0]).toMatchObject({
+      totalLessons: 4,
+      totalFaltas: 2,
+      attendanceRatio: 0.5,
+    });
+  });
+
+  it("a página completa não corta alunos nem disciplinas após oito itens", () => {
+    const input = riskInput();
+    input.activeStudents = Array.from({ length: 10 }, (_, i) => ({
+      id: `s${i}`,
+      name: `Aluno ${i}`,
+    }));
+    input.disciplines = Array.from({ length: 10 }, (_, i) => ({
+      id: `d${i}`,
+      discipline: `Disc ${i}`,
+      lessons: 10,
+    }));
+    input.lessons = input.disciplines.flatMap((d) => lessonsFor(d.id, 1, 0));
+    input.assessments = input.disciplines.map((d) => ({
+      id: `${d.id}-av`,
+      disciplineId: d.id,
+      title: "P",
+      weight: 1,
+    }));
+    input.grades = input.assessments.flatMap((a) =>
+      input.activeStudents.map((student) => ({
+        assessmentId: a.id,
+        studentId: student.id,
+        score: 5,
+      })),
+    );
+    expect(buildTeacherDashboard(input).atRiskStudents).toHaveLength(8);
+    const full = buildTeacherDashboard(input, Infinity).atRiskStudents;
+    expect(full).toHaveLength(10);
+    expect(full.every((student) => student.disciplines.length === 10)).toBe(true);
   });
 
   it("frequência exatamente 0.75 não é risco", () => {

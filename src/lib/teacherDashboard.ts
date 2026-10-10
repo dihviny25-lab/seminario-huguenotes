@@ -126,9 +126,14 @@ export type AtRiskStudentItem = {
   studentId: string;
   studentName: string;
   disciplines: Array<{
+    disciplineId: string;
     disciplineName: string;
     teacherName: string | null;
     reason: "media" | "frequencia" | "ambos";
+    average: number | null;
+    totalLessons: number;
+    totalFaltas: number;
+    attendanceRatio: number | null;
   }>;
 };
 
@@ -163,7 +168,12 @@ function isPastLesson(date: string | null, today: string): boolean {
 }
 
 export function computeDisciplineProgress(
-  discipline: { id: string; discipline: string; lessons: number | null; teacherName?: string | null },
+  discipline: {
+    id: string;
+    discipline: string;
+    lessons: number | null;
+    teacherName?: string | null;
+  },
   lessons: Array<{ disciplineId: string; givenAt: string | null }>,
 ): DisciplineProgress {
   const mine = lessons.filter((l) => l.disciplineId === discipline.id);
@@ -389,7 +399,10 @@ export function pickForumActivity(input: DashboardInput): ForumActivityItem[] {
     .slice(0, FORUM_ITEMS_LIMIT);
 }
 
-export function pickAtRiskStudents(input: DashboardInput): {
+export function pickAtRiskStudents(
+  input: DashboardInput,
+  limit = AT_RISK_LIMIT,
+): {
   items: AtRiskStudentItem[];
   total: number;
 } {
@@ -450,26 +463,34 @@ export function pickAtRiskStudents(input: DashboardInput): {
         });
       }
       byStudent.get(student.id)!.disciplines.push({
+        disciplineId: d.id,
         disciplineName: d.discipline,
         teacherName: d.teacherName ?? null,
         reason,
+        average,
+        totalLessons: disciplineGivenLessonIds.length,
+        totalFaltas: faltas,
+        attendanceRatio: ratio,
       });
     }
   }
 
   const all = [...byStudent.values()].sort((a, b) => b.disciplines.length - a.disciplines.length);
-  const items = all.slice(0, AT_RISK_LIMIT).map((s) => ({
+  const items = all.slice(0, limit).map((s) => ({
     ...s,
-    disciplines: s.disciplines.slice(0, AT_RISK_LIMIT),
+    disciplines: s.disciplines.slice(0, limit),
   }));
   return { items, total: all.length };
 }
 
-export function buildTeacherDashboard(input: DashboardInput): TeacherDashboard {
+export function buildTeacherDashboard(
+  input: DashboardInput,
+  atRiskLimit = AT_RISK_LIMIT,
+): TeacherDashboard {
   const pendingGrading = pickPendingGrading(input);
   const missingAttendance = pickMissingAttendance(input);
   const endingDisciplines = pickEndingDisciplines(input);
-  const atRiskStudents = pickAtRiskStudents(input);
+  const atRiskStudents = pickAtRiskStudents(input, atRiskLimit);
   return {
     scope: input.scope,
     counts: {

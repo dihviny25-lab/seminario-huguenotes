@@ -9,111 +9,82 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as RedefinirSenhaAlunoRouteImport } from './routes/redefinir-senha-aluno'
-import { Route as RedefinirSenhaRouteImport } from './routes/redefinir-senha'
-import { Route as LoginAlunoRouteImport } from './routes/login-aluno'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as EsqueciSenhaAlunoRouteImport } from './routes/esqueci-senha-aluno'
-import { Route as EsqueciSenhaRouteImport } from './routes/esqueci-senha'
-import { Route as ConfirmarEmailRouteImport } from './routes/confirmar-email'
-import { Route as AgendaDoticsRouteImport } from './routes/agenda[.]ics'
-import { Route as PortalRouteRouteImport } from './routes/portal/route'
-import { Route as PainelRouteRouteImport } from './routes/painel/route'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as PortalIndexRouteImport } from './routes/portal/index'
+import { Route as AgendaDoticsRouteImport } from './routes/agenda[.]ics'
+import { Route as ConfirmarEmailRouteImport } from './routes/confirmar-email'
+import { Route as EsqueciSenhaRouteImport } from './routes/esqueci-senha'
+import { Route as EsqueciSenhaAlunoRouteImport } from './routes/esqueci-senha-aluno'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as LoginAlunoRouteImport } from './routes/login-aluno'
+import { Route as PainelRouteRouteImport } from './routes/painel/route'
+import { Route as PortalRouteRouteImport } from './routes/portal/route'
+import { Route as RedefinirSenhaRouteImport } from './routes/redefinir-senha'
+import { Route as RedefinirSenhaAlunoRouteImport } from './routes/redefinir-senha-aluno'
 import { Route as PainelIndexRouteImport } from './routes/painel/index'
-import { Route as SemestreSemesterRouteImport } from './routes/semestre/$semester'
-import { Route as PortalVideosRouteImport } from './routes/portal/videos'
-import { Route as PortalTrocarSenhaRouteImport } from './routes/portal/trocar-senha'
-import { Route as PortalPdfRouteImport } from './routes/portal/pdf'
-import { Route as PortalNotasRouteImport } from './routes/portal/notas'
-import { Route as PortalMensalidadesRouteImport } from './routes/portal/mensalidades'
-import { Route as PortalDiscipuladoRouteImport } from './routes/portal/discipulado'
-import { Route as PortalContaRouteImport } from './routes/portal/conta'
-import { Route as PainelTrocarSenhaRouteImport } from './routes/painel/trocar-senha'
-import { Route as PainelRelatorioModuloRouteImport } from './routes/painel/relatorio-modulo'
-import { Route as PainelRelatorioRouteImport } from './routes/painel/relatorio'
-import { Route as PainelProfessoresRouteImport } from './routes/painel/professores'
-import { Route as PainelPagamentosRouteImport } from './routes/painel/pagamentos'
-import { Route as PainelMateriaisRouteImport } from './routes/painel/materiais'
-import { Route as PainelFinanceiroRouteImport } from './routes/painel/financeiro'
-import { Route as PainelDespesasRouteImport } from './routes/painel/despesas'
-import { Route as PainelBibliotecaRouteImport } from './routes/painel/biblioteca'
-import { Route as PainelAuditoriaRouteImport } from './routes/painel/auditoria'
-import { Route as PainelAtribuicoesRouteImport } from './routes/painel/atribuicoes'
-import { Route as PainelAlunosRouteImport } from './routes/painel/alunos'
 import { Route as PainelAgendaRouteImport } from './routes/painel/agenda'
-import { Route as PortalTarefasIndexRouteImport } from './routes/portal/tarefas/index'
-import { Route as PortalSlidesIndexRouteImport } from './routes/portal/slides/index'
-import { Route as PortalProvasIndexRouteImport } from './routes/portal/provas/index'
-import { Route as PortalForumIndexRouteImport } from './routes/portal/forum/index'
-import { Route as PortalDisciplinasIndexRouteImport } from './routes/portal/disciplinas/index'
-import { Route as PortalBibliotecaIndexRouteImport } from './routes/portal/biblioteca/index'
-import { Route as PortalApostilasIndexRouteImport } from './routes/portal/apostilas/index'
-import { Route as PainelTarefasIndexRouteImport } from './routes/painel/tarefas/index'
-import { Route as PainelProvasIndexRouteImport } from './routes/painel/provas/index'
-import { Route as PainelMinhasMateriasIndexRouteImport } from './routes/painel/minhas-materias/index'
-import { Route as PainelForumIndexRouteImport } from './routes/painel/forum/index'
-import { Route as PainelForumInternoIndexRouteImport } from './routes/painel/forum-interno/index'
-import { Route as PainelApostilasCompartilhadasIndexRouteImport } from './routes/painel/apostilas-compartilhadas/index'
-import { Route as PortalTarefasAssignmentIdRouteImport } from './routes/portal/tarefas/$assignmentId'
-import { Route as PortalSlidesSlideIdRouteImport } from './routes/portal/slides/$slideId'
-import { Route as PortalProvasExamIdRouteImport } from './routes/portal/provas/$examId'
-import { Route as PortalForumThreadIdRouteImport } from './routes/portal/forum/$threadId'
-import { Route as PortalDisciplinasDisciplineIdRouteImport } from './routes/portal/disciplinas/$disciplineId'
-import { Route as PortalCheckinLessonIdRouteImport } from './routes/portal/checkin/$lessonId'
-import { Route as PortalBibliotecaBookIdRouteImport } from './routes/portal/biblioteca/$bookId'
-import { Route as PortalApostilasMaterialIdRouteImport } from './routes/portal/apostilas/$materialId'
-import { Route as PainelTarefasAssignmentIdRouteImport } from './routes/painel/tarefas/$assignmentId'
-import { Route as PainelProvasExamIdRouteImport } from './routes/painel/provas/$examId'
-import { Route as PainelForumThreadIdRouteImport } from './routes/painel/forum/$threadId'
-import { Route as PainelForumInternoThreadIdRouteImport } from './routes/painel/forum-interno/$threadId'
-import { Route as PainelDisciplinasDisciplineIdRouteImport } from './routes/painel/disciplinas/$disciplineId'
-import { Route as PainelApostilasCompartilhadasMaterialIdRouteImport } from './routes/painel/apostilas-compartilhadas/$materialId'
-import { Route as ApiMercadopagoWebhookRouteImport } from './routes/api/mercadopago/webhook'
-import { Route as ApiCronPaymentRemindersRouteImport } from './routes/api/cron/payment-reminders'
-import { Route as ApiCronFinalizeExpiredExamsRouteImport } from './routes/api/cron/finalize-expired-exams'
-import { Route as ApiBlobUploadRouteImport } from './routes/api/blob/upload'
-import { Route as ApiArquivoFileIdRouteImport } from './routes/api/arquivo/$fileId'
+import { Route as PainelAlunosRouteImport } from './routes/painel/alunos'
+import { Route as PainelAlunosEmRiscoRouteImport } from './routes/painel/alunos-em-risco'
+import { Route as PainelAtribuicoesRouteImport } from './routes/painel/atribuicoes'
+import { Route as PainelAuditoriaRouteImport } from './routes/painel/auditoria'
+import { Route as PainelBibliotecaRouteImport } from './routes/painel/biblioteca'
+import { Route as PainelDespesasRouteImport } from './routes/painel/despesas'
+import { Route as PainelFinanceiroRouteImport } from './routes/painel/financeiro'
+import { Route as PainelMateriaisRouteImport } from './routes/painel/materiais'
+import { Route as PainelPagamentosRouteImport } from './routes/painel/pagamentos'
+import { Route as PainelProfessoresRouteImport } from './routes/painel/professores'
+import { Route as PainelRelatorioRouteImport } from './routes/painel/relatorio'
+import { Route as PainelRelatorioModuloRouteImport } from './routes/painel/relatorio-modulo'
+import { Route as PainelTrocarSenhaRouteImport } from './routes/painel/trocar-senha'
+import { Route as PortalIndexRouteImport } from './routes/portal/index'
+import { Route as PortalContaRouteImport } from './routes/portal/conta'
+import { Route as PortalDiscipuladoRouteImport } from './routes/portal/discipulado'
+import { Route as PortalMensalidadesRouteImport } from './routes/portal/mensalidades'
+import { Route as PortalNotasRouteImport } from './routes/portal/notas'
+import { Route as PortalPdfRouteImport } from './routes/portal/pdf'
+import { Route as PortalTrocarSenhaRouteImport } from './routes/portal/trocar-senha'
+import { Route as PortalVideosRouteImport } from './routes/portal/videos'
+import { Route as SemestreSemesterRouteImport } from './routes/semestre/$semester'
 import { Route as ApiAdminMigrarArquivosLegadosRouteImport } from './routes/api/admin/migrar-arquivos-legados'
-import { Route as PortalMensalidadesChargeIdReciboRouteImport } from './routes/portal/mensalidades/$chargeId/recibo'
-import { Route as PainelRelatorioStudentIdPdfRouteImport } from './routes/painel/relatorio/$studentId/pdf'
+import { Route as ApiArquivoFileIdRouteImport } from './routes/api/arquivo/$fileId'
+import { Route as ApiBlobUploadRouteImport } from './routes/api/blob/upload'
+import { Route as ApiCronFinalizeExpiredExamsRouteImport } from './routes/api/cron/finalize-expired-exams'
+import { Route as ApiCronPaymentRemindersRouteImport } from './routes/api/cron/payment-reminders'
+import { Route as ApiMercadopagoWebhookRouteImport } from './routes/api/mercadopago/webhook'
+import { Route as PainelApostilasCompartilhadasIndexRouteImport } from './routes/painel/apostilas-compartilhadas/index'
+import { Route as PainelApostilasCompartilhadasMaterialIdRouteImport } from './routes/painel/apostilas-compartilhadas/$materialId'
+import { Route as PainelDisciplinasDisciplineIdRouteImport } from './routes/painel/disciplinas/$disciplineId'
+import { Route as PainelForumInternoIndexRouteImport } from './routes/painel/forum-interno/index'
+import { Route as PainelForumInternoThreadIdRouteImport } from './routes/painel/forum-interno/$threadId'
+import { Route as PainelForumIndexRouteImport } from './routes/painel/forum/index'
+import { Route as PainelForumThreadIdRouteImport } from './routes/painel/forum/$threadId'
+import { Route as PainelMinhasMateriasIndexRouteImport } from './routes/painel/minhas-materias/index'
+import { Route as PainelProvasIndexRouteImport } from './routes/painel/provas/index'
+import { Route as PainelProvasExamIdRouteImport } from './routes/painel/provas/$examId'
+import { Route as PainelTarefasIndexRouteImport } from './routes/painel/tarefas/index'
+import { Route as PainelTarefasAssignmentIdRouteImport } from './routes/painel/tarefas/$assignmentId'
+import { Route as PortalApostilasIndexRouteImport } from './routes/portal/apostilas/index'
+import { Route as PortalApostilasMaterialIdRouteImport } from './routes/portal/apostilas/$materialId'
+import { Route as PortalBibliotecaIndexRouteImport } from './routes/portal/biblioteca/index'
+import { Route as PortalBibliotecaBookIdRouteImport } from './routes/portal/biblioteca/$bookId'
+import { Route as PortalCheckinLessonIdRouteImport } from './routes/portal/checkin/$lessonId'
+import { Route as PortalDisciplinasIndexRouteImport } from './routes/portal/disciplinas/index'
+import { Route as PortalDisciplinasDisciplineIdRouteImport } from './routes/portal/disciplinas/$disciplineId'
+import { Route as PortalForumIndexRouteImport } from './routes/portal/forum/index'
+import { Route as PortalForumThreadIdRouteImport } from './routes/portal/forum/$threadId'
+import { Route as PortalProvasIndexRouteImport } from './routes/portal/provas/index'
+import { Route as PortalProvasExamIdRouteImport } from './routes/portal/provas/$examId'
+import { Route as PortalSlidesIndexRouteImport } from './routes/portal/slides/index'
+import { Route as PortalSlidesSlideIdRouteImport } from './routes/portal/slides/$slideId'
+import { Route as PortalTarefasIndexRouteImport } from './routes/portal/tarefas/index'
+import { Route as PortalTarefasAssignmentIdRouteImport } from './routes/portal/tarefas/$assignmentId'
 import { Route as PainelPagamentosChargeIdReciboRouteImport } from './routes/painel/pagamentos/$chargeId/recibo'
+import { Route as PainelRelatorioStudentIdPdfRouteImport } from './routes/painel/relatorio/$studentId/pdf'
+import { Route as PortalMensalidadesChargeIdReciboRouteImport } from './routes/portal/mensalidades/$chargeId/recibo'
 import { Route as PainelRelatorioTurmaDisciplineIdPdfRouteImport } from './routes/painel/relatorio/turma/$disciplineId/pdf'
 
-const RedefinirSenhaAlunoRoute = RedefinirSenhaAlunoRouteImport.update({
-  id: '/redefinir-senha-aluno',
-  path: '/redefinir-senha-aluno',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RedefinirSenhaRoute = RedefinirSenhaRouteImport.update({
-  id: '/redefinir-senha',
-  path: '/redefinir-senha',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginAlunoRoute = LoginAlunoRouteImport.update({
-  id: '/login-aluno',
-  path: '/login-aluno',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const EsqueciSenhaAlunoRoute = EsqueciSenhaAlunoRouteImport.update({
-  id: '/esqueci-senha-aluno',
-  path: '/esqueci-senha-aluno',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const EsqueciSenhaRoute = EsqueciSenhaRouteImport.update({
-  id: '/esqueci-senha',
-  path: '/esqueci-senha',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ConfirmarEmailRoute = ConfirmarEmailRouteImport.update({
-  id: '/confirmar-email',
-  path: '/confirmar-email',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AgendaDoticsRoute = AgendaDoticsRouteImport.update({
@@ -121,9 +92,29 @@ const AgendaDoticsRoute = AgendaDoticsRouteImport.update({
   path: '/agenda.ics',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PortalRouteRoute = PortalRouteRouteImport.update({
-  id: '/portal',
-  path: '/portal',
+const ConfirmarEmailRoute = ConfirmarEmailRouteImport.update({
+  id: '/confirmar-email',
+  path: '/confirmar-email',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EsqueciSenhaRoute = EsqueciSenhaRouteImport.update({
+  id: '/esqueci-senha',
+  path: '/esqueci-senha',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EsqueciSenhaAlunoRoute = EsqueciSenhaAlunoRouteImport.update({
+  id: '/esqueci-senha-aluno',
+  path: '/esqueci-senha-aluno',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginAlunoRoute = LoginAlunoRouteImport.update({
+  id: '/login-aluno',
+  path: '/login-aluno',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PainelRouteRoute = PainelRouteRouteImport.update({
@@ -131,110 +122,46 @@ const PainelRouteRoute = PainelRouteRouteImport.update({
   path: '/painel',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const PortalRouteRoute = PortalRouteRouteImport.update({
+  id: '/portal',
+  path: '/portal',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PortalIndexRoute = PortalIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => PortalRouteRoute,
+const RedefinirSenhaRoute = RedefinirSenhaRouteImport.update({
+  id: '/redefinir-senha',
+  path: '/redefinir-senha',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RedefinirSenhaAlunoRoute = RedefinirSenhaAlunoRouteImport.update({
+  id: '/redefinir-senha-aluno',
+  path: '/redefinir-senha-aluno',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const PainelIndexRoute = PainelIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => PainelRouteRoute,
 } as any)
-const SemestreSemesterRoute = SemestreSemesterRouteImport.update({
-  id: '/semestre/$semester',
-  path: '/semestre/$semester',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PortalVideosRoute = PortalVideosRouteImport.update({
-  id: '/videos',
-  path: '/videos',
-  getParentRoute: () => PortalRouteRoute,
-} as any)
-const PortalTrocarSenhaRoute = PortalTrocarSenhaRouteImport.update({
-  id: '/trocar-senha',
-  path: '/trocar-senha',
-  getParentRoute: () => PortalRouteRoute,
-} as any)
-const PortalPdfRoute = PortalPdfRouteImport.update({
-  id: '/pdf',
-  path: '/pdf',
-  getParentRoute: () => PortalRouteRoute,
-} as any)
-const PortalNotasRoute = PortalNotasRouteImport.update({
-  id: '/notas',
-  path: '/notas',
-  getParentRoute: () => PortalRouteRoute,
-} as any)
-const PortalMensalidadesRoute = PortalMensalidadesRouteImport.update({
-  id: '/mensalidades',
-  path: '/mensalidades',
-  getParentRoute: () => PortalRouteRoute,
-} as any)
-const PortalDiscipuladoRoute = PortalDiscipuladoRouteImport.update({
-  id: '/discipulado',
-  path: '/discipulado',
-  getParentRoute: () => PortalRouteRoute,
-} as any).lazy(() =>
-  import('./routes/portal/discipulado.lazy').then((d) => d.Route),
-)
-const PortalContaRoute = PortalContaRouteImport.update({
-  id: '/conta',
-  path: '/conta',
-  getParentRoute: () => PortalRouteRoute,
-} as any)
-const PainelTrocarSenhaRoute = PainelTrocarSenhaRouteImport.update({
-  id: '/trocar-senha',
-  path: '/trocar-senha',
+const PainelAgendaRoute = PainelAgendaRouteImport.update({
+  id: '/agenda',
+  path: '/agenda',
   getParentRoute: () => PainelRouteRoute,
 } as any)
-const PainelRelatorioModuloRoute = PainelRelatorioModuloRouteImport.update({
-  id: '/relatorio-modulo',
-  path: '/relatorio-modulo',
+const PainelAlunosRoute = PainelAlunosRouteImport.update({
+  id: '/alunos',
+  path: '/alunos',
+  getParentRoute: () => PainelRouteRoute,
+} as any)
+const PainelAlunosEmRiscoRoute = PainelAlunosEmRiscoRouteImport.update({
+  id: '/alunos-em-risco',
+  path: '/alunos-em-risco',
   getParentRoute: () => PainelRouteRoute,
 } as any).lazy(() =>
-  import('./routes/painel/relatorio-modulo.lazy').then((d) => d.Route),
+  import('./routes/painel/alunos-em-risco.lazy').then((d) => d.Route),
 )
-const PainelRelatorioRoute = PainelRelatorioRouteImport.update({
-  id: '/relatorio',
-  path: '/relatorio',
-  getParentRoute: () => PainelRouteRoute,
-} as any).lazy(() =>
-  import('./routes/painel/relatorio.lazy').then((d) => d.Route),
-)
-const PainelProfessoresRoute = PainelProfessoresRouteImport.update({
-  id: '/professores',
-  path: '/professores',
-  getParentRoute: () => PainelRouteRoute,
-} as any)
-const PainelPagamentosRoute = PainelPagamentosRouteImport.update({
-  id: '/pagamentos',
-  path: '/pagamentos',
-  getParentRoute: () => PainelRouteRoute,
-} as any)
-const PainelMateriaisRoute = PainelMateriaisRouteImport.update({
-  id: '/materiais',
-  path: '/materiais',
-  getParentRoute: () => PainelRouteRoute,
-} as any)
-const PainelFinanceiroRoute = PainelFinanceiroRouteImport.update({
-  id: '/financeiro',
-  path: '/financeiro',
-  getParentRoute: () => PainelRouteRoute,
-} as any)
-const PainelDespesasRoute = PainelDespesasRouteImport.update({
-  id: '/despesas',
-  path: '/despesas',
-  getParentRoute: () => PainelRouteRoute,
-} as any)
-const PainelBibliotecaRoute = PainelBibliotecaRouteImport.update({
-  id: '/biblioteca',
-  path: '/biblioteca',
+const PainelAtribuicoesRoute = PainelAtribuicoesRouteImport.update({
+  id: '/atribuicoes',
+  path: '/atribuicoes',
   getParentRoute: () => PainelRouteRoute,
 } as any)
 const PainelAuditoriaRoute = PainelAuditoriaRouteImport.update({
@@ -244,64 +171,171 @@ const PainelAuditoriaRoute = PainelAuditoriaRouteImport.update({
 } as any).lazy(() =>
   import('./routes/painel/auditoria.lazy').then((d) => d.Route),
 )
-const PainelAtribuicoesRoute = PainelAtribuicoesRouteImport.update({
-  id: '/atribuicoes',
-  path: '/atribuicoes',
+const PainelBibliotecaRoute = PainelBibliotecaRouteImport.update({
+  id: '/biblioteca',
+  path: '/biblioteca',
   getParentRoute: () => PainelRouteRoute,
 } as any)
-const PainelAlunosRoute = PainelAlunosRouteImport.update({
-  id: '/alunos',
-  path: '/alunos',
+const PainelDespesasRoute = PainelDespesasRouteImport.update({
+  id: '/despesas',
+  path: '/despesas',
   getParentRoute: () => PainelRouteRoute,
 } as any)
-const PainelAgendaRoute = PainelAgendaRouteImport.update({
-  id: '/agenda',
-  path: '/agenda',
+const PainelFinanceiroRoute = PainelFinanceiroRouteImport.update({
+  id: '/financeiro',
+  path: '/financeiro',
   getParentRoute: () => PainelRouteRoute,
 } as any)
-const PortalTarefasIndexRoute = PortalTarefasIndexRouteImport.update({
-  id: '/tarefas/',
-  path: '/tarefas/',
+const PainelMateriaisRoute = PainelMateriaisRouteImport.update({
+  id: '/materiais',
+  path: '/materiais',
+  getParentRoute: () => PainelRouteRoute,
+} as any)
+const PainelPagamentosRoute = PainelPagamentosRouteImport.update({
+  id: '/pagamentos',
+  path: '/pagamentos',
+  getParentRoute: () => PainelRouteRoute,
+} as any)
+const PainelProfessoresRoute = PainelProfessoresRouteImport.update({
+  id: '/professores',
+  path: '/professores',
+  getParentRoute: () => PainelRouteRoute,
+} as any)
+const PainelRelatorioRoute = PainelRelatorioRouteImport.update({
+  id: '/relatorio',
+  path: '/relatorio',
+  getParentRoute: () => PainelRouteRoute,
+} as any).lazy(() =>
+  import('./routes/painel/relatorio.lazy').then((d) => d.Route),
+)
+const PainelRelatorioModuloRoute = PainelRelatorioModuloRouteImport.update({
+  id: '/relatorio-modulo',
+  path: '/relatorio-modulo',
+  getParentRoute: () => PainelRouteRoute,
+} as any).lazy(() =>
+  import('./routes/painel/relatorio-modulo.lazy').then((d) => d.Route),
+)
+const PainelTrocarSenhaRoute = PainelTrocarSenhaRouteImport.update({
+  id: '/trocar-senha',
+  path: '/trocar-senha',
+  getParentRoute: () => PainelRouteRoute,
+} as any)
+const PortalIndexRoute = PortalIndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => PortalRouteRoute,
 } as any)
-const PortalSlidesIndexRoute = PortalSlidesIndexRouteImport.update({
-  id: '/slides/',
-  path: '/slides/',
+const PortalContaRoute = PortalContaRouteImport.update({
+  id: '/conta',
+  path: '/conta',
   getParentRoute: () => PortalRouteRoute,
 } as any)
-const PortalProvasIndexRoute = PortalProvasIndexRouteImport.update({
-  id: '/provas/',
-  path: '/provas/',
+const PortalDiscipuladoRoute = PortalDiscipuladoRouteImport.update({
+  id: '/discipulado',
+  path: '/discipulado',
+  getParentRoute: () => PortalRouteRoute,
+} as any).lazy(() =>
+  import('./routes/portal/discipulado.lazy').then((d) => d.Route),
+)
+const PortalMensalidadesRoute = PortalMensalidadesRouteImport.update({
+  id: '/mensalidades',
+  path: '/mensalidades',
   getParentRoute: () => PortalRouteRoute,
 } as any)
-const PortalForumIndexRoute = PortalForumIndexRouteImport.update({
+const PortalNotasRoute = PortalNotasRouteImport.update({
+  id: '/notas',
+  path: '/notas',
+  getParentRoute: () => PortalRouteRoute,
+} as any)
+const PortalPdfRoute = PortalPdfRouteImport.update({
+  id: '/pdf',
+  path: '/pdf',
+  getParentRoute: () => PortalRouteRoute,
+} as any)
+const PortalTrocarSenhaRoute = PortalTrocarSenhaRouteImport.update({
+  id: '/trocar-senha',
+  path: '/trocar-senha',
+  getParentRoute: () => PortalRouteRoute,
+} as any)
+const PortalVideosRoute = PortalVideosRouteImport.update({
+  id: '/videos',
+  path: '/videos',
+  getParentRoute: () => PortalRouteRoute,
+} as any)
+const SemestreSemesterRoute = SemestreSemesterRouteImport.update({
+  id: '/semestre/$semester',
+  path: '/semestre/$semester',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAdminMigrarArquivosLegadosRoute =
+  ApiAdminMigrarArquivosLegadosRouteImport.update({
+    id: '/api/admin/migrar-arquivos-legados',
+    path: '/api/admin/migrar-arquivos-legados',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiArquivoFileIdRoute = ApiArquivoFileIdRouteImport.update({
+  id: '/api/arquivo/$fileId',
+  path: '/api/arquivo/$fileId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBlobUploadRoute = ApiBlobUploadRouteImport.update({
+  id: '/api/blob/upload',
+  path: '/api/blob/upload',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCronFinalizeExpiredExamsRoute =
+  ApiCronFinalizeExpiredExamsRouteImport.update({
+    id: '/api/cron/finalize-expired-exams',
+    path: '/api/cron/finalize-expired-exams',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiCronPaymentRemindersRoute = ApiCronPaymentRemindersRouteImport.update({
+  id: '/api/cron/payment-reminders',
+  path: '/api/cron/payment-reminders',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiMercadopagoWebhookRoute = ApiMercadopagoWebhookRouteImport.update({
+  id: '/api/mercadopago/webhook',
+  path: '/api/mercadopago/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PainelApostilasCompartilhadasIndexRoute =
+  PainelApostilasCompartilhadasIndexRouteImport.update({
+    id: '/apostilas-compartilhadas/',
+    path: '/apostilas-compartilhadas/',
+    getParentRoute: () => PainelRouteRoute,
+  } as any)
+const PainelApostilasCompartilhadasMaterialIdRoute =
+  PainelApostilasCompartilhadasMaterialIdRouteImport.update({
+    id: '/apostilas-compartilhadas/$materialId',
+    path: '/apostilas-compartilhadas/$materialId',
+    getParentRoute: () => PainelRouteRoute,
+  } as any)
+const PainelDisciplinasDisciplineIdRoute =
+  PainelDisciplinasDisciplineIdRouteImport.update({
+    id: '/disciplinas/$disciplineId',
+    path: '/disciplinas/$disciplineId',
+    getParentRoute: () => PainelRouteRoute,
+  } as any)
+const PainelForumInternoIndexRoute = PainelForumInternoIndexRouteImport.update({
+  id: '/forum-interno/',
+  path: '/forum-interno/',
+  getParentRoute: () => PainelRouteRoute,
+} as any)
+const PainelForumInternoThreadIdRoute =
+  PainelForumInternoThreadIdRouteImport.update({
+    id: '/forum-interno/$threadId',
+    path: '/forum-interno/$threadId',
+    getParentRoute: () => PainelRouteRoute,
+  } as any)
+const PainelForumIndexRoute = PainelForumIndexRouteImport.update({
   id: '/forum/',
   path: '/forum/',
-  getParentRoute: () => PortalRouteRoute,
-} as any)
-const PortalDisciplinasIndexRoute = PortalDisciplinasIndexRouteImport.update({
-  id: '/disciplinas/',
-  path: '/disciplinas/',
-  getParentRoute: () => PortalRouteRoute,
-} as any)
-const PortalBibliotecaIndexRoute = PortalBibliotecaIndexRouteImport.update({
-  id: '/biblioteca/',
-  path: '/biblioteca/',
-  getParentRoute: () => PortalRouteRoute,
-} as any)
-const PortalApostilasIndexRoute = PortalApostilasIndexRouteImport.update({
-  id: '/apostilas/',
-  path: '/apostilas/',
-  getParentRoute: () => PortalRouteRoute,
-} as any)
-const PainelTarefasIndexRoute = PainelTarefasIndexRouteImport.update({
-  id: '/tarefas/',
-  path: '/tarefas/',
   getParentRoute: () => PainelRouteRoute,
 } as any)
-const PainelProvasIndexRoute = PainelProvasIndexRouteImport.update({
-  id: '/provas/',
-  path: '/provas/',
+const PainelForumThreadIdRoute = PainelForumThreadIdRouteImport.update({
+  id: '/forum/$threadId',
+  path: '/forum/$threadId',
   getParentRoute: () => PainelRouteRoute,
 } as any)
 const PainelMinhasMateriasIndexRoute =
@@ -310,31 +344,81 @@ const PainelMinhasMateriasIndexRoute =
     path: '/minhas-materias/',
     getParentRoute: () => PainelRouteRoute,
   } as any)
-const PainelForumIndexRoute = PainelForumIndexRouteImport.update({
-  id: '/forum/',
-  path: '/forum/',
+const PainelProvasIndexRoute = PainelProvasIndexRouteImport.update({
+  id: '/provas/',
+  path: '/provas/',
   getParentRoute: () => PainelRouteRoute,
 } as any)
-const PainelForumInternoIndexRoute = PainelForumInternoIndexRouteImport.update({
-  id: '/forum-interno/',
-  path: '/forum-interno/',
+const PainelProvasExamIdRoute = PainelProvasExamIdRouteImport.update({
+  id: '/provas/$examId',
+  path: '/provas/$examId',
+  getParentRoute: () => PainelRouteRoute,
+} as any).lazy(() =>
+  import('./routes/painel/provas/$examId.lazy').then((d) => d.Route),
+)
+const PainelTarefasIndexRoute = PainelTarefasIndexRouteImport.update({
+  id: '/tarefas/',
+  path: '/tarefas/',
   getParentRoute: () => PainelRouteRoute,
 } as any)
-const PainelApostilasCompartilhadasIndexRoute =
-  PainelApostilasCompartilhadasIndexRouteImport.update({
-    id: '/apostilas-compartilhadas/',
-    path: '/apostilas-compartilhadas/',
-    getParentRoute: () => PainelRouteRoute,
-  } as any)
-const PortalTarefasAssignmentIdRoute =
-  PortalTarefasAssignmentIdRouteImport.update({
+const PainelTarefasAssignmentIdRoute =
+  PainelTarefasAssignmentIdRouteImport.update({
     id: '/tarefas/$assignmentId',
     path: '/tarefas/$assignmentId',
+    getParentRoute: () => PainelRouteRoute,
+  } as any).lazy(() =>
+    import('./routes/painel/tarefas/$assignmentId.lazy').then((d) => d.Route),
+  )
+const PortalApostilasIndexRoute = PortalApostilasIndexRouteImport.update({
+  id: '/apostilas/',
+  path: '/apostilas/',
+  getParentRoute: () => PortalRouteRoute,
+} as any)
+const PortalApostilasMaterialIdRoute =
+  PortalApostilasMaterialIdRouteImport.update({
+    id: '/apostilas/$materialId',
+    path: '/apostilas/$materialId',
     getParentRoute: () => PortalRouteRoute,
   } as any)
-const PortalSlidesSlideIdRoute = PortalSlidesSlideIdRouteImport.update({
-  id: '/slides/$slideId',
-  path: '/slides/$slideId',
+const PortalBibliotecaIndexRoute = PortalBibliotecaIndexRouteImport.update({
+  id: '/biblioteca/',
+  path: '/biblioteca/',
+  getParentRoute: () => PortalRouteRoute,
+} as any)
+const PortalBibliotecaBookIdRoute = PortalBibliotecaBookIdRouteImport.update({
+  id: '/biblioteca/$bookId',
+  path: '/biblioteca/$bookId',
+  getParentRoute: () => PortalRouteRoute,
+} as any)
+const PortalCheckinLessonIdRoute = PortalCheckinLessonIdRouteImport.update({
+  id: '/checkin/$lessonId',
+  path: '/checkin/$lessonId',
+  getParentRoute: () => PortalRouteRoute,
+} as any)
+const PortalDisciplinasIndexRoute = PortalDisciplinasIndexRouteImport.update({
+  id: '/disciplinas/',
+  path: '/disciplinas/',
+  getParentRoute: () => PortalRouteRoute,
+} as any)
+const PortalDisciplinasDisciplineIdRoute =
+  PortalDisciplinasDisciplineIdRouteImport.update({
+    id: '/disciplinas/$disciplineId',
+    path: '/disciplinas/$disciplineId',
+    getParentRoute: () => PortalRouteRoute,
+  } as any)
+const PortalForumIndexRoute = PortalForumIndexRouteImport.update({
+  id: '/forum/',
+  path: '/forum/',
+  getParentRoute: () => PortalRouteRoute,
+} as any)
+const PortalForumThreadIdRoute = PortalForumThreadIdRouteImport.update({
+  id: '/forum/$threadId',
+  path: '/forum/$threadId',
+  getParentRoute: () => PortalRouteRoute,
+} as any)
+const PortalProvasIndexRoute = PortalProvasIndexRouteImport.update({
+  id: '/provas/',
+  path: '/provas/',
   getParentRoute: () => PortalRouteRoute,
 } as any)
 const PortalProvasExamIdRoute = PortalProvasExamIdRouteImport.update({
@@ -344,108 +428,32 @@ const PortalProvasExamIdRoute = PortalProvasExamIdRouteImport.update({
 } as any).lazy(() =>
   import('./routes/portal/provas/$examId.lazy').then((d) => d.Route),
 )
-const PortalForumThreadIdRoute = PortalForumThreadIdRouteImport.update({
-  id: '/forum/$threadId',
-  path: '/forum/$threadId',
+const PortalSlidesIndexRoute = PortalSlidesIndexRouteImport.update({
+  id: '/slides/',
+  path: '/slides/',
   getParentRoute: () => PortalRouteRoute,
 } as any)
-const PortalDisciplinasDisciplineIdRoute =
-  PortalDisciplinasDisciplineIdRouteImport.update({
-    id: '/disciplinas/$disciplineId',
-    path: '/disciplinas/$disciplineId',
-    getParentRoute: () => PortalRouteRoute,
-  } as any)
-const PortalCheckinLessonIdRoute = PortalCheckinLessonIdRouteImport.update({
-  id: '/checkin/$lessonId',
-  path: '/checkin/$lessonId',
+const PortalSlidesSlideIdRoute = PortalSlidesSlideIdRouteImport.update({
+  id: '/slides/$slideId',
+  path: '/slides/$slideId',
   getParentRoute: () => PortalRouteRoute,
 } as any)
-const PortalBibliotecaBookIdRoute = PortalBibliotecaBookIdRouteImport.update({
-  id: '/biblioteca/$bookId',
-  path: '/biblioteca/$bookId',
+const PortalTarefasIndexRoute = PortalTarefasIndexRouteImport.update({
+  id: '/tarefas/',
+  path: '/tarefas/',
   getParentRoute: () => PortalRouteRoute,
 } as any)
-const PortalApostilasMaterialIdRoute =
-  PortalApostilasMaterialIdRouteImport.update({
-    id: '/apostilas/$materialId',
-    path: '/apostilas/$materialId',
-    getParentRoute: () => PortalRouteRoute,
-  } as any)
-const PainelTarefasAssignmentIdRoute =
-  PainelTarefasAssignmentIdRouteImport.update({
+const PortalTarefasAssignmentIdRoute =
+  PortalTarefasAssignmentIdRouteImport.update({
     id: '/tarefas/$assignmentId',
     path: '/tarefas/$assignmentId',
-    getParentRoute: () => PainelRouteRoute,
-  } as any).lazy(() =>
-    import('./routes/painel/tarefas/$assignmentId.lazy').then((d) => d.Route),
-  )
-const PainelProvasExamIdRoute = PainelProvasExamIdRouteImport.update({
-  id: '/provas/$examId',
-  path: '/provas/$examId',
-  getParentRoute: () => PainelRouteRoute,
-} as any).lazy(() =>
-  import('./routes/painel/provas/$examId.lazy').then((d) => d.Route),
-)
-const PainelForumThreadIdRoute = PainelForumThreadIdRouteImport.update({
-  id: '/forum/$threadId',
-  path: '/forum/$threadId',
-  getParentRoute: () => PainelRouteRoute,
-} as any)
-const PainelForumInternoThreadIdRoute =
-  PainelForumInternoThreadIdRouteImport.update({
-    id: '/forum-interno/$threadId',
-    path: '/forum-interno/$threadId',
-    getParentRoute: () => PainelRouteRoute,
+    getParentRoute: () => PortalRouteRoute,
   } as any)
-const PainelDisciplinasDisciplineIdRoute =
-  PainelDisciplinasDisciplineIdRouteImport.update({
-    id: '/disciplinas/$disciplineId',
-    path: '/disciplinas/$disciplineId',
-    getParentRoute: () => PainelRouteRoute,
-  } as any)
-const PainelApostilasCompartilhadasMaterialIdRoute =
-  PainelApostilasCompartilhadasMaterialIdRouteImport.update({
-    id: '/apostilas-compartilhadas/$materialId',
-    path: '/apostilas-compartilhadas/$materialId',
-    getParentRoute: () => PainelRouteRoute,
-  } as any)
-const ApiMercadopagoWebhookRoute = ApiMercadopagoWebhookRouteImport.update({
-  id: '/api/mercadopago/webhook',
-  path: '/api/mercadopago/webhook',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiCronPaymentRemindersRoute = ApiCronPaymentRemindersRouteImport.update({
-  id: '/api/cron/payment-reminders',
-  path: '/api/cron/payment-reminders',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiCronFinalizeExpiredExamsRoute =
-  ApiCronFinalizeExpiredExamsRouteImport.update({
-    id: '/api/cron/finalize-expired-exams',
-    path: '/api/cron/finalize-expired-exams',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiBlobUploadRoute = ApiBlobUploadRouteImport.update({
-  id: '/api/blob/upload',
-  path: '/api/blob/upload',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiArquivoFileIdRoute = ApiArquivoFileIdRouteImport.update({
-  id: '/api/arquivo/$fileId',
-  path: '/api/arquivo/$fileId',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAdminMigrarArquivosLegadosRoute =
-  ApiAdminMigrarArquivosLegadosRouteImport.update({
-    id: '/api/admin/migrar-arquivos-legados',
-    path: '/api/admin/migrar-arquivos-legados',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const PortalMensalidadesChargeIdReciboRoute =
-  PortalMensalidadesChargeIdReciboRouteImport.update({
+const PainelPagamentosChargeIdReciboRoute =
+  PainelPagamentosChargeIdReciboRouteImport.update({
     id: '/$chargeId/recibo',
     path: '/$chargeId/recibo',
-    getParentRoute: () => PortalMensalidadesRoute,
+    getParentRoute: () => PainelPagamentosRoute,
   } as any)
 const PainelRelatorioStudentIdPdfRoute =
   PainelRelatorioStudentIdPdfRouteImport.update({
@@ -453,11 +461,11 @@ const PainelRelatorioStudentIdPdfRoute =
     path: '/$studentId/pdf',
     getParentRoute: () => PainelRelatorioRoute,
   } as any)
-const PainelPagamentosChargeIdReciboRoute =
-  PainelPagamentosChargeIdReciboRouteImport.update({
+const PortalMensalidadesChargeIdReciboRoute =
+  PortalMensalidadesChargeIdReciboRouteImport.update({
     id: '/$chargeId/recibo',
     path: '/$chargeId/recibo',
-    getParentRoute: () => PainelPagamentosRoute,
+    getParentRoute: () => PortalMensalidadesRoute,
   } as any)
 const PainelRelatorioTurmaDisciplineIdPdfRoute =
   PainelRelatorioTurmaDisciplineIdPdfRouteImport.update({
@@ -480,6 +488,7 @@ export interface FileRoutesByFullPath {
   '/redefinir-senha-aluno': typeof RedefinirSenhaAlunoRoute
   '/painel/agenda': typeof PainelAgendaRoute
   '/painel/alunos': typeof PainelAlunosRoute
+  '/painel/alunos-em-risco': typeof PainelAlunosEmRiscoRoute
   '/painel/atribuicoes': typeof PainelAtribuicoesRoute
   '/painel/auditoria': typeof PainelAuditoriaRoute
   '/painel/biblioteca': typeof PainelBibliotecaRoute
@@ -551,6 +560,7 @@ export interface FileRoutesByTo {
   '/redefinir-senha-aluno': typeof RedefinirSenhaAlunoRoute
   '/painel/agenda': typeof PainelAgendaRoute
   '/painel/alunos': typeof PainelAlunosRoute
+  '/painel/alunos-em-risco': typeof PainelAlunosEmRiscoRoute
   '/painel/atribuicoes': typeof PainelAtribuicoesRoute
   '/painel/auditoria': typeof PainelAuditoriaRoute
   '/painel/biblioteca': typeof PainelBibliotecaRoute
@@ -625,6 +635,7 @@ export interface FileRoutesById {
   '/redefinir-senha-aluno': typeof RedefinirSenhaAlunoRoute
   '/painel/agenda': typeof PainelAgendaRoute
   '/painel/alunos': typeof PainelAlunosRoute
+  '/painel/alunos-em-risco': typeof PainelAlunosEmRiscoRoute
   '/painel/atribuicoes': typeof PainelAtribuicoesRoute
   '/painel/auditoria': typeof PainelAuditoriaRoute
   '/painel/biblioteca': typeof PainelBibliotecaRoute
@@ -700,6 +711,7 @@ export interface FileRouteTypes {
     | '/redefinir-senha-aluno'
     | '/painel/agenda'
     | '/painel/alunos'
+    | '/painel/alunos-em-risco'
     | '/painel/atribuicoes'
     | '/painel/auditoria'
     | '/painel/biblioteca'
@@ -771,6 +783,7 @@ export interface FileRouteTypes {
     | '/redefinir-senha-aluno'
     | '/painel/agenda'
     | '/painel/alunos'
+    | '/painel/alunos-em-risco'
     | '/painel/atribuicoes'
     | '/painel/auditoria'
     | '/painel/biblioteca'
@@ -844,6 +857,7 @@ export interface FileRouteTypes {
     | '/redefinir-senha-aluno'
     | '/painel/agenda'
     | '/painel/alunos'
+    | '/painel/alunos-em-risco'
     | '/painel/atribuicoes'
     | '/painel/auditoria'
     | '/painel/biblioteca'
@@ -927,53 +941,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/redefinir-senha-aluno': {
-      id: '/redefinir-senha-aluno'
-      path: '/redefinir-senha-aluno'
-      fullPath: '/redefinir-senha-aluno'
-      preLoaderRoute: typeof RedefinirSenhaAlunoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/redefinir-senha': {
-      id: '/redefinir-senha'
-      path: '/redefinir-senha'
-      fullPath: '/redefinir-senha'
-      preLoaderRoute: typeof RedefinirSenhaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login-aluno': {
-      id: '/login-aluno'
-      path: '/login-aluno'
-      fullPath: '/login-aluno'
-      preLoaderRoute: typeof LoginAlunoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/esqueci-senha-aluno': {
-      id: '/esqueci-senha-aluno'
-      path: '/esqueci-senha-aluno'
-      fullPath: '/esqueci-senha-aluno'
-      preLoaderRoute: typeof EsqueciSenhaAlunoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/esqueci-senha': {
-      id: '/esqueci-senha'
-      path: '/esqueci-senha'
-      fullPath: '/esqueci-senha'
-      preLoaderRoute: typeof EsqueciSenhaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/confirmar-email': {
-      id: '/confirmar-email'
-      path: '/confirmar-email'
-      fullPath: '/confirmar-email'
-      preLoaderRoute: typeof ConfirmarEmailRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/agenda.ics': {
@@ -983,11 +955,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AgendaDoticsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/portal': {
-      id: '/portal'
-      path: '/portal'
-      fullPath: '/portal'
-      preLoaderRoute: typeof PortalRouteRouteImport
+    '/confirmar-email': {
+      id: '/confirmar-email'
+      path: '/confirmar-email'
+      fullPath: '/confirmar-email'
+      preLoaderRoute: typeof ConfirmarEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/esqueci-senha': {
+      id: '/esqueci-senha'
+      path: '/esqueci-senha'
+      fullPath: '/esqueci-senha'
+      preLoaderRoute: typeof EsqueciSenhaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/esqueci-senha-aluno': {
+      id: '/esqueci-senha-aluno'
+      path: '/esqueci-senha-aluno'
+      fullPath: '/esqueci-senha-aluno'
+      preLoaderRoute: typeof EsqueciSenhaAlunoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login-aluno': {
+      id: '/login-aluno'
+      path: '/login-aluno'
+      fullPath: '/login-aluno'
+      preLoaderRoute: typeof LoginAlunoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/painel': {
@@ -997,165 +997,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PainelRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/portal': {
+      id: '/portal'
+      path: '/portal'
+      fullPath: '/portal'
+      preLoaderRoute: typeof PortalRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/portal/': {
-      id: '/portal/'
-      path: '/'
-      fullPath: '/portal/'
-      preLoaderRoute: typeof PortalIndexRouteImport
-      parentRoute: typeof PortalRouteRoute
+    '/redefinir-senha': {
+      id: '/redefinir-senha'
+      path: '/redefinir-senha'
+      fullPath: '/redefinir-senha'
+      preLoaderRoute: typeof RedefinirSenhaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/redefinir-senha-aluno': {
+      id: '/redefinir-senha-aluno'
+      path: '/redefinir-senha-aluno'
+      fullPath: '/redefinir-senha-aluno'
+      preLoaderRoute: typeof RedefinirSenhaAlunoRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/painel/': {
       id: '/painel/'
       path: '/'
       fullPath: '/painel/'
       preLoaderRoute: typeof PainelIndexRouteImport
-      parentRoute: typeof PainelRouteRoute
-    }
-    '/semestre/$semester': {
-      id: '/semestre/$semester'
-      path: '/semestre/$semester'
-      fullPath: '/semestre/$semester'
-      preLoaderRoute: typeof SemestreSemesterRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/portal/videos': {
-      id: '/portal/videos'
-      path: '/videos'
-      fullPath: '/portal/videos'
-      preLoaderRoute: typeof PortalVideosRouteImport
-      parentRoute: typeof PortalRouteRoute
-    }
-    '/portal/trocar-senha': {
-      id: '/portal/trocar-senha'
-      path: '/trocar-senha'
-      fullPath: '/portal/trocar-senha'
-      preLoaderRoute: typeof PortalTrocarSenhaRouteImport
-      parentRoute: typeof PortalRouteRoute
-    }
-    '/portal/pdf': {
-      id: '/portal/pdf'
-      path: '/pdf'
-      fullPath: '/portal/pdf'
-      preLoaderRoute: typeof PortalPdfRouteImport
-      parentRoute: typeof PortalRouteRoute
-    }
-    '/portal/notas': {
-      id: '/portal/notas'
-      path: '/notas'
-      fullPath: '/portal/notas'
-      preLoaderRoute: typeof PortalNotasRouteImport
-      parentRoute: typeof PortalRouteRoute
-    }
-    '/portal/mensalidades': {
-      id: '/portal/mensalidades'
-      path: '/mensalidades'
-      fullPath: '/portal/mensalidades'
-      preLoaderRoute: typeof PortalMensalidadesRouteImport
-      parentRoute: typeof PortalRouteRoute
-    }
-    '/portal/discipulado': {
-      id: '/portal/discipulado'
-      path: '/discipulado'
-      fullPath: '/portal/discipulado'
-      preLoaderRoute: typeof PortalDiscipuladoRouteImport
-      parentRoute: typeof PortalRouteRoute
-    }
-    '/portal/conta': {
-      id: '/portal/conta'
-      path: '/conta'
-      fullPath: '/portal/conta'
-      preLoaderRoute: typeof PortalContaRouteImport
-      parentRoute: typeof PortalRouteRoute
-    }
-    '/painel/trocar-senha': {
-      id: '/painel/trocar-senha'
-      path: '/trocar-senha'
-      fullPath: '/painel/trocar-senha'
-      preLoaderRoute: typeof PainelTrocarSenhaRouteImport
-      parentRoute: typeof PainelRouteRoute
-    }
-    '/painel/relatorio-modulo': {
-      id: '/painel/relatorio-modulo'
-      path: '/relatorio-modulo'
-      fullPath: '/painel/relatorio-modulo'
-      preLoaderRoute: typeof PainelRelatorioModuloRouteImport
-      parentRoute: typeof PainelRouteRoute
-    }
-    '/painel/relatorio': {
-      id: '/painel/relatorio'
-      path: '/relatorio'
-      fullPath: '/painel/relatorio'
-      preLoaderRoute: typeof PainelRelatorioRouteImport
-      parentRoute: typeof PainelRouteRoute
-    }
-    '/painel/professores': {
-      id: '/painel/professores'
-      path: '/professores'
-      fullPath: '/painel/professores'
-      preLoaderRoute: typeof PainelProfessoresRouteImport
-      parentRoute: typeof PainelRouteRoute
-    }
-    '/painel/pagamentos': {
-      id: '/painel/pagamentos'
-      path: '/pagamentos'
-      fullPath: '/painel/pagamentos'
-      preLoaderRoute: typeof PainelPagamentosRouteImport
-      parentRoute: typeof PainelRouteRoute
-    }
-    '/painel/materiais': {
-      id: '/painel/materiais'
-      path: '/materiais'
-      fullPath: '/painel/materiais'
-      preLoaderRoute: typeof PainelMateriaisRouteImport
-      parentRoute: typeof PainelRouteRoute
-    }
-    '/painel/financeiro': {
-      id: '/painel/financeiro'
-      path: '/financeiro'
-      fullPath: '/painel/financeiro'
-      preLoaderRoute: typeof PainelFinanceiroRouteImport
-      parentRoute: typeof PainelRouteRoute
-    }
-    '/painel/despesas': {
-      id: '/painel/despesas'
-      path: '/despesas'
-      fullPath: '/painel/despesas'
-      preLoaderRoute: typeof PainelDespesasRouteImport
-      parentRoute: typeof PainelRouteRoute
-    }
-    '/painel/biblioteca': {
-      id: '/painel/biblioteca'
-      path: '/biblioteca'
-      fullPath: '/painel/biblioteca'
-      preLoaderRoute: typeof PainelBibliotecaRouteImport
-      parentRoute: typeof PainelRouteRoute
-    }
-    '/painel/auditoria': {
-      id: '/painel/auditoria'
-      path: '/auditoria'
-      fullPath: '/painel/auditoria'
-      preLoaderRoute: typeof PainelAuditoriaRouteImport
-      parentRoute: typeof PainelRouteRoute
-    }
-    '/painel/atribuicoes': {
-      id: '/painel/atribuicoes'
-      path: '/atribuicoes'
-      fullPath: '/painel/atribuicoes'
-      preLoaderRoute: typeof PainelAtribuicoesRouteImport
-      parentRoute: typeof PainelRouteRoute
-    }
-    '/painel/alunos': {
-      id: '/painel/alunos'
-      path: '/alunos'
-      fullPath: '/painel/alunos'
-      preLoaderRoute: typeof PainelAlunosRouteImport
       parentRoute: typeof PainelRouteRoute
     }
     '/painel/agenda': {
@@ -1165,228 +1032,158 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PainelAgendaRouteImport
       parentRoute: typeof PainelRouteRoute
     }
-    '/portal/tarefas/': {
-      id: '/portal/tarefas/'
-      path: '/tarefas'
-      fullPath: '/portal/tarefas/'
-      preLoaderRoute: typeof PortalTarefasIndexRouteImport
-      parentRoute: typeof PortalRouteRoute
+    '/painel/alunos': {
+      id: '/painel/alunos'
+      path: '/alunos'
+      fullPath: '/painel/alunos'
+      preLoaderRoute: typeof PainelAlunosRouteImport
+      parentRoute: typeof PainelRouteRoute
     }
-    '/portal/slides/': {
-      id: '/portal/slides/'
-      path: '/slides'
-      fullPath: '/portal/slides/'
-      preLoaderRoute: typeof PortalSlidesIndexRouteImport
-      parentRoute: typeof PortalRouteRoute
+    '/painel/alunos-em-risco': {
+      id: '/painel/alunos-em-risco'
+      path: '/alunos-em-risco'
+      fullPath: '/painel/alunos-em-risco'
+      preLoaderRoute: typeof PainelAlunosEmRiscoRouteImport
+      parentRoute: typeof PainelRouteRoute
     }
-    '/portal/provas/': {
-      id: '/portal/provas/'
-      path: '/provas'
-      fullPath: '/portal/provas/'
-      preLoaderRoute: typeof PortalProvasIndexRouteImport
-      parentRoute: typeof PortalRouteRoute
+    '/painel/atribuicoes': {
+      id: '/painel/atribuicoes'
+      path: '/atribuicoes'
+      fullPath: '/painel/atribuicoes'
+      preLoaderRoute: typeof PainelAtribuicoesRouteImport
+      parentRoute: typeof PainelRouteRoute
     }
-    '/portal/forum/': {
-      id: '/portal/forum/'
-      path: '/forum'
-      fullPath: '/portal/forum/'
-      preLoaderRoute: typeof PortalForumIndexRouteImport
-      parentRoute: typeof PortalRouteRoute
+    '/painel/auditoria': {
+      id: '/painel/auditoria'
+      path: '/auditoria'
+      fullPath: '/painel/auditoria'
+      preLoaderRoute: typeof PainelAuditoriaRouteImport
+      parentRoute: typeof PainelRouteRoute
     }
-    '/portal/disciplinas/': {
-      id: '/portal/disciplinas/'
-      path: '/disciplinas'
-      fullPath: '/portal/disciplinas/'
-      preLoaderRoute: typeof PortalDisciplinasIndexRouteImport
-      parentRoute: typeof PortalRouteRoute
-    }
-    '/portal/biblioteca/': {
-      id: '/portal/biblioteca/'
+    '/painel/biblioteca': {
+      id: '/painel/biblioteca'
       path: '/biblioteca'
-      fullPath: '/portal/biblioteca/'
-      preLoaderRoute: typeof PortalBibliotecaIndexRouteImport
+      fullPath: '/painel/biblioteca'
+      preLoaderRoute: typeof PainelBibliotecaRouteImport
+      parentRoute: typeof PainelRouteRoute
+    }
+    '/painel/despesas': {
+      id: '/painel/despesas'
+      path: '/despesas'
+      fullPath: '/painel/despesas'
+      preLoaderRoute: typeof PainelDespesasRouteImport
+      parentRoute: typeof PainelRouteRoute
+    }
+    '/painel/financeiro': {
+      id: '/painel/financeiro'
+      path: '/financeiro'
+      fullPath: '/painel/financeiro'
+      preLoaderRoute: typeof PainelFinanceiroRouteImport
+      parentRoute: typeof PainelRouteRoute
+    }
+    '/painel/materiais': {
+      id: '/painel/materiais'
+      path: '/materiais'
+      fullPath: '/painel/materiais'
+      preLoaderRoute: typeof PainelMateriaisRouteImport
+      parentRoute: typeof PainelRouteRoute
+    }
+    '/painel/pagamentos': {
+      id: '/painel/pagamentos'
+      path: '/pagamentos'
+      fullPath: '/painel/pagamentos'
+      preLoaderRoute: typeof PainelPagamentosRouteImport
+      parentRoute: typeof PainelRouteRoute
+    }
+    '/painel/professores': {
+      id: '/painel/professores'
+      path: '/professores'
+      fullPath: '/painel/professores'
+      preLoaderRoute: typeof PainelProfessoresRouteImport
+      parentRoute: typeof PainelRouteRoute
+    }
+    '/painel/relatorio': {
+      id: '/painel/relatorio'
+      path: '/relatorio'
+      fullPath: '/painel/relatorio'
+      preLoaderRoute: typeof PainelRelatorioRouteImport
+      parentRoute: typeof PainelRouteRoute
+    }
+    '/painel/relatorio-modulo': {
+      id: '/painel/relatorio-modulo'
+      path: '/relatorio-modulo'
+      fullPath: '/painel/relatorio-modulo'
+      preLoaderRoute: typeof PainelRelatorioModuloRouteImport
+      parentRoute: typeof PainelRouteRoute
+    }
+    '/painel/trocar-senha': {
+      id: '/painel/trocar-senha'
+      path: '/trocar-senha'
+      fullPath: '/painel/trocar-senha'
+      preLoaderRoute: typeof PainelTrocarSenhaRouteImport
+      parentRoute: typeof PainelRouteRoute
+    }
+    '/portal/': {
+      id: '/portal/'
+      path: '/'
+      fullPath: '/portal/'
+      preLoaderRoute: typeof PortalIndexRouteImport
       parentRoute: typeof PortalRouteRoute
     }
-    '/portal/apostilas/': {
-      id: '/portal/apostilas/'
-      path: '/apostilas'
-      fullPath: '/portal/apostilas/'
-      preLoaderRoute: typeof PortalApostilasIndexRouteImport
+    '/portal/conta': {
+      id: '/portal/conta'
+      path: '/conta'
+      fullPath: '/portal/conta'
+      preLoaderRoute: typeof PortalContaRouteImport
       parentRoute: typeof PortalRouteRoute
     }
-    '/painel/tarefas/': {
-      id: '/painel/tarefas/'
-      path: '/tarefas'
-      fullPath: '/painel/tarefas/'
-      preLoaderRoute: typeof PainelTarefasIndexRouteImport
-      parentRoute: typeof PainelRouteRoute
-    }
-    '/painel/provas/': {
-      id: '/painel/provas/'
-      path: '/provas'
-      fullPath: '/painel/provas/'
-      preLoaderRoute: typeof PainelProvasIndexRouteImport
-      parentRoute: typeof PainelRouteRoute
-    }
-    '/painel/minhas-materias/': {
-      id: '/painel/minhas-materias/'
-      path: '/minhas-materias'
-      fullPath: '/painel/minhas-materias/'
-      preLoaderRoute: typeof PainelMinhasMateriasIndexRouteImport
-      parentRoute: typeof PainelRouteRoute
-    }
-    '/painel/forum/': {
-      id: '/painel/forum/'
-      path: '/forum'
-      fullPath: '/painel/forum/'
-      preLoaderRoute: typeof PainelForumIndexRouteImport
-      parentRoute: typeof PainelRouteRoute
-    }
-    '/painel/forum-interno/': {
-      id: '/painel/forum-interno/'
-      path: '/forum-interno'
-      fullPath: '/painel/forum-interno/'
-      preLoaderRoute: typeof PainelForumInternoIndexRouteImport
-      parentRoute: typeof PainelRouteRoute
-    }
-    '/painel/apostilas-compartilhadas/': {
-      id: '/painel/apostilas-compartilhadas/'
-      path: '/apostilas-compartilhadas'
-      fullPath: '/painel/apostilas-compartilhadas/'
-      preLoaderRoute: typeof PainelApostilasCompartilhadasIndexRouteImport
-      parentRoute: typeof PainelRouteRoute
-    }
-    '/portal/tarefas/$assignmentId': {
-      id: '/portal/tarefas/$assignmentId'
-      path: '/tarefas/$assignmentId'
-      fullPath: '/portal/tarefas/$assignmentId'
-      preLoaderRoute: typeof PortalTarefasAssignmentIdRouteImport
+    '/portal/discipulado': {
+      id: '/portal/discipulado'
+      path: '/discipulado'
+      fullPath: '/portal/discipulado'
+      preLoaderRoute: typeof PortalDiscipuladoRouteImport
       parentRoute: typeof PortalRouteRoute
     }
-    '/portal/slides/$slideId': {
-      id: '/portal/slides/$slideId'
-      path: '/slides/$slideId'
-      fullPath: '/portal/slides/$slideId'
-      preLoaderRoute: typeof PortalSlidesSlideIdRouteImport
+    '/portal/mensalidades': {
+      id: '/portal/mensalidades'
+      path: '/mensalidades'
+      fullPath: '/portal/mensalidades'
+      preLoaderRoute: typeof PortalMensalidadesRouteImport
       parentRoute: typeof PortalRouteRoute
     }
-    '/portal/provas/$examId': {
-      id: '/portal/provas/$examId'
-      path: '/provas/$examId'
-      fullPath: '/portal/provas/$examId'
-      preLoaderRoute: typeof PortalProvasExamIdRouteImport
+    '/portal/notas': {
+      id: '/portal/notas'
+      path: '/notas'
+      fullPath: '/portal/notas'
+      preLoaderRoute: typeof PortalNotasRouteImport
       parentRoute: typeof PortalRouteRoute
     }
-    '/portal/forum/$threadId': {
-      id: '/portal/forum/$threadId'
-      path: '/forum/$threadId'
-      fullPath: '/portal/forum/$threadId'
-      preLoaderRoute: typeof PortalForumThreadIdRouteImport
+    '/portal/pdf': {
+      id: '/portal/pdf'
+      path: '/pdf'
+      fullPath: '/portal/pdf'
+      preLoaderRoute: typeof PortalPdfRouteImport
       parentRoute: typeof PortalRouteRoute
     }
-    '/portal/disciplinas/$disciplineId': {
-      id: '/portal/disciplinas/$disciplineId'
-      path: '/disciplinas/$disciplineId'
-      fullPath: '/portal/disciplinas/$disciplineId'
-      preLoaderRoute: typeof PortalDisciplinasDisciplineIdRouteImport
+    '/portal/trocar-senha': {
+      id: '/portal/trocar-senha'
+      path: '/trocar-senha'
+      fullPath: '/portal/trocar-senha'
+      preLoaderRoute: typeof PortalTrocarSenhaRouteImport
       parentRoute: typeof PortalRouteRoute
     }
-    '/portal/checkin/$lessonId': {
-      id: '/portal/checkin/$lessonId'
-      path: '/checkin/$lessonId'
-      fullPath: '/portal/checkin/$lessonId'
-      preLoaderRoute: typeof PortalCheckinLessonIdRouteImport
+    '/portal/videos': {
+      id: '/portal/videos'
+      path: '/videos'
+      fullPath: '/portal/videos'
+      preLoaderRoute: typeof PortalVideosRouteImport
       parentRoute: typeof PortalRouteRoute
     }
-    '/portal/biblioteca/$bookId': {
-      id: '/portal/biblioteca/$bookId'
-      path: '/biblioteca/$bookId'
-      fullPath: '/portal/biblioteca/$bookId'
-      preLoaderRoute: typeof PortalBibliotecaBookIdRouteImport
-      parentRoute: typeof PortalRouteRoute
-    }
-    '/portal/apostilas/$materialId': {
-      id: '/portal/apostilas/$materialId'
-      path: '/apostilas/$materialId'
-      fullPath: '/portal/apostilas/$materialId'
-      preLoaderRoute: typeof PortalApostilasMaterialIdRouteImport
-      parentRoute: typeof PortalRouteRoute
-    }
-    '/painel/tarefas/$assignmentId': {
-      id: '/painel/tarefas/$assignmentId'
-      path: '/tarefas/$assignmentId'
-      fullPath: '/painel/tarefas/$assignmentId'
-      preLoaderRoute: typeof PainelTarefasAssignmentIdRouteImport
-      parentRoute: typeof PainelRouteRoute
-    }
-    '/painel/provas/$examId': {
-      id: '/painel/provas/$examId'
-      path: '/provas/$examId'
-      fullPath: '/painel/provas/$examId'
-      preLoaderRoute: typeof PainelProvasExamIdRouteImport
-      parentRoute: typeof PainelRouteRoute
-    }
-    '/painel/forum/$threadId': {
-      id: '/painel/forum/$threadId'
-      path: '/forum/$threadId'
-      fullPath: '/painel/forum/$threadId'
-      preLoaderRoute: typeof PainelForumThreadIdRouteImport
-      parentRoute: typeof PainelRouteRoute
-    }
-    '/painel/forum-interno/$threadId': {
-      id: '/painel/forum-interno/$threadId'
-      path: '/forum-interno/$threadId'
-      fullPath: '/painel/forum-interno/$threadId'
-      preLoaderRoute: typeof PainelForumInternoThreadIdRouteImport
-      parentRoute: typeof PainelRouteRoute
-    }
-    '/painel/disciplinas/$disciplineId': {
-      id: '/painel/disciplinas/$disciplineId'
-      path: '/disciplinas/$disciplineId'
-      fullPath: '/painel/disciplinas/$disciplineId'
-      preLoaderRoute: typeof PainelDisciplinasDisciplineIdRouteImport
-      parentRoute: typeof PainelRouteRoute
-    }
-    '/painel/apostilas-compartilhadas/$materialId': {
-      id: '/painel/apostilas-compartilhadas/$materialId'
-      path: '/apostilas-compartilhadas/$materialId'
-      fullPath: '/painel/apostilas-compartilhadas/$materialId'
-      preLoaderRoute: typeof PainelApostilasCompartilhadasMaterialIdRouteImport
-      parentRoute: typeof PainelRouteRoute
-    }
-    '/api/mercadopago/webhook': {
-      id: '/api/mercadopago/webhook'
-      path: '/api/mercadopago/webhook'
-      fullPath: '/api/mercadopago/webhook'
-      preLoaderRoute: typeof ApiMercadopagoWebhookRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/cron/payment-reminders': {
-      id: '/api/cron/payment-reminders'
-      path: '/api/cron/payment-reminders'
-      fullPath: '/api/cron/payment-reminders'
-      preLoaderRoute: typeof ApiCronPaymentRemindersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/cron/finalize-expired-exams': {
-      id: '/api/cron/finalize-expired-exams'
-      path: '/api/cron/finalize-expired-exams'
-      fullPath: '/api/cron/finalize-expired-exams'
-      preLoaderRoute: typeof ApiCronFinalizeExpiredExamsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/blob/upload': {
-      id: '/api/blob/upload'
-      path: '/api/blob/upload'
-      fullPath: '/api/blob/upload'
-      preLoaderRoute: typeof ApiBlobUploadRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/arquivo/$fileId': {
-      id: '/api/arquivo/$fileId'
-      path: '/api/arquivo/$fileId'
-      fullPath: '/api/arquivo/$fileId'
-      preLoaderRoute: typeof ApiArquivoFileIdRouteImport
+    '/semestre/$semester': {
+      id: '/semestre/$semester'
+      path: '/semestre/$semester'
+      fullPath: '/semestre/$semester'
+      preLoaderRoute: typeof SemestreSemesterRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/admin/migrar-arquivos-legados': {
@@ -1396,12 +1193,236 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAdminMigrarArquivosLegadosRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/portal/mensalidades/$chargeId/recibo': {
-      id: '/portal/mensalidades/$chargeId/recibo'
+    '/api/arquivo/$fileId': {
+      id: '/api/arquivo/$fileId'
+      path: '/api/arquivo/$fileId'
+      fullPath: '/api/arquivo/$fileId'
+      preLoaderRoute: typeof ApiArquivoFileIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/blob/upload': {
+      id: '/api/blob/upload'
+      path: '/api/blob/upload'
+      fullPath: '/api/blob/upload'
+      preLoaderRoute: typeof ApiBlobUploadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/cron/finalize-expired-exams': {
+      id: '/api/cron/finalize-expired-exams'
+      path: '/api/cron/finalize-expired-exams'
+      fullPath: '/api/cron/finalize-expired-exams'
+      preLoaderRoute: typeof ApiCronFinalizeExpiredExamsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/cron/payment-reminders': {
+      id: '/api/cron/payment-reminders'
+      path: '/api/cron/payment-reminders'
+      fullPath: '/api/cron/payment-reminders'
+      preLoaderRoute: typeof ApiCronPaymentRemindersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/mercadopago/webhook': {
+      id: '/api/mercadopago/webhook'
+      path: '/api/mercadopago/webhook'
+      fullPath: '/api/mercadopago/webhook'
+      preLoaderRoute: typeof ApiMercadopagoWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/painel/apostilas-compartilhadas/': {
+      id: '/painel/apostilas-compartilhadas/'
+      path: '/apostilas-compartilhadas'
+      fullPath: '/painel/apostilas-compartilhadas/'
+      preLoaderRoute: typeof PainelApostilasCompartilhadasIndexRouteImport
+      parentRoute: typeof PainelRouteRoute
+    }
+    '/painel/apostilas-compartilhadas/$materialId': {
+      id: '/painel/apostilas-compartilhadas/$materialId'
+      path: '/apostilas-compartilhadas/$materialId'
+      fullPath: '/painel/apostilas-compartilhadas/$materialId'
+      preLoaderRoute: typeof PainelApostilasCompartilhadasMaterialIdRouteImport
+      parentRoute: typeof PainelRouteRoute
+    }
+    '/painel/disciplinas/$disciplineId': {
+      id: '/painel/disciplinas/$disciplineId'
+      path: '/disciplinas/$disciplineId'
+      fullPath: '/painel/disciplinas/$disciplineId'
+      preLoaderRoute: typeof PainelDisciplinasDisciplineIdRouteImport
+      parentRoute: typeof PainelRouteRoute
+    }
+    '/painel/forum-interno/': {
+      id: '/painel/forum-interno/'
+      path: '/forum-interno'
+      fullPath: '/painel/forum-interno/'
+      preLoaderRoute: typeof PainelForumInternoIndexRouteImport
+      parentRoute: typeof PainelRouteRoute
+    }
+    '/painel/forum-interno/$threadId': {
+      id: '/painel/forum-interno/$threadId'
+      path: '/forum-interno/$threadId'
+      fullPath: '/painel/forum-interno/$threadId'
+      preLoaderRoute: typeof PainelForumInternoThreadIdRouteImport
+      parentRoute: typeof PainelRouteRoute
+    }
+    '/painel/forum/': {
+      id: '/painel/forum/'
+      path: '/forum'
+      fullPath: '/painel/forum/'
+      preLoaderRoute: typeof PainelForumIndexRouteImport
+      parentRoute: typeof PainelRouteRoute
+    }
+    '/painel/forum/$threadId': {
+      id: '/painel/forum/$threadId'
+      path: '/forum/$threadId'
+      fullPath: '/painel/forum/$threadId'
+      preLoaderRoute: typeof PainelForumThreadIdRouteImport
+      parentRoute: typeof PainelRouteRoute
+    }
+    '/painel/minhas-materias/': {
+      id: '/painel/minhas-materias/'
+      path: '/minhas-materias'
+      fullPath: '/painel/minhas-materias/'
+      preLoaderRoute: typeof PainelMinhasMateriasIndexRouteImport
+      parentRoute: typeof PainelRouteRoute
+    }
+    '/painel/provas/': {
+      id: '/painel/provas/'
+      path: '/provas'
+      fullPath: '/painel/provas/'
+      preLoaderRoute: typeof PainelProvasIndexRouteImport
+      parentRoute: typeof PainelRouteRoute
+    }
+    '/painel/provas/$examId': {
+      id: '/painel/provas/$examId'
+      path: '/provas/$examId'
+      fullPath: '/painel/provas/$examId'
+      preLoaderRoute: typeof PainelProvasExamIdRouteImport
+      parentRoute: typeof PainelRouteRoute
+    }
+    '/painel/tarefas/': {
+      id: '/painel/tarefas/'
+      path: '/tarefas'
+      fullPath: '/painel/tarefas/'
+      preLoaderRoute: typeof PainelTarefasIndexRouteImport
+      parentRoute: typeof PainelRouteRoute
+    }
+    '/painel/tarefas/$assignmentId': {
+      id: '/painel/tarefas/$assignmentId'
+      path: '/tarefas/$assignmentId'
+      fullPath: '/painel/tarefas/$assignmentId'
+      preLoaderRoute: typeof PainelTarefasAssignmentIdRouteImport
+      parentRoute: typeof PainelRouteRoute
+    }
+    '/portal/apostilas/': {
+      id: '/portal/apostilas/'
+      path: '/apostilas'
+      fullPath: '/portal/apostilas/'
+      preLoaderRoute: typeof PortalApostilasIndexRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
+    '/portal/apostilas/$materialId': {
+      id: '/portal/apostilas/$materialId'
+      path: '/apostilas/$materialId'
+      fullPath: '/portal/apostilas/$materialId'
+      preLoaderRoute: typeof PortalApostilasMaterialIdRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
+    '/portal/biblioteca/': {
+      id: '/portal/biblioteca/'
+      path: '/biblioteca'
+      fullPath: '/portal/biblioteca/'
+      preLoaderRoute: typeof PortalBibliotecaIndexRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
+    '/portal/biblioteca/$bookId': {
+      id: '/portal/biblioteca/$bookId'
+      path: '/biblioteca/$bookId'
+      fullPath: '/portal/biblioteca/$bookId'
+      preLoaderRoute: typeof PortalBibliotecaBookIdRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
+    '/portal/checkin/$lessonId': {
+      id: '/portal/checkin/$lessonId'
+      path: '/checkin/$lessonId'
+      fullPath: '/portal/checkin/$lessonId'
+      preLoaderRoute: typeof PortalCheckinLessonIdRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
+    '/portal/disciplinas/': {
+      id: '/portal/disciplinas/'
+      path: '/disciplinas'
+      fullPath: '/portal/disciplinas/'
+      preLoaderRoute: typeof PortalDisciplinasIndexRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
+    '/portal/disciplinas/$disciplineId': {
+      id: '/portal/disciplinas/$disciplineId'
+      path: '/disciplinas/$disciplineId'
+      fullPath: '/portal/disciplinas/$disciplineId'
+      preLoaderRoute: typeof PortalDisciplinasDisciplineIdRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
+    '/portal/forum/': {
+      id: '/portal/forum/'
+      path: '/forum'
+      fullPath: '/portal/forum/'
+      preLoaderRoute: typeof PortalForumIndexRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
+    '/portal/forum/$threadId': {
+      id: '/portal/forum/$threadId'
+      path: '/forum/$threadId'
+      fullPath: '/portal/forum/$threadId'
+      preLoaderRoute: typeof PortalForumThreadIdRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
+    '/portal/provas/': {
+      id: '/portal/provas/'
+      path: '/provas'
+      fullPath: '/portal/provas/'
+      preLoaderRoute: typeof PortalProvasIndexRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
+    '/portal/provas/$examId': {
+      id: '/portal/provas/$examId'
+      path: '/provas/$examId'
+      fullPath: '/portal/provas/$examId'
+      preLoaderRoute: typeof PortalProvasExamIdRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
+    '/portal/slides/': {
+      id: '/portal/slides/'
+      path: '/slides'
+      fullPath: '/portal/slides/'
+      preLoaderRoute: typeof PortalSlidesIndexRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
+    '/portal/slides/$slideId': {
+      id: '/portal/slides/$slideId'
+      path: '/slides/$slideId'
+      fullPath: '/portal/slides/$slideId'
+      preLoaderRoute: typeof PortalSlidesSlideIdRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
+    '/portal/tarefas/': {
+      id: '/portal/tarefas/'
+      path: '/tarefas'
+      fullPath: '/portal/tarefas/'
+      preLoaderRoute: typeof PortalTarefasIndexRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
+    '/portal/tarefas/$assignmentId': {
+      id: '/portal/tarefas/$assignmentId'
+      path: '/tarefas/$assignmentId'
+      fullPath: '/portal/tarefas/$assignmentId'
+      preLoaderRoute: typeof PortalTarefasAssignmentIdRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
+    '/painel/pagamentos/$chargeId/recibo': {
+      id: '/painel/pagamentos/$chargeId/recibo'
       path: '/$chargeId/recibo'
-      fullPath: '/portal/mensalidades/$chargeId/recibo'
-      preLoaderRoute: typeof PortalMensalidadesChargeIdReciboRouteImport
-      parentRoute: typeof PortalMensalidadesRoute
+      fullPath: '/painel/pagamentos/$chargeId/recibo'
+      preLoaderRoute: typeof PainelPagamentosChargeIdReciboRouteImport
+      parentRoute: typeof PainelPagamentosRoute
     }
     '/painel/relatorio/$studentId/pdf': {
       id: '/painel/relatorio/$studentId/pdf'
@@ -1410,12 +1431,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PainelRelatorioStudentIdPdfRouteImport
       parentRoute: typeof PainelRelatorioRoute
     }
-    '/painel/pagamentos/$chargeId/recibo': {
-      id: '/painel/pagamentos/$chargeId/recibo'
+    '/portal/mensalidades/$chargeId/recibo': {
+      id: '/portal/mensalidades/$chargeId/recibo'
       path: '/$chargeId/recibo'
-      fullPath: '/painel/pagamentos/$chargeId/recibo'
-      preLoaderRoute: typeof PainelPagamentosChargeIdReciboRouteImport
-      parentRoute: typeof PainelPagamentosRoute
+      fullPath: '/portal/mensalidades/$chargeId/recibo'
+      preLoaderRoute: typeof PortalMensalidadesChargeIdReciboRouteImport
+      parentRoute: typeof PortalMensalidadesRoute
     }
     '/painel/relatorio/turma/$disciplineId/pdf': {
       id: '/painel/relatorio/turma/$disciplineId/pdf'
@@ -1456,6 +1477,7 @@ const PainelRelatorioRouteWithChildren = PainelRelatorioRoute._addFileChildren(
 interface PainelRouteRouteChildren {
   PainelAgendaRoute: typeof PainelAgendaRoute
   PainelAlunosRoute: typeof PainelAlunosRoute
+  PainelAlunosEmRiscoRoute: typeof PainelAlunosEmRiscoRoute
   PainelAtribuicoesRoute: typeof PainelAtribuicoesRoute
   PainelAuditoriaRoute: typeof PainelAuditoriaRoute
   PainelBibliotecaRoute: typeof PainelBibliotecaRoute
@@ -1485,6 +1507,7 @@ interface PainelRouteRouteChildren {
 const PainelRouteRouteChildren: PainelRouteRouteChildren = {
   PainelAgendaRoute: PainelAgendaRoute,
   PainelAlunosRoute: PainelAlunosRoute,
+  PainelAlunosEmRiscoRoute: PainelAlunosEmRiscoRoute,
   PainelAtribuicoesRoute: PainelAtribuicoesRoute,
   PainelAuditoriaRoute: PainelAuditoriaRoute,
   PainelBibliotecaRoute: PainelBibliotecaRoute,

@@ -2,6 +2,7 @@ import { useState, type ComponentProps, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
+  AlertTriangle,
   BarChart3,
   BookOpen,
   CalendarRange,
@@ -56,6 +57,7 @@ const painelNavItems = [
   { to: "/painel/biblioteca", label: "Biblioteca virtual", icon: Library },
   { to: "/painel/apostilas-compartilhadas", label: "Apostilas compartilhadas", icon: Share2 },
   { to: "/painel/relatorio", label: "Boletim do aluno", icon: FileText },
+  { to: "/painel/alunos-em-risco", label: "Alunos em risco", icon: AlertTriangle },
   { to: "/painel/relatorio-modulo", label: "Relatório por módulo", icon: Layers },
   { to: "/painel/pagamentos", label: "Pagamentos", icon: Wallet },
 ] as const;

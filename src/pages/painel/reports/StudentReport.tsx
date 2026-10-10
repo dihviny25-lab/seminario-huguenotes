@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CalendarCheck,
@@ -68,7 +69,9 @@ import { PASSING_AVERAGE } from "@/lib/grades";
 /** Busca de aluno + relatório consolidado de notas/faltas, com filtro por semestre. */
 export function StudentReport() {
   const [comboOpen, setComboOpen] = useState(false);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const { studentId } = useSearch({ from: "/painel/relatorio" });
+  const navigate = useNavigate({ from: "/painel/relatorio" });
+  const selectedId = studentId ?? null;
   const [semesterFilter, setSemesterFilter] = useState<string>("all");
 
   const { data: students } = useQuery({
@@ -144,7 +147,7 @@ export function StudentReport() {
                       key={student.id}
                       value={student.name}
                       onSelect={() => {
-                        setSelectedId(student.id);
+                        navigate({ search: { studentId: student.id } });
                         setComboOpen(false);
                       }}
                     >

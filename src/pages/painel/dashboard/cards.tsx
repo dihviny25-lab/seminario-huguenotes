@@ -15,6 +15,7 @@ import type { UpcomingLessonItem } from "@/lib/teacherDashboard";
 import { cn } from "@/lib/utils";
 
 import { DashboardCard } from "./DashboardCard";
+import { AtRiskStudentDetails } from "./AtRiskStudentDetails";
 
 /**
  * Itens de cards "action" carregam uma pista de urgência (borda esquerda
@@ -191,7 +192,7 @@ export function ActionCards({
             title="Alunos em risco"
             icon={AlertTriangle}
             tone="action"
-            viewAll={{ to: "/painel/relatorio" }}
+            viewAll={{ to: "/painel/alunos-em-risco" }}
             isLoading={isLoading}
             isEmpty={!d || d.atRiskStudents.length === 0}
             emptyLabel="Nenhum aluno abaixo do mínimo."
@@ -199,27 +200,20 @@ export function ActionCards({
             {d?.atRiskStudents.map((item) => (
               <Link
                 key={item.studentId}
-                to="/painel/relatorio"
+                to="/painel/alunos-em-risco"
+                search={{ studentId: item.studentId }}
                 className={actionItemClass("destructive")}
               >
                 <AlertTriangle className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden />
-                <span className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium text-foreground">
                     {item.studentName}
                   </span>
-                  <span className="block truncate text-xs text-muted-foreground">
-                    {item.disciplines
-                      .map((x) => {
-                        const teacher = x.teacherName ? ` — ${x.teacherName}` : "";
-                        return x.reason === "ambos"
-                          ? `${x.disciplineName} (nota e frequência)${teacher}`
-                          : x.reason === "media"
-                            ? `${x.disciplineName} (nota)${teacher}`
-                            : `${x.disciplineName} (frequência)${teacher}`;
-                      })
-                      .join(" · ")}
+                  <AtRiskStudentDetails student={item} />
+                  <span className="mt-2 block text-xs font-medium text-accent">
+                    Ver detalhes do risco
                   </span>
-                </span>
+                </div>
               </Link>
             ))}
           </DashboardCard>
